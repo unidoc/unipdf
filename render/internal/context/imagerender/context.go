@@ -212,7 +212,7 @@ func (dc *Context) SetRGB255(r, g, b int) {
 	dc.SetRGBA255(r, g, b, 255)
 }
 
-// SetRGBA sets the current color. r, g, b, a values should be between 0 and 1,
+// SetNRGBA sets the current color. r, g, b, a values should be between 0 and 1,
 // inclusive.
 func (dc *Context) SetRGBA(r, g, b, a float64) {
 	dc.color = color.NRGBA{

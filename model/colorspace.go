@@ -8,11 +8,11 @@ package model
 import (
 	"errors"
 	"fmt"
-	"image/color"
 	"math"
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
+	"github.com/unidoc/unipdf/v3/internal/imageutil"
 )
 
 // PdfColorspace interface defines the common methods of a PDF colorspace.
@@ -305,26 +305,19 @@ func (cs *PdfColorspaceDeviceGray) ColorToRGB(color PdfColor) (PdfColor, error) 
 
 // ImageToRGB convert 1-component grayscale data to 3-component RGB.
 func (cs *PdfColorspaceDeviceGray) ImageToRGB(img Image) (Image, error) {
-	data := make([]byte, 3*img.Width*img.Height)
-	for y := 0; y < int(img.Height); y++ {
-		for x := 0; x < int(img.Width); x++ {
-			c, err := img.ColorAt(x, y)
-			if err != nil {
-				return img, err
-			}
-			r, g, b, _ := c.RGBA()
-
-			idx := (y*int(img.Width) + x) * 3
-			data[idx], data[idx+1], data[idx+2] = uint8(r>>8), uint8(g>>8), uint8(b>>8)
-		}
+	if img.ColorComponents != 1 {
+		return img, errors.New("provided image is not gray scale image")
+	}
+	iImg, err := imageutil.NewImage(int(img.Width), int(img.Height), int(img.BitsPerComponent), img.ColorComponents, img.Data, img.alphaData, img.decode)
+	if err != nil {
+		return img, err
 	}
 
-	rgbImage := img
-	rgbImage.BitsPerComponent = 8
-	rgbImage.ColorComponents = 3
-	rgbImage.Data = data
-	rgbImage.decode = nil
-	rgbImage.setBytesPerLine()
+	rgbImg, err := imageutil.NRGBAConverter.Convert(iImg)
+	if err != nil {
+		return img, err
+	}
+	rgbImage := imageFromBase(rgbImg.Base())
 
 	common.Log.Trace("DeviceGray -> RGB")
 	common.Log.Trace("samples: %v", img.Data)
@@ -476,33 +469,19 @@ func (cs *PdfColorspaceDeviceRGB) ImageToRGB(img Image) (Image, error) {
 
 // ImageToGray returns a new grayscale image based on the passed in RGB image.
 func (cs *PdfColorspaceDeviceRGB) ImageToGray(img Image) (Image, error) {
-	grayImage := img
-
-	samples := img.GetSamples()
-
-	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
-	var graySamples []uint32
-	for i := 0; i < len(samples); i += 3 {
-		// Normalized data, range 0-1.
-		r := float64(samples[i]) / maxVal
-		g := float64(samples[i+1]) / maxVal
-		b := float64(samples[i+2]) / maxVal
-
-		// Calculate grayValue [0-1]
-		grayValue := 0.3*r + 0.59*g + 0.11*b
-
-		// Clip to [0-1]
-		grayValue = math.Min(math.Max(grayValue, 0.0), 1.0)
-
-		// Convert to uint32
-		val := uint32(grayValue * maxVal)
-		graySamples = append(graySamples, val)
+	if img.ColorComponents != 3 {
+		return img, errors.New("provided image is not a DeviceRGB")
 	}
-	grayImage.ColorComponents = 1
-	grayImage.setBytesPerLine()
-	grayImage.SetSamples(graySamples)
 
-	return grayImage, nil
+	iImg, err := imageutil.NewImage(int(img.Width), int(img.Height), int(img.BitsPerComponent), img.ColorComponents, img.Data, img.alphaData, img.decode)
+	if err != nil {
+		return img, err
+	}
+	grayImg, err := imageutil.GrayConverter.Convert(iImg)
+	if err != nil {
+		return img, err
+	}
+	return imageFromBase(grayImg.Base()), nil
 }
 
 //////////////////////
@@ -510,16 +489,16 @@ func (cs *PdfColorspaceDeviceRGB) ImageToGray(img Image) (Image, error) {
 // C, M, Y, K components.
 // No other parameters.
 
-// PdfColorDeviceCMYK is a CMYK color, where each component is defined in the range 0.0 - 1.0 where 1.0 is the primary intensity.
+// PdfColorDeviceCMYK is a CMYK32 color, where each component is defined in the range 0.0 - 1.0 where 1.0 is the primary intensity.
 type PdfColorDeviceCMYK [4]float64
 
-// NewPdfColorDeviceCMYK returns a new CMYK color.
+// NewPdfColorDeviceCMYK returns a new CMYK32 color.
 func NewPdfColorDeviceCMYK(c, m, y, k float64) *PdfColorDeviceCMYK {
 	color := PdfColorDeviceCMYK{c, m, y, k}
 	return &color
 }
 
-// GetNumComponents returns the number of color components (4 for CMYK).
+// GetNumComponents returns the number of color components (4 for CMYK32).
 func (col *PdfColorDeviceCMYK) GetNumComponents() int {
 	return 4
 }
@@ -550,10 +529,10 @@ func (col *PdfColorDeviceCMYK) ToInteger(bits int) [4]uint32 {
 	return [4]uint32{uint32(maxVal * col.C()), uint32(maxVal * col.M()), uint32(maxVal * col.Y()), uint32(maxVal * col.K())}
 }
 
-// PdfColorspaceDeviceCMYK represents a CMYK colorspace.
+// PdfColorspaceDeviceCMYK represents a CMYK32 colorspace.
 type PdfColorspaceDeviceCMYK struct{}
 
-// NewPdfColorspaceDeviceCMYK returns a new CMYK colorspace object.
+// NewPdfColorspaceDeviceCMYK returns a new CMYK32 colorspace object.
 func NewPdfColorspaceDeviceCMYK() *PdfColorspaceDeviceCMYK {
 	return &PdfColorspaceDeviceCMYK{}
 }
@@ -563,7 +542,7 @@ func (cs *PdfColorspaceDeviceCMYK) String() string {
 }
 
 // GetNumComponents returns the number of color components of the colorspace device.
-// Returns 4 for a CMYK device.
+// Returns 4 for a CMYK32 device.
 func (cs *PdfColorspaceDeviceCMYK) GetNumComponents() int {
 	return 4
 }
@@ -629,7 +608,7 @@ func (cs *PdfColorspaceDeviceCMYK) ColorFromPdfObjects(objects []core.PdfObject)
 	return cs.ColorFromFloats(floats)
 }
 
-// ColorToRGB converts a CMYK color to an RGB color.
+// ColorToRGB converts a CMYK32 color to an RGB color.
 func (cs *PdfColorspaceDeviceCMYK) ColorToRGB(color PdfColor) (PdfColor, error) {
 	cmyk, ok := color.(*PdfColorDeviceCMYK)
 	if !ok {
@@ -653,61 +632,23 @@ func (cs *PdfColorspaceDeviceCMYK) ColorToRGB(color PdfColor) (PdfColor, error) 
 	return NewPdfColorDeviceRGB(r, g, b), nil
 }
 
-// ImageToRGB converts an image in CMYK colorspace to an RGB image.
+// ImageToRGB converts an image in CMYK32 colorspace to an RGB image.
 func (cs *PdfColorspaceDeviceCMYK) ImageToRGB(img Image) (Image, error) {
-	rgbImage := img
-
-	common.Log.Trace("CMYK -> RGB")
+	common.Log.Trace("CMYK32 -> RGB")
 	common.Log.Trace("Image BPC: %d, Color components: %d", img.BitsPerComponent, img.ColorComponents)
 	common.Log.Trace("Len data: %d", len(img.Data))
 	common.Log.Trace("Height: %d, Width: %d", img.Height, img.Width)
 
-	decode := img.decode
-	if decode == nil {
-		decode = []float64{0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0}
-	}
-	if len(decode) != 8 {
-		common.Log.Debug("Invalid decode array (%d): %.3f", len(decode), decode)
-		return img, errors.New("invalid decode array")
-	}
-	common.Log.Trace("Decode array: %f", decode)
-
-	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
-	common.Log.Trace("MaxVal: %f", maxVal)
-
-	data := make([]byte, 3*img.Width*img.Height)
-	for l := 0; l < int(img.Height); l++ {
-		for x := 0; x < int(img.Width); x++ {
-			col, err := img.ColorAt(x, l)
-			if err != nil {
-				return img, err
-			}
-			cmyk, ok := col.(color.CMYK)
-			if !ok {
-				return img, errors.New("")
-			}
-
-			// Normalized c, m, y, k values.
-			c := interpolate(float64(cmyk.C), 0, maxVal, decode[0], decode[1])
-			m := interpolate(float64(cmyk.M), 0, maxVal, decode[2], decode[3])
-			y := interpolate(float64(cmyk.Y), 0, maxVal, decode[4], decode[5])
-			k := interpolate(float64(cmyk.K), 0, maxVal, decode[6], decode[7])
-
-			r := uint8(float64(1-(c*(1-k)+k)) * maxVal)
-			g := uint8(float64(1-(m*(1-k)+k)) * maxVal)
-			b := uint8(float64(1-(y*(1-k)+k)) * maxVal)
-
-			idx := (l*int(img.Width) + x) * 3
-			data[idx], data[idx+1], data[idx+2] = r, g, b
-		}
+	simg, err := imageutil.NewImage(int(img.Width), int(img.Height), int(img.BitsPerComponent), img.ColorComponents, img.Data, img.alphaData, img.decode)
+	if err != nil {
+		return Image{}, err
 	}
 
-	rgbImage.BitsPerComponent = 8
-	rgbImage.ColorComponents = 3
-	rgbImage.setBytesPerLine()
-	rgbImage.Data = data
-
-	return rgbImage, nil
+	iimg, err := imageutil.NRGBAConverter.Convert(simg)
+	if err != nil {
+		return Image{}, err
+	}
+	return imageFromBase(iimg.Base()), nil
 }
 
 //////////////////////
@@ -987,7 +928,6 @@ func (cs *PdfColorspaceCalGray) ImageToRGB(img Image) (Image, error) {
 		rgbSamples = append(rgbSamples, R, G, B)
 	}
 	rgbImage.ColorComponents = 3
-	rgbImage.setBytesPerLine()
 	rgbImage.SetSamples(rgbSamples)
 
 	return rgbImage, nil
@@ -1337,7 +1277,6 @@ func (cs *PdfColorspaceCalRGB) ImageToRGB(img Image) (Image, error) {
 		rgbSamples = append(rgbSamples, R, G, B)
 	}
 	rgbImage.ColorComponents = 3
-	rgbImage.setBytesPerLine()
 	rgbImage.SetSamples(rgbSamples)
 
 	return rgbImage, nil
@@ -1690,9 +1629,9 @@ func (cs *PdfColorspaceLab) ImageToRGB(img Image) (Image, error) {
 		ANorm := float64(samples[i+1]) / maxVal
 		BNorm := float64(samples[i+2]) / maxVal
 
-		LStar := interpolate(LNorm, 0.0, 1.0, componentRanges[0], componentRanges[1])
-		AStar := interpolate(ANorm, 0.0, 1.0, componentRanges[2], componentRanges[3])
-		BStar := interpolate(BNorm, 0.0, 1.0, componentRanges[4], componentRanges[5])
+		LStar := imageutil.LinearInterpolate(LNorm, 0.0, 1.0, componentRanges[0], componentRanges[1])
+		AStar := imageutil.LinearInterpolate(ANorm, 0.0, 1.0, componentRanges[2], componentRanges[3])
+		BStar := imageutil.LinearInterpolate(BNorm, 0.0, 1.0, componentRanges[4], componentRanges[5])
 
 		// Convert L*,a*,b* -> L, M, N
 		L := (LStar+16)/116 + AStar/500
@@ -1724,7 +1663,6 @@ func (cs *PdfColorspaceLab) ImageToRGB(img Image) (Image, error) {
 		rgbSamples = append(rgbSamples, R, G, B)
 	}
 	rgbImage.ColorComponents = 3
-	rgbImage.setBytesPerLine()
 	rgbImage.SetSamples(rgbSamples)
 
 	return rgbImage, nil
@@ -2009,7 +1947,7 @@ func (cs *PdfColorspaceICCBased) ColorToRGB(color PdfColor) (PdfColor, error) {
 			return color, nil
 		} else if cs.N == 4 {
 			common.Log.Debug("ICC Based colorspace missing alternative - using DeviceCMYK (N=4)")
-			// CMYK
+			// CMYK32
 			cmykCS := NewPdfColorspaceDeviceCMYK()
 			return cmykCS.ColorToRGB(color)
 		} else {
@@ -2035,7 +1973,7 @@ func (cs *PdfColorspaceICCBased) ImageToRGB(img Image) (Image, error) {
 			return img, nil
 		} else if cs.N == 4 {
 			common.Log.Debug("ICC Based colorspace missing alternative - using DeviceCMYK (N=4)")
-			// CMYK
+			// CMYK32
 			cmykCS := NewPdfColorspaceDeviceCMYK()
 			return cmykCS.ImageToRGB(img)
 		} else {
@@ -2441,7 +2379,6 @@ func (cs *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 		}
 	}
 	baseImage.ColorComponents = N
-	baseImage.setBytesPerLine()
 	baseImage.SetSamples(baseSamples)
 
 	common.Log.Trace("Input samples: %d", samples)
@@ -2658,7 +2595,7 @@ func (cs *PdfColorspaceSpecialSeparation) ImageToRGB(img Image) (Image, error) {
 
 		for i, val := range outputs {
 			// Convert component value to 0-1 range.
-			altVal := interpolate(val, altDecode[i*2], altDecode[i*2+1], 0, 1)
+			altVal := imageutil.LinearInterpolate(val, altDecode[i*2], altDecode[i*2+1], 0, 1)
 
 			// Rescale to [0, maxVal]
 			altComponent := uint32(altVal * maxVal)
@@ -2668,7 +2605,6 @@ func (cs *PdfColorspaceSpecialSeparation) ImageToRGB(img Image) (Image, error) {
 	}
 	common.Log.Trace("Samples out: %d", len(altSamples))
 	altImage.ColorComponents = cs.AlternateSpace.GetNumComponents()
-	altImage.setBytesPerLine()
 	altImage.SetSamples(altSamples)
 
 	// Set the image's decode parameters for interpretation in the alternative CS.
@@ -2884,7 +2820,6 @@ func (cs *PdfColorspaceDeviceN) ImageToRGB(img Image) (Image, error) {
 			altSamples = append(altSamples, altComponent)
 		}
 	}
-	altImage.setBytesPerLine()
 	altImage.SetSamples(altSamples)
 
 	// Convert to RGB via the alternate colorspace.

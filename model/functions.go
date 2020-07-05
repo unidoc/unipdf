@@ -11,6 +11,7 @@ import (
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
+	"github.com/unidoc/unipdf/v3/internal/imageutil"
 	"github.com/unidoc/unipdf/v3/internal/sampling"
 	"github.com/unidoc/unipdf/v3/ps"
 )
@@ -84,16 +85,6 @@ func newPdfFunctionFromPdfObject(obj core.PdfObject) (PdfFunction, error) {
 		common.Log.Debug("Function Type error: %#v", obj)
 		return nil, errors.New("type error")
 	}
-}
-
-// Simple linear interpolation from the PDF manual.
-func interpolate(x, xmin, xmax, ymin, ymax float64) float64 {
-	if math.Abs(xmax-xmin) < 0.000001 {
-		return ymin
-	}
-
-	y := ymin + (x-xmin)*(ymax-ymin)/(xmax-xmin)
-	return y
 }
 
 // PdfFunctionType0 uses a sequence of sample values (contained in a stream) to provide an approximation
@@ -308,7 +299,7 @@ func (f *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 
 		// See section 7.10.2 Type 0 (Sampled) Functions (pp. 93-94 PDF32000_2008).
 		xip := math.Min(math.Max(xi, f.Domain[2*i]), f.Domain[2*i+1])
-		ei := interpolate(xip, f.Domain[2*i], f.Domain[2*i+1], encode[2*i], encode[2*i+1])
+		ei := imageutil.LinearInterpolate(xip, f.Domain[2*i], f.Domain[2*i+1], encode[2*i], encode[2*i+1])
 		eip := math.Min(math.Max(ei, 0), float64(f.Size[i]-1))
 		// eip represents coordinate into the data table.
 		// At this point it is real values.
@@ -342,7 +333,7 @@ func (f *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 	var outputs []float64
 	for j := 0; j < f.NumOutputs; j++ {
 		rj := f.data[m+j]
-		rjp := interpolate(float64(rj), 0, math.Pow(2, float64(f.BitsPerSample)), decode[2*j], decode[2*j+1])
+		rjp := imageutil.LinearInterpolate(float64(rj), 0, math.Pow(2, float64(f.BitsPerSample)), decode[2*j], decode[2*j+1])
 		yj := math.Min(math.Max(rjp, f.Range[2*j]), f.Range[2*j+1])
 		outputs = append(outputs, yj)
 	}

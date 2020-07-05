@@ -413,7 +413,7 @@ func GoImageToJBIG2(i image.Image, bwThreshold float64) (*JBIG2Image, error) {
 	if bwThreshold == JB2ImageAutoThreshold {
 		// autoThreshold using triangle method
 		gray := imageutil.ImgToGray(i)
-		histogram := imageutil.GrayImageHistogram(gray)
+		histogram := imageutil.GrayHistogram(gray)
 		th = imageutil.AutoThresholdTriangle(histogram)
 		i = gray
 	} else if bwThreshold > 1.0 || bwThreshold < 0.0 {

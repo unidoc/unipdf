@@ -34,6 +34,7 @@ import (
 	lzw1 "golang.org/x/image/tiff/lzw"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/imageutil"
 
 	"github.com/unidoc/unipdf/v3/internal/ccittfax"
 )
@@ -730,6 +731,7 @@ func (enc *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) 
 		if enc.Predictor == 2 { // TIFF encoding: Needs some tests.
 			common.Log.Trace("Tiff encoding")
 
+			// TODO(kucjac): check if needed to optimize rowLength.
 			rowLength := int(enc.Columns) * enc.Colors
 			if rowLength < 1 {
 				// No data. Return empty set.
@@ -1003,6 +1005,7 @@ func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	}
 	bounds := img.Bounds()
 
+	// TODO(kucjac): check if we can change the size of the rows when the BPC < 8
 	var decoded = make([]byte, bounds.Dx()*bounds.Dy()*enc.ColorComponents*enc.BitsPerComponent/8)
 	index := 0
 
@@ -1010,10 +1013,10 @@ func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 		for i := bounds.Min.X; i < bounds.Max.X; i++ {
 			color := img.At(i, j)
 
-			// Gray scale.
+			// Gray8 scale.
 			if enc.ColorComponents == 1 {
 				if enc.BitsPerComponent == 16 {
-					// Gray - 16 bit.
+					// Gray8 - 16 bit.
 					val, ok := color.(gocolor.Gray16)
 					if !ok {
 						return nil, errors.New("color type error")
@@ -1023,7 +1026,7 @@ func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 					decoded[index] = byte(val.Y & 0xff)
 					index++
 				} else {
-					// Gray - 8 bit.
+					// Gray8 - 8 bit.
 					val, ok := color.(gocolor.Gray)
 					if !ok {
 						return nil, errors.New("color type error")
@@ -1071,7 +1074,7 @@ func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 						// data into YCbCr with some kind of mapping, or that the original
 						// data is not in R,G,B...
 						// TODO: This is not good as it means we end up with R, G, B... even
-						// if the original colormap was different.  Unless calling the RGBA()
+						// if the original colormap was different.  Unless calling the NRGBA32()
 						// call exactly reverses the previous conversion to YCbCr (even if
 						// real data is not rgb)... ?
 						// TODO: Test more. Consider whether we need to implement our own jpeg filter.
@@ -1084,7 +1087,7 @@ func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 					}
 				}
 			} else if enc.ColorComponents == 4 {
-				// CMYK - 8 bit.
+				// CMYK32 - 8 bit.
 				val, ok := color.(gocolor.CMYK)
 				if !ok {
 					return nil, errors.New("color type error")
@@ -1122,92 +1125,19 @@ type DrawableImage interface {
 
 // EncodeBytes DCT encodes the passed in slice of bytes.
 func (enc *DCTEncoder) EncodeBytes(data []byte) ([]byte, error) {
-	bounds := goimage.Rect(0, 0, enc.Width, enc.Height)
-	var img DrawableImage
-	if enc.ColorComponents == 1 {
-		if enc.BitsPerComponent == 16 {
-			img = goimage.NewGray16(bounds)
-		} else {
-			img = goimage.NewGray(bounds)
-		}
-	} else if enc.ColorComponents == 3 {
-		if enc.BitsPerComponent == 16 {
-			img = goimage.NewRGBA64(bounds)
-		} else {
-			img = goimage.NewRGBA(bounds)
-		}
-	} else if enc.ColorComponents == 4 {
-		img = goimage.NewCMYK(bounds)
-	} else {
-		return nil, errors.New("unsupported")
-	}
-
-	// Draw the data on the image..
-	if enc.BitsPerComponent < 8 {
-		// TODO(kucjac) enable bits per component < 8
-		enc.BitsPerComponent = 8
-	}
-
-	bytesPerColor := enc.ColorComponents * enc.BitsPerComponent / 8
-	if bytesPerColor < 1 {
-		bytesPerColor = 1
-	}
-
-	x := 0
-	var i int
-	for y := 0; y < enc.Height; y++ {
-		for i := 0; i < bytesPerLine; i++ {
-
-		}
-	}
-	for i := 0; i+bytesPerColor-1 < len(data); i += bytesPerColor {
-		var c gocolor.Color
-		if enc.ColorComponents == 1 {
-			if enc.BitsPerComponent == 16 {
-				val := uint16(data[i])<<8 | uint16(data[i+1])
-				c = gocolor.Gray16{val}
-			} else {
-				val := uint8(data[i] & 0xff)
-				c = gocolor.Gray{val}
-			}
-		} else if enc.ColorComponents == 3 {
-			if enc.BitsPerComponent == 16 {
-				r := uint16(data[i])<<8 | uint16(data[i+1])
-				g := uint16(data[i+2])<<8 | uint16(data[i+3])
-				b := uint16(data[i+4])<<8 | uint16(data[i+5])
-				c = gocolor.RGBA64{R: r, G: g, B: b, A: 0}
-			} else {
-				r := uint8(data[i] & 0xff)
-				g := uint8(data[i+1] & 0xff)
-				b := uint8(data[i+2] & 0xff)
-				c = gocolor.RGBA{R: r, G: g, B: b, A: 0}
-			}
-		} else if enc.ColorComponents == 4 {
-			c1 := uint8(data[i] & 0xff)
-			m1 := uint8(data[i+1] & 0xff)
-			y1 := uint8(data[i+2] & 0xff)
-			k1 := uint8(data[i+3] & 0xff)
-			c = gocolor.CMYK{C: c1, M: m1, Y: y1, K: k1}
-		}
-
-		img.Set(x, y, c)
-		x++
-		if x == enc.Width {
-			x = 0
-			y++
-		}
+	img, err := imageutil.NewImage(enc.Width, enc.Height, enc.BitsPerComponent, enc.ColorComponents, data, nil, nil)
+	if err != nil {
+		return nil, err
 	}
 
 	// The quality is specified from 0-100 (with 100 being the best quality) in the DCT structure.
 	// N.B. even 100 is lossy, as still is transformed, but as good as it gets for DCT.
 	// This is not related to the DPI, but rather inherent transformation losses.
-
 	opt := jpeg.Options{}
 	opt.Quality = enc.Quality
 
 	var buf bytes.Buffer
-	err := jpeg.Encode(&buf, img, &opt)
-	if err != nil {
+	if err = jpeg.Encode(&buf, img, &opt); err != nil {
 		return nil, err
 	}
 

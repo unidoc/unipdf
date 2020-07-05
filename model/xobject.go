@@ -546,7 +546,6 @@ func (ximg *XObjectImage) ToImage() (*Image, error) {
 		}
 		image.decode = decode
 	}
-	image.setBytesPerLine()
 
 	return image, nil
 }

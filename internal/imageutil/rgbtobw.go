@@ -92,10 +92,17 @@ func AutoThresholdTriangle(histogram [256]int) uint8 {
 	return uint8(split)
 }
 
-// GrayImageHistogram gets histogram for the provided Gray 'img'.
-func GrayImageHistogram(img *image.Gray) (histogram [256]int) {
-	for _, pix := range img.Pix {
-		histogram[pix]++
+// GrayHistogram gets histogram for the provided Gray8 'img'.
+func GrayHistogram(g Gray) (histogram [256]int) {
+	img, ok := g.(image.Image)
+	if !ok {
+		return [256]int{}
+	}
+	bounds := img.Bounds()
+	for x := 0; x < bounds.Max.X; x++ {
+		for y := 0; y < bounds.Max.Y; y++ {
+			histogram[g.GrayAt(x, y).Y]++
+		}
 	}
 	return histogram
 }
@@ -156,7 +163,7 @@ func gray16ImageToBlackWhite(img *image.Gray16, th uint8) *image.Gray {
 }
 
 // grayImageToBlackWhite gets black and white image on the base of provided
-// Gray 'img' and a threshold 'th'.
+// Gray8 'img' and a threshold 'th'.
 func grayImageToBlackWhite(img *image.Gray, th uint8) *image.Gray {
 	bounds := img.Bounds()
 	d := image.NewGray(bounds)

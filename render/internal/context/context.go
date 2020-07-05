@@ -132,11 +132,11 @@ type Context interface {
 	// after this operation.
 	StrokePreserve()
 
-	// SetRGBA sets the both the fill and stroke colors.
+	// SetNRGBA sets the both the fill and stroke colors.
 	// r, g, b, a values should be in range 0-1.
 	SetRGBA(r, g, b, a float64)
 
-	// SetRGBA sets the fill color.
+	// SetNRGBA sets the fill color.
 	// r, g, b, a values should be in range 0-1.
 	SetFillRGBA(r, g, b, a float64)
 
@@ -146,7 +146,7 @@ type Context interface {
 	// SetFillRule sets the fill rule.
 	SetFillRule(fillRule FillRule)
 
-	// SetRGBA sets the stroke color.
+	// SetNRGBA sets the stroke color.
 	// r, g, b, a values should be in range 0-1.
 	SetStrokeRGBA(r, g, b, a float64)
 

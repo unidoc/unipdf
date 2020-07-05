@@ -12,6 +12,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/unidoc/unipdf/v3/internal/imageutil"
 )
 
 func TestImageResampling(t *testing.T) {
@@ -34,7 +36,6 @@ func TestImageResampling(t *testing.T) {
 	img.Width = 4
 	img.ColorComponents = 1
 	img.Height = 1
-	img.setBytesPerLine()
 
 	img.Resample(1)
 	if len(img.Data) != 1 {
@@ -57,7 +58,7 @@ func TestImageResampling(t *testing.T) {
 	img.Width = 12
 	img.ColorComponents = 1
 	img.Height = 1
-	img.setBytesPerLine()
+
 	img.Resample(1)
 
 	if len(img.Data) != 2 {
@@ -90,7 +91,7 @@ func TestImageColorAt(t *testing.T) {
 
 		t.Run("NoPadding", func(t *testing.T) {
 			img.Width = 16
-			img.setBytesPerLine()
+
 			c, err := img.ColorAt(3, 0)
 			require.NoError(t, err)
 			if y := c.(color.Gray).Y; y != 255 {
@@ -106,7 +107,6 @@ func TestImageColorAt(t *testing.T) {
 
 		t.Run("WithPadding", func(t *testing.T) {
 			img.Width = 12
-			img.setBytesPerLine()
 
 			c, err := img.ColorAt(3, 0)
 			require.NoError(t, err)
@@ -128,7 +128,6 @@ func TestImageColorAt(t *testing.T) {
 		t.Run("NoPadding", func(t *testing.T) {
 			img.Width = 4
 			img.Height = 6
-			img.setBytesPerLine()
 
 			c, err := img.ColorAt(0, 2)
 			require.NoError(t, err)
@@ -146,7 +145,6 @@ func TestImageColorAt(t *testing.T) {
 		t.Run("WithPadding", func(t *testing.T) {
 			img.Width = 7
 			img.Height = 3
-			img.setBytesPerLine()
 
 			c, err := img.ColorAt(0, 2)
 			require.NoError(t, err)
@@ -174,7 +172,6 @@ func TestImageColorAt(t *testing.T) {
 		t.Run("NoPadding", func(t *testing.T) {
 			img.Width = 4
 			img.Height = 3
-			img.setBytesPerLine()
 
 			c, err := img.ColorAt(0, 0)
 			require.NoError(t, err)
@@ -192,7 +189,6 @@ func TestImageColorAt(t *testing.T) {
 		t.Run("WithPadding", func(t *testing.T) {
 			img.Width = 3
 			img.Height = 3
-			img.setBytesPerLine()
 
 			c, err := img.ColorAt(0, 0)
 			require.NoError(t, err)
@@ -220,7 +216,6 @@ func TestImageColorAt(t *testing.T) {
 		img.Height = 3
 		img.ColorComponents = 1
 		img.BitsPerComponent = 8
-		img.setBytesPerLine()
 
 		c, err := img.ColorAt(1, 0)
 		require.NoError(t, err)
@@ -241,12 +236,12 @@ func TestImageColorAt(t *testing.T) {
 		img.Height = 3
 		img.ColorComponents = 1
 		img.BitsPerComponent = 16
-		img.setBytesPerLine()
 
 		c, err := img.ColorAt(0, 0)
 		require.NoError(t, err)
-		if y := c.(color.Gray16).Y; y != 32656 {
-			t.Errorf("Expected 32656. Got %d.", y) // Bytes 127 and 144.
+		expected := uint16(img.Data[0])<<8 | uint16(img.Data[1])
+		if y := c.(color.Gray16).Y; y != expected {
+			t.Errorf("Expected %d. Got %d.", expected, y) // Bytes 127 and 144.
 		}
 
 		c, err = img.ColorAt(0, 1)
@@ -263,39 +258,37 @@ func TestImageColorAt(t *testing.T) {
 		t.Run("NoPadding", func(t *testing.T) {
 			img.Width = 2
 			img.Height = 2
-			img.setBytesPerLine()
 
 			c, err := img.ColorAt(1, 0)
 			require.NoError(t, err)
 			r, g, b, _ := c.RGBA()
 			if v := r >> 8; v != 0 {
-				t.Errorf("Expected 0 for R component. Got %d.", v) // b'0000' translated in 0-255 range.
+				t.Errorf("Expected 0 for R component. Got '%08b'.", v) // b'0000' translated in 0-255 range.
 			}
 			if v := g >> 8; v != 68 {
-				t.Errorf("Expected 68 for G component. Got %d.", v) // b'0100' translated in 0-255 range.
+				t.Errorf("Expected '%08b' for G component. Got '%08b'.", 68, v) // b'0100' translated in 0-255 range.
 			}
 			if v := b >> 8; v != 0 {
-				t.Errorf("Expected 0 for B component. Got %d.", v) // b'0000' translated in 0-255 range.
+				t.Errorf("Expected 0 for B component. Got '%08b'.", v) // b'0000' translated in 0-255 range.
 			}
 
 			c, err = img.ColorAt(1, 1)
 			require.NoError(t, err)
 			r, g, b, _ = c.RGBA()
 			if v := r >> 8; v != 238 {
-				t.Errorf("Expected 238 for R component. Got %d.", v) // b'1110' translated in 0-255 range.
+				t.Errorf("Expected '%08b' for R component. Got '%08b'.", 238, v) // b'1110' translated in 0-255 range.
 			}
 			if v := g >> 8; v != 34 {
-				t.Errorf("Expected 34 for G component. Got %d.", v) // b'0010' translated in 0-255 range.
+				t.Errorf("Expected '%08b' for G component. Got '%08b'.", 34, v) // b'0010' translated in 0-255 range.
 			}
 			if v := b >> 8; v != 85 {
-				t.Errorf("Expected 85 for B component. Got %d.", v) // b'0101' translated in 0-255 range.
+				t.Errorf("Expected '%08b' for B component. Got '%08b'.", 85, v) // b'0101' translated in 0-255 range.
 			}
 		})
 
 		t.Run("WithPadding", func(t *testing.T) {
 			img.Width = 1
 			img.Height = 3
-			img.setBytesPerLine()
 
 			c, err := img.ColorAt(0, 1)
 			require.NoError(t, err)
@@ -317,7 +310,6 @@ func TestImageColorAt(t *testing.T) {
 		img.Height = 1
 		img.BitsPerComponent = 8
 		img.ColorComponents = 3
-		img.setBytesPerLine()
 
 		c, err := img.ColorAt(0, 0)
 		require.NoError(t, err)
@@ -352,7 +344,6 @@ func TestImageColorAt(t *testing.T) {
 		img.Height = 2
 		img.BitsPerComponent = 16
 		img.ColorComponents = 3
-		img.setBytesPerLine()
 
 		img.Data = []byte{
 			// 01111111 10010000
@@ -407,27 +398,26 @@ func TestImageColorAt(t *testing.T) {
 			// 00001101 00110011 10100111 10111101	00000000 00000000 00000000 00000000
 			13, 51, 167, 189, 0, 0, 0, 0,
 		}
-		img.setBytesPerLine()
 
 		c, err := img.ColorAt(0, 0)
 		require.NoError(t, err)
 		cc := c.(color.CMYK)
 		if cc.C != 127 || cc.M != 144 || cc.Y != 64 || cc.K != 93 {
-			t.Errorf("Expected CMYK values (127,144,64,93). Got (%d,%d,%d,%d).", cc.C, cc.M, cc.Y, cc.K)
+			t.Errorf("Expected CMYK32 values (127,144,64,93). Got (%d,%d,%d,%d).", cc.C, cc.M, cc.Y, cc.K)
 		}
 
 		c, err = img.ColorAt(1, 0)
 		require.NoError(t, err)
 		cc = c.(color.CMYK)
 		if cc.C != 158 || cc.M != 37 || cc.Y != 44 || cc.K != 78 {
-			t.Errorf("Expected CMYK values (158,37,44,78). Got (%d,%d,%d,%d).", cc.C, cc.M, cc.Y, cc.K)
+			t.Errorf("Expected CMYK32 values (158,37,44,78). Got (%d,%d,%d,%d).", cc.C, cc.M, cc.Y, cc.K)
 		}
 
 		c, err = img.ColorAt(0, 1)
 		require.NoError(t, err)
 		cc = c.(color.CMYK)
 		if cc.C != 13 || cc.M != 51 || cc.Y != 167 || cc.K != 189 {
-			t.Errorf("Expected CMYK values (13,51,167,189). Got (%d,%d,%d,%d).", cc.C, cc.M, cc.Y, cc.K)
+			t.Errorf("Expected CMYK32 values (13,51,167,189). Got (%d,%d,%d,%d).", cc.C, cc.M, cc.Y, cc.K)
 		}
 	})
 }
@@ -542,7 +532,7 @@ func BenchmarkColorAtFull(b *testing.B) {
 		{
 			BitsPerComponent: 8,
 			ColorComponents:  4,
-			Name:             "CMYK",
+			Name:             "CMYK32",
 		},
 	}
 	img := &Image{}
@@ -552,8 +542,9 @@ func BenchmarkColorAtFull(b *testing.B) {
 		img.Height = 1024
 		img.BitsPerComponent = suite.BitsPerComponent
 		img.ColorComponents = suite.ColorComponents
-		img.setBytesPerLine()
-		img.Data = make([]byte, img.BytesPerLine*int(img.Height))
+
+		bytesPerLine := imageutil.BytesPerLine(int(img.Width), int(suite.BitsPerComponent), suite.ColorComponents)
+		img.Data = make([]byte, bytesPerLine*int(img.Height))
 
 		b.Run(suite.Name, func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
@@ -574,20 +565,67 @@ func BenchmarkColorAtRGB(b *testing.B) {
 		Name             string
 		ColorAtFunc      func(x, y int) (color.RGBA, error)
 	}
-
 	img := &Image{}
 	suites := []*benchmarkSuite{
 		{
 			BitsPerComponent: 4,
 			ColorComponents:  3,
 			Name:             "4BPC",
-			ColorAtFunc:      img.rgb4BPCColorAt,
 		},
 		{
 			BitsPerComponent: 8,
 			ColorComponents:  3,
 			Name:             "8BPC",
-			ColorAtFunc:      img.rgb8BPCColorAt,
+		},
+		{
+			BitsPerComponent: 16,
+			ColorComponents:  3,
+			Name:             "16BPC",
+		},
+	}
+
+	for _, suite := range suites {
+		img.Width = 1024
+		img.Height = 1024
+		img.BitsPerComponent = suite.BitsPerComponent
+		img.ColorComponents = suite.ColorComponents
+		bytesPerLine := imageutil.BytesPerLine(int(img.Width), int(suite.BitsPerComponent), suite.ColorComponents)
+		img.Data = make([]byte, bytesPerLine*int(img.Height))
+		b.Run(suite.Name, func(b *testing.B) {
+			for n := 0; n < b.N; n++ {
+				for y := 0; y < int(img.Height); y++ {
+					for x := 0; x < int(img.Width); x++ {
+						_, _ = imageutil.ColorAtNRGBA(x, y, int(img.Width), bytesPerLine, int(img.BitsPerComponent), img.Data, img.alphaData, nil)
+					}
+				}
+			}
+		})
+	}
+}
+
+func BenchmarkColorAtImageRGB(b *testing.B) {
+	type benchmarkSuite struct {
+		BitsPerComponent int64
+		ColorComponents  int
+		Name             string
+		ColorAtFunc      func(x, y int) (color.RGBA, error)
+	}
+	img := &Image{}
+	suites := []*benchmarkSuite{
+		{
+			BitsPerComponent: 4,
+			ColorComponents:  3,
+			Name:             "4BPC",
+		},
+		{
+			BitsPerComponent: 8,
+			ColorComponents:  3,
+			Name:             "8BPC",
+		},
+		{
+			BitsPerComponent: 16,
+			ColorComponents:  3,
+			Name:             "16BPC",
 		},
 	}
 
@@ -597,13 +635,14 @@ func BenchmarkColorAtRGB(b *testing.B) {
 		img.BitsPerComponent = suite.BitsPerComponent
 		img.ColorComponents = suite.ColorComponents
 
-		img.setBytesPerLine()
-		img.Data = make([]byte, img.BytesPerLine*int(img.Height))
+		iimg, err := imageutil.NewImage(int(img.Width), int(img.Height), int(img.BitsPerComponent), img.ColorComponents, nil, nil, nil)
+		require.NoError(b, err)
+
 		b.Run(suite.Name, func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
 				for y := 0; y < int(img.Height); y++ {
 					for x := 0; x < int(img.Width); x++ {
-						suite.ColorAtFunc(x, y)
+						_, _ = iimg.ColorAt(x, y)
 					}
 				}
 			}
@@ -616,28 +655,33 @@ func BenchmarkColorAtGray(b *testing.B) {
 		BitsPerComponent int64
 		ColorComponents  int
 		Name             string
-		ColorAtFunc      func(x, y int) (color.Gray, error)
+		ColorAtFunc      func(x, y, bytesPerLine int, data []byte, decode []float64) (color.Gray, error)
 	}
-
 	img := &Image{}
 	suites := []*benchmarkSuite{
 		{
 			BitsPerComponent: 1,
 			ColorComponents:  1,
 			Name:             "1BPC",
-			ColorAtFunc:      img.grayscaleBitColorAt,
+			ColorAtFunc:      imageutil.ColorAtGray1BPC,
+		},
+		{
+			BitsPerComponent: 2,
+			ColorComponents:  1,
+			Name:             "2BPC",
+			ColorAtFunc:      imageutil.ColorAtGray2BPC,
 		},
 		{
 			BitsPerComponent: 4,
 			ColorComponents:  1,
 			Name:             "4BPC",
-			ColorAtFunc:      img.grayscaleQBitColorAt,
+			ColorAtFunc:      imageutil.ColorAtGray4BPC,
 		},
 		{
 			BitsPerComponent: 8,
 			ColorComponents:  1,
 			Name:             "8BPC",
-			ColorAtFunc:      img.grayscale8bitColorAt,
+			ColorAtFunc:      imageutil.ColorAtGray8BPC,
 		},
 	}
 
@@ -647,13 +691,14 @@ func BenchmarkColorAtGray(b *testing.B) {
 		img.BitsPerComponent = suite.BitsPerComponent
 		img.ColorComponents = suite.ColorComponents
 
-		img.setBytesPerLine()
-		img.Data = make([]byte, img.BytesPerLine*int(img.Height))
+		bytesPerLine := imageutil.BytesPerLine(int(img.Width), int(suite.BitsPerComponent), suite.ColorComponents)
+		img.Data = make([]byte, bytesPerLine*int(img.Height))
+
 		b.Run(suite.Name, func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
 				for y := 0; y < int(img.Height); y++ {
 					for x := 0; x < int(img.Width); x++ {
-						suite.ColorAtFunc(x, y)
+						_, _ = suite.ColorAtFunc(x, y, bytesPerLine, img.Data, nil)
 					}
 				}
 			}
@@ -667,16 +712,21 @@ func BenchmarkColorAtRGB8BPC(b *testing.B) {
 	img.Height = 1024
 	img.BitsPerComponent = 8
 	img.ColorComponents = 3
-	img.setBytesPerLine()
-	img.Data = make([]byte, img.BytesPerLine*int(img.Height))
+
+	bytesPerLine := imageutil.BytesPerLine(int(img.Width), int(img.BitsPerComponent), img.ColorComponents)
+	img.Data = make([]byte, bytesPerLine*int(img.Height))
 	b.StartTimer()
+	// This variable is used only to get color.Color interface  - otherwise the benchmark is not well comparable.
+	var cl color.Color
 	for n := 0; n < b.N; n++ {
 		for y := 0; y < int(img.Height); y++ {
 			for x := 0; x < int(img.Width); x++ {
-				_, _ = img.rgb8BPCColorAt(x, y)
+				cl, _ = imageutil.ColorAtNRGBA32(x, y, int(img.Width), img.Data, img.alphaData, nil)
 			}
 		}
 	}
+	b.StopTimer()
+	cl.RGBA()
 }
 
 func BenchmarkColorAtFullRGB8BPC(b *testing.B) {
@@ -685,13 +735,36 @@ func BenchmarkColorAtFullRGB8BPC(b *testing.B) {
 	img.Height = 1024
 	img.BitsPerComponent = 8
 	img.ColorComponents = 3
-	img.setBytesPerLine()
-	img.Data = make([]byte, img.BytesPerLine*int(img.Height))
+
+	bytesPerLine := imageutil.BytesPerLine(int(img.Width), int(img.BitsPerComponent), img.ColorComponents)
+	img.Data = make([]byte, bytesPerLine*int(img.Height))
 	b.StartTimer()
+
 	for n := 0; n < b.N; n++ {
 		for y := 0; y < int(img.Height); y++ {
 			for x := 0; x < int(img.Width); x++ {
 				_, _ = img.ColorAt(x, y)
+			}
+		}
+	}
+}
+
+func BenchmarkColorAtImageRGB8BPC(b *testing.B) {
+	img := &Image{}
+	img.Width = 1024
+	img.Height = 1024
+	img.BitsPerComponent = 8
+	img.ColorComponents = 3
+
+	iImg, err := imageutil.NewImage(int(img.Width), int(img.Height), int(img.BitsPerComponent), img.ColorComponents, nil, nil, nil)
+	require.NoError(b, err)
+
+	b.StartTimer()
+
+	for n := 0; n < b.N; n++ {
+		for y := 0; y < int(img.Height); y++ {
+			for x := 0; x < int(img.Width); x++ {
+				_, _ = iImg.ColorAt(x, y)
 			}
 		}
 	}
@@ -703,13 +776,14 @@ func BenchmarkColorAtGray8BPC(b *testing.B) {
 	img.Height = 1024
 	img.BitsPerComponent = 8
 	img.ColorComponents = 1
-	img.setBytesPerLine()
-	img.Data = make([]byte, img.BytesPerLine*int(img.Height))
+
+	bytesPerLine := imageutil.BytesPerLine(int(img.Width), int(img.BitsPerComponent), img.ColorComponents)
+	img.Data = make([]byte, bytesPerLine*int(img.Height))
 	b.StartTimer()
 	for n := 0; n < b.N; n++ {
 		for y := 0; y < int(img.Height); y++ {
 			for x := 0; x < int(img.Width); x++ {
-				_, _ = img.grayscale8bitColorAt(x, y)
+				_, _ = imageutil.ColorAtGray8BPC(x, y, bytesPerLine, img.Data, nil)
 			}
 		}
 	}
@@ -721,8 +795,9 @@ func BenchmarkColorAtFullGray8BPC(b *testing.B) {
 	img.Height = 1024
 	img.BitsPerComponent = 8
 	img.ColorComponents = 1
-	img.setBytesPerLine()
-	img.Data = make([]byte, img.BytesPerLine*int(img.Height))
+
+	bytesPerLine := imageutil.BytesPerLine(int(img.Width), int(img.BitsPerComponent), img.ColorComponents)
+	img.Data = make([]byte, bytesPerLine*int(img.Height))
 	b.StartTimer()
 	for n := 0; n < b.N; n++ {
 		for y := 0; y < int(img.Height); y++ {
@@ -730,5 +805,22 @@ func BenchmarkColorAtFullGray8BPC(b *testing.B) {
 				_, _ = img.ColorAt(x, y)
 			}
 		}
+	}
+}
+
+func BenchmarkDeviceRGBConvertToGray(b *testing.B) {
+	img := Image{}
+	img.Width = 1024
+	img.Height = 1024
+	img.BitsPerComponent = 8
+	img.ColorComponents = 3
+
+	bytesPerLine := imageutil.BytesPerLine(int(img.Width), int(img.BitsPerComponent), img.ColorComponents)
+	img.Data = make([]byte, bytesPerLine*int(img.Height))
+
+	g := NewPdfColorspaceDeviceRGB()
+
+	for i := 0; i < b.N; i++ {
+		_, _ = g.ImageToGray(img)
 	}
 }
