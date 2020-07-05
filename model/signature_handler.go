@@ -41,10 +41,17 @@ type SignatureHandlerEx interface {
 // SignatureValidationResult defines the response from the signature validation handler.
 type SignatureValidationResult struct {
 	// List of errors when validating the signature.
-	Errors      []string
-	IsSigned    bool
-	IsVerified  bool
-	IsTrusted   bool
+	Errors     []string
+	IsSigned   bool
+	IsVerified bool
+	IsTrusted  bool
+
+	IsVRIFound        bool
+	IsOCSPsFound      bool
+	IsVerifiedByOCSPs bool
+	IsCLRsFound       bool
+	IsVerifiedByCLRs  bool
+
 	Fields      []*PdfField
 	Name        string
 	Date        PdfDate

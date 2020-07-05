@@ -1882,18 +1882,19 @@ To run this test
 		return
 	}
 
-	f, _ := ioutil.ReadFile("./testdata/tinycert/cert.pfx")
-
-	blocks, err := pkcs12.ToPEM(f, pass)
+	f, err := ioutil.ReadFile("./testdata/tinycert/cert.pfx")
 	if err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return
 	}
-	log.Print(blocks)
 
 	privateKey, cert, err := pkcs12.Decode(f, pass)
 
-	caCertF, _ := ioutil.ReadFile("./testdata/tinycert/cacert.pem")
+	caCertF, err := ioutil.ReadFile("./testdata/tinycert/cacert.pem")
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
 
 	certDERBlock, _ := pem.Decode(caCertF)
 

@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package sighandler
 
 import (
@@ -6,7 +11,6 @@ import (
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/hex"
 	"errors"
@@ -298,7 +302,7 @@ func (a *etsiPAdES) Sign(sig *model.PdfSignature, digest model.Hasher) error {
 	}
 
 	h = sha1.New()
-	h.Write(detachedSignature)
+	h.Write(data)
 	key := strings.ToUpper(hex.EncodeToString(h.Sum(nil)))
 	stream, err := core.MakeStream(a.certificate.Raw, core.NewRawEncoder())
 	if err != nil {
@@ -332,7 +336,7 @@ func (a *etsiPAdES) Validate(sig *model.PdfSignature, digest model.Hasher) (mode
 	return a.ValidateEx(sig, digest, nil)
 }
 
-// ValidateEx validates PdfSignature with additional information.
+// ValidateEx validates PdfSignature with OCSP responses from the DSS dictionary from the PdfReader.
 func (a *etsiPAdES) ValidateEx(sig *model.PdfSignature, digest model.Hasher, r *model.PdfReader) (model.SignatureValidationResult, error) {
 	signed := sig.Contents.Bytes()
 
@@ -361,27 +365,13 @@ func (a *etsiPAdES) ValidateEx(sig *model.PdfSignature, digest model.Hasher, r *
 		}
 	}
 
-	var vriCLRs []*pkix.CertificateList
-
-	if vri != nil {
-		for _, stream := range vri.CLRs {
-			clr, err := x509.ParseCRL(stream.Stream)
-			if err != nil {
-				return model.SignatureValidationResult{}, err
-			}
-			vriCLRs = append(vriCLRs, clr)
-		}
-	}
-
-	var vriOCSPs []*ocsp.Response
-
-	if vri != nil {
-		for _, stream := range vri.OCSPs {
-			res, err := ocsp.ParseResponse(stream.Stream, nil)
-			if err != nil {
-				return model.SignatureValidationResult{}, err
-			}
-			vriOCSPs = append(vriOCSPs, res)
+	signer := p7.GetOnlySigner()
+	var issuer *x509.Certificate
+	for _, cert := range vriCertificates {
+		sn := cert.Subject.SerialNumber
+		cn := cert.Subject.CommonName
+		if sn == signer.Issuer.SerialNumber && cn == signer.Issuer.CommonName {
+			issuer = cert
 		}
 	}
 
@@ -392,10 +382,50 @@ func (a *etsiPAdES) ValidateEx(sig *model.PdfSignature, digest model.Hasher, r *
 		return model.SignatureValidationResult{}, err
 	}
 
-	return model.SignatureValidationResult{
+	result := model.SignatureValidationResult{
 		IsSigned:   true,
 		IsVerified: true,
-	}, nil
+		IsVRIFound: vri != nil,
+	}
+
+	if vri != nil {
+		result.IsOCSPsFound = len(vri.OCSPs) > 0
+		for i, stream := range vri.OCSPs {
+			if i == 0 {
+				result.IsVerifiedByOCSPs = true
+			}
+			if _, err := ocsp.ParseResponseForCert(stream.Stream, signer, issuer); err != nil {
+				result.Errors = append(result.Errors, err.Error())
+				result.IsVerifiedByOCSPs = false
+			}
+		}
+		result.IsCLRsFound = len(vri.CLRs) > 0
+		for i, stream := range vri.CLRs {
+			if i == 0 {
+				result.IsVerifiedByCLRs = true
+			}
+			clr, err := x509.ParseCRL(stream.Stream)
+			if err != nil {
+				result.Errors = append(result.Errors, err.Error())
+				result.IsVerifiedByCLRs = false
+				continue
+			}
+			for _, rc := range clr.TBSCertList.RevokedCertificates {
+				if rc.SerialNumber.Cmp(signer.SerialNumber) == 0 {
+					result.Errors = append(result.Errors, fmt.Sprintf("Certificate with SerialNumber %s is revoked", signer.SerialNumber.String()))
+					result.IsVerifiedByCLRs = false
+				}
+				for _, cert := range vriCertificates {
+					if rc.SerialNumber.Cmp(cert.SerialNumber) == 0 {
+						result.Errors = append(result.Errors, fmt.Sprintf("Certificate with SerialNumber %s is revoked", signer.SerialNumber.String()))
+						result.IsVerifiedByCLRs = false
+					}
+				}
+			}
+		}
+	}
+
+	return result, nil
 }
 
 // IsApplicable returns true if the signature handler is applicable for the PdfSignature.
