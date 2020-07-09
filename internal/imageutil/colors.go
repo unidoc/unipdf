@@ -29,7 +29,7 @@ var (
 	GrayConverter       = ConverterFunc(grayConverter)
 	Gray16Converter     = ConverterFunc(gray16Converter)
 	NRGBA16Converter    = ConverterFunc(nrgba16Converter)
-	NRGBAConverter      = ConverterFunc(rgbaConverter)
+	NRGBAConverter      = ConverterFunc(nrgbaConverter)
 	NRGBA64Converter    = ConverterFunc(nrgba64Converter)
 	CMYKConverter       = ConverterFunc(cmykConverter)
 )

@@ -345,7 +345,7 @@ func ColorAtNRGBA32(x, y, width int, data, alpha []byte, decode []float64) (colo
 	return color.NRGBA{R: r, G: g, B: b, A: a}, nil
 }
 
-func rgbaConverter(src image.Image) (Image, error) {
+func nrgbaConverter(src image.Image) (Image, error) {
 	if i, ok := src.(*NRGBA32); ok {
 		return i.Copy(), nil
 	}

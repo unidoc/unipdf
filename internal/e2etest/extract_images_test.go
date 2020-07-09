@@ -7,6 +7,7 @@ package e2etest
 
 import (
 	"archive/zip"
+	"flag"
 	"fmt"
 	"image/jpeg"
 	"io/ioutil"
@@ -15,8 +16,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/extractor"
@@ -31,7 +32,12 @@ import (
 //		UNIDOC_EXTRACT_IMAGES_TESTDATA to the path of the corpus folder.
 var (
 	extractImagesCorpusFolder = os.Getenv("UNIDOC_EXTRACT_IMAGES_TESTDATA")
+	keepImageFiles            bool
 )
+
+func init() {
+	flag.BoolVar(&keepImageFiles, "e2e-keep-images", false, "stores the images in the temporary `os.TempDir`/unipdf/jbig2 directory")
+}
 
 // knownExtrImgsHashes defines a list of known output hashes to ensure that the output is constant.
 // If there is a change in hash need to find out why and update only if the change is accepted.
@@ -76,31 +82,35 @@ func TestExtractImages(t *testing.T) {
 	// Make a temporary folder and clean up after.
 	tempdir, err := ioutil.TempDir("", "unidoc_extract_images")
 	require.NoError(t, err)
-	defer os.RemoveAll(tempdir)
+	if !keepImageFiles {
+		defer os.RemoveAll(tempdir)
+	}
 
 	matchcount := 0
 	for _, file := range files {
-		basename := filepath.Base(file.Name())
-		outName := strings.TrimSuffix(basename, filepath.Ext(basename)) + ".zip"
+		t.Run(file.Name(), func(t *testing.T) {
+			basename := filepath.Base(file.Name())
+			outName := strings.TrimSuffix(basename, filepath.Ext(basename)) + ".zip"
 
-		t.Logf("%s", file.Name())
-		fpath := filepath.Join(extractImagesCorpusFolder, file.Name())
-		params := extractImagesParams{
-			inputPath: fpath,
-			outPath:   filepath.Join(tempdir, "extract_images_"+outName),
-		}
-		extractImagesSinglePdf(t, params)
+			// t.Logf("%s", file.Name())
+			fpath := filepath.Join(extractImagesCorpusFolder, file.Name())
+			params := extractImagesParams{
+				inputPath: fpath,
+				outPath:   filepath.Join(tempdir, "extract_images_"+outName),
+			}
+			extractImagesSinglePdf(t, params)
 
-		hash, err := hashFile(params.outPath)
-		require.NoError(t, err)
+			hash, err := hashFile(params.outPath)
+			require.NoError(t, err)
 
-		knownHash, has := knownExtrImgsHashes[file.Name()]
-		if has {
-			assert.Equal(t, knownHash, hash)
-			matchcount++
-		} else {
-			t.Logf("%s - hash: %s not in the list of known hashes", file.Name(), hash)
-		}
+			knownHash, has := knownExtrImgsHashes[file.Name()]
+			if has {
+				assert.Equal(t, knownHash, hash)
+				matchcount++
+			} else {
+				t.Logf("%s - hash: %s not in the list of known hashes", file.Name(), hash)
+			}
+		})
 	}
 
 	// Ensure all the defined hashes were found.

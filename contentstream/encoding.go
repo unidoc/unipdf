@@ -83,7 +83,9 @@ func newEncoderFromInlineImage(inlineImage *ContentStreamInlineImage) (core.Stre
 // only when a multi filter is used.
 func newFlateEncoderFromInlineImage(inlineImage *ContentStreamInlineImage, decodeParams *core.PdfObjectDictionary) (*core.FlateEncoder, error) {
 	encoder := core.NewFlateEncoder()
-
+	if inlineImage.base != nil {
+		encoder.SetImage(inlineImage.base)
+	}
 	// If decodeParams not provided, see if we can get from the stream.
 	if decodeParams == nil {
 		obj := inlineImage.DecodeParms

@@ -2343,7 +2343,7 @@ func (cs *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 	baseImage.Height = img.Height
 	baseImage.Width = img.Width
 	baseImage.alphaData = img.alphaData
-	baseImage.BitsPerComponent = img.BitsPerComponent
+	baseImage.BitsPerComponent = 8
 	baseImage.hasAlpha = img.hasAlpha
 	baseImage.ColorComponents = cs.Base.GetNumComponents()
 
@@ -2608,7 +2608,7 @@ func (cs *PdfColorspaceSpecialSeparation) ImageToRGB(img Image) (Image, error) {
 	altImage.SetSamples(altSamples)
 
 	// Set the image's decode parameters for interpretation in the alternative CS.
-	altImage.decode = altDecode
+	// altImage.decode = altDecode
 
 	// Convert to RGB via the alternate colorspace.
 	return cs.AlternateSpace.ImageToRGB(altImage)

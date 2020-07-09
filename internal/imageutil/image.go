@@ -43,7 +43,7 @@ func (i *ImageBase) Pix() []byte {
 
 // HasAlpha implements SMasker interface.
 func (i *ImageBase) HasAlpha() bool {
-	return i.Alpha == nil
+	return i.Alpha != nil
 }
 
 // GetAlpha implements SMasker interface.

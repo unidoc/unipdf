@@ -76,7 +76,10 @@ type FlateEncoder struct {
 	BitsPerComponent int
 	// For predictors
 	Columns int
+	Rows    int
 	Colors  int
+
+	img *imageutil.ImageBase
 }
 
 // NewFlateEncoder makes a new flate encoder with default parameters, predictor 1 and bits per component 8.
@@ -93,6 +96,11 @@ func NewFlateEncoder() *FlateEncoder {
 	encoder.Columns = 1
 
 	return encoder
+}
+
+// SetImage sets the image base for given flate encoder.
+func (enc *FlateEncoder) SetImage(img *imageutil.ImageBase) {
+	enc.img = img
 }
 
 // SetPredictor sets the predictor function.  Specify the number of columns per row.
@@ -179,6 +187,8 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 		// No encoding dictionary.
 		return encoder, nil
 	}
+
+	encoder.img = encDict.extractImage()
 
 	// If decodeParams not provided, see if we can get from the stream.
 	if decodeParams == nil {
@@ -426,7 +436,28 @@ func (enc *FlateEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error
 		return nil, err
 	}
 
-	return enc.postDecodePredict(outData)
+	outData, err = enc.postDecodePredict(outData)
+	if err != nil {
+		return nil, err
+	}
+	return enc.cleanImageData(outData)
+}
+
+func (enc *FlateEncoder) cleanImageData(data []byte) ([]byte, error) {
+	if enc.img == nil {
+		return data, nil
+	}
+	if enc.img.BitsPerComponent >= 8 {
+		return data, nil
+	}
+	fullBytesNumber := enc.img.BitsPerComponent * enc.img.Width * enc.img.ColorComponents * enc.img.Height / 8
+	data = data[:fullBytesNumber]
+	var err error
+	data, err = imageutil.AddDataPadding(enc.img.Width, enc.img.Height, enc.img.BitsPerComponent, enc.img.ColorComponents, data)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 // EncodeBytes encodes a bytes array and return the encoded value based on the encoder parameters.
@@ -731,7 +762,6 @@ func (enc *LZWEncoder) DecodeStream(streamObj *PdfObjectStream) ([]byte, error) 
 		if enc.Predictor == 2 { // TIFF encoding: Needs some tests.
 			common.Log.Trace("Tiff encoding")
 
-			// TODO(kucjac): check if needed to optimize rowLength.
 			rowLength := int(enc.Columns) * enc.Colors
 			if rowLength < 1 {
 				// No data. Return empty set.
@@ -996,7 +1026,7 @@ func newDCTEncoderFromStream(streamObj *PdfObjectStream, multiEnc *MultiEncoder)
 // DecodeBytes decodes a slice of DCT encoded bytes and returns the result.
 func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	bufReader := bytes.NewReader(encoded)
-	//img, _, err := goimage.Decode(bufReader)
+
 	img, err := jpeg.Decode(bufReader)
 	if err != nil {
 		common.Log.Debug("Error decoding image: %s", err)
@@ -1004,7 +1034,6 @@ func (enc *DCTEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	}
 	bounds := img.Bounds()
 
-	// TODO(kucjac): check if we can change the size of the rows when the BPC < 8
 	var decoded = make([]byte, bounds.Dx()*bounds.Dy()*enc.ColorComponents*enc.BitsPerComponent/8)
 	index := 0
 
@@ -1856,6 +1885,12 @@ func (enc *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	var bitPos byte
 	var currentByte byte
 	for i := range pixels {
+		if bitPos != 0 {
+			decoded = append(decoded, currentByte)
+			currentByte = 0
+			decodedIdx++
+			bitPos = 0
+		}
 		for j := range pixels[i] {
 			currentByte |= pixels[i][j] << (7 - bitPos)
 
@@ -1864,9 +1899,7 @@ func (enc *CCITTFaxEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 			if bitPos == 8 {
 				decoded = append(decoded, currentByte)
 				currentByte = 0
-
 				decodedIdx++
-
 				bitPos = 0
 			}
 		}

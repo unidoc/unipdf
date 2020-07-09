@@ -527,11 +527,13 @@ func (ximg *XObjectImage) ToImage() (*Image, error) {
 	image.BitsPerComponent = *ximg.BitsPerComponent
 
 	image.ColorComponents = ximg.ColorSpace.GetNumComponents()
+	ximg.primitive.Set("ColorComponents", core.MakeInteger(int64(image.ColorComponents)))
 
 	decoded, err := core.DecodeStream(ximg.primitive)
 	if err != nil {
 		return nil, err
 	}
+
 	image.Data = decoded
 
 	if ximg.Decode != nil {

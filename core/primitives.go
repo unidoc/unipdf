@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/imageutil"
 	"github.com/unidoc/unipdf/v3/internal/strutils"
 )
 
@@ -1032,4 +1033,26 @@ func (streams *PdfObjectStreams) WriteString() string {
 	b.WriteString(strconv.FormatInt(streams.ObjectNumber, 10))
 	b.WriteString(" 0 R")
 	return b.String()
+}
+
+func (d *PdfObjectDictionary) extractImage() (img *imageutil.ImageBase) {
+	var (
+		integer *PdfObjectInteger
+		ok      bool
+	)
+	if integer, ok = d.Get("Width").(*PdfObjectInteger); ok {
+		img = &imageutil.ImageBase{Width: int(*integer)}
+	} else {
+		return nil
+	}
+	if integer, ok = d.Get("Height").(*PdfObjectInteger); ok {
+		img.Height = int(*integer)
+	}
+	if integer, ok = d.Get("BitsPerComponent").(*PdfObjectInteger); ok {
+		img.BitsPerComponent = int(*integer)
+	}
+	if integer, ok = d.Get("ColorComponents").(*PdfObjectInteger); ok {
+		img.ColorComponents = int(*integer)
+	}
+	return img
 }

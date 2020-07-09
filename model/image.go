@@ -125,6 +125,11 @@ func (img *Image) GetSamples() []uint32 {
 	return samples
 }
 
+// SetDecode sets the decode image float slice.
+func (img *Image) SetDecode(decode []float64) {
+	img.decode = decode
+}
+
 // SetSamples convert samples to byte-data and sets for the image.
 // NOTE: The method resamples the data and this could lead to high memory usage,
 // especially on large images. It should be used only when it is not possible
@@ -390,8 +395,9 @@ func (img *Image) resampleLowBits(samples []uint32) {
 }
 
 func (img *Image) samplesAddPadding(samples []uint32) []uint32 {
-	bytesPerLine := imageutil.BytesPerLine(int(img.Width), int(img.BitsPerComponent), img.ColorComponents)
-	paddedLen := img.ColorComponents * bytesPerLine * int(img.Height)
+
+	samplesPerLine := imageutil.BytesPerLine(int(img.Width), int(img.BitsPerComponent), img.ColorComponents) * (8 / int(img.BitsPerComponent))
+	paddedLen := samplesPerLine * int(img.Height)
 	if len(samples) == paddedLen {
 		return samples
 	}
@@ -399,7 +405,7 @@ func (img *Image) samplesAddPadding(samples []uint32) []uint32 {
 	samplesPerTrimmedRow := int(img.Width) * img.ColorComponents
 	for row := 0; row < int(img.Height); row++ {
 		rowIndexTrimmed := row * int(img.Width)
-		rowIndexPadded := row * bytesPerLine
+		rowIndexPadded := row * samplesPerLine
 		for i := 0; i < samplesPerTrimmedRow; i++ {
 			paddedSamples[rowIndexPadded+i] = samples[rowIndexTrimmed+i]
 		}
@@ -409,7 +415,11 @@ func (img *Image) samplesAddPadding(samples []uint32) []uint32 {
 
 func (img *Image) samplesTrimPadding(samples []uint32) []uint32 {
 	// initialize the samples that wouldn't contain extra padding at the end of each row.
-	trimmed := make([]uint32, int64(img.ColorComponents)*img.Width*img.Height)
+	trimmedLength := img.ColorComponents * int(img.Width) * int(img.Height)
+	if len(samples) == trimmedLength {
+		return samples
+	}
+	trimmed := make([]uint32, trimmedLength)
 	// get number of samples per trimmed row
 	samplesPerTrimmedRow := int(img.Width) * img.ColorComponents
 	var row, rowIndexTrimmed, rowIndexUntrimmed, i int
