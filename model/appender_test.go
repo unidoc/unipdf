@@ -1851,16 +1851,6 @@ func TestValidatePAdESSignature(t *testing.T) {
 }
 
 func TestAppenderSignPAdES(t *testing.T) {
-	pass := os.Getenv("TINYCERT_USER_PASS")
-	if len(pass) == 0 {
-		t.Skip(`
-To run this test
-	1. Register on https://www.tinycert.org.
-	2. Set TINYCERT_USER_PASS environment variable.
-	3. Copy your tinycert private certificate to ./testdata/tinycert/cert.pfx.
-	4. Copy your CA certificate to ./testdata/tinycert/cacert.pem.
-`)
-	}
 
 	validateFile(t, testPdfSignedPDFDocument)
 
@@ -1888,7 +1878,11 @@ To run this test
 		return
 	}
 
-	privateKey, cert, err := pkcs12.Decode(f, pass)
+	privateKey, cert, err := pkcs12.Decode(f, testPKS12KeyPassword)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
 
 	caCertF, err := ioutil.ReadFile("./testdata/tinycert/cacert.pem")
 	if err != nil {
