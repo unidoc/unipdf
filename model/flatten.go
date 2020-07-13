@@ -97,8 +97,8 @@ func (r *PdfReader) FlattenFields(allannots bool, appgen FieldAppearanceGenerato
 		}
 
 		for _, annot := range annotations {
-			hasV, toflatten := ftargets[annot]
-			if !toflatten {
+			toflatten, hasV := ftargets[annot]
+			if hasV && !toflatten {
 				// Not to be flattened.
 				annots = append(annots, annot)
 				continue
