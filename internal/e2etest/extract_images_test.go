@@ -168,6 +168,7 @@ func extractImagesSinglePdf(t *testing.T, params extractImagesParams) memoryMeas
 
 	if numPages < 1 {
 		common.Log.Debug("Empty pdf - nothing to be done!")
+		measure.Stop()
 		return measure
 	}
 
