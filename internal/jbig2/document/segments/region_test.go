@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // TestEncodeRegion tests the encode function for the region structure.
@@ -24,7 +24,7 @@ func TestEncodeRegion(t *testing.T) {
 		YLocation:          35,
 		CombinaionOperator: bitmap.CmbOpXor,
 	}
-	w := writer.BufferedMSB()
+	w := bitwise.BufferedMSB()
 	n, err := regionSample.Encode(w)
 	require.NoError(t, err)
 
@@ -37,9 +37,9 @@ func TestEncodeRegion(t *testing.T) {
 		0x00, 0x00, 0x00, 0x1E,
 		// Second four bytes should be the height - 150 uint32
 		0x00, 0x00, 0x00, 0x96,
-		// Next four bytes should be the x location of the region - 40 uint32
+		// ReadSample four bytes should be the x location of the region - 40 uint32
 		0x00, 0x00, 0x00, 0x28,
-		// Next four bytes should be the y location of the region - 35 uint32
+		// ReadSample four bytes should be the y location of the region - 35 uint32
 		0x00, 0x00, 0x00, 0x23,
 		// The last byte should define the region flags
 		// 5 empty bits and 3 bits for the combination operator

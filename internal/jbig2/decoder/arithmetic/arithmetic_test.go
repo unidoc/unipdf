@@ -11,8 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/unidoc/unipdf/v3/common"
-
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 )
 
 // TestArithmeticDecoder tests the arithmetic decoder with the Apendix A methods.
@@ -28,7 +27,7 @@ func TestArithmeticDecoder(t *testing.T) {
 		0xDF, 0xFF, 0xAC,
 	}
 
-	r := reader.New(encoded)
+	r := bitwise.NewReader(encoded)
 	a, err := New(r)
 	if assert.NoError(t, err) {
 		cx := NewStats(512, 0)

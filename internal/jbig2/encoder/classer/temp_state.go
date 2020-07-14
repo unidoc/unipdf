@@ -35,7 +35,7 @@ func initSimilarTemplatesFinder(c *Classer, bms *bitmap.Bitmap) *similarTemplate
 	}
 }
 
-// Next finds next template state.
+// ReadSample finds next template state.
 func (f *similarTemplatesFinder) Next() int {
 	var (
 		desireDH, desireDW, size, templ int

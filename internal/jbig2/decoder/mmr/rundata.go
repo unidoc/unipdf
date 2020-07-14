@@ -9,8 +9,7 @@ import (
 	"io"
 
 	"github.com/unidoc/unipdf/v3/common"
-
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 )
 
 const (
@@ -20,7 +19,7 @@ const (
 )
 
 type runData struct {
-	r          *reader.SubstreamReader
+	r          *bitwise.SubstreamReader
 	offset     int
 	lastOffset int
 	lastCode   int
@@ -30,7 +29,7 @@ type runData struct {
 	bufferTop  int
 }
 
-func newRunData(r *reader.SubstreamReader) (*runData, error) {
+func newRunData(r *bitwise.SubstreamReader) (*runData, error) {
 	d := &runData{
 		r:          r,
 		offset:     0,

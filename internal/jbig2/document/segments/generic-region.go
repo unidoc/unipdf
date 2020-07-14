@@ -10,21 +10,20 @@ import (
 	"strings"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder/arithmetic"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder/mmr"
 	enc "github.com/unidoc/unipdf/v3/internal/jbig2/encoder/arithmetic"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // GenericRegion represents a generic region segment.
 // Parsing is done as described in 7.4.5.
 // Decoding procedure is done as described in 6.2.5.7 and 7.4.6.4.
 type GenericRegion struct {
-	r reader.StreamReader
+	r bitwise.StreamReader
 
 	DataHeaderOffset int64
 	DataHeaderLength int64
@@ -58,7 +57,7 @@ type GenericRegion struct {
 }
 
 // NewGenericRegion creates new GenericRegion segment.
-func NewGenericRegion(r reader.StreamReader) *GenericRegion {
+func NewGenericRegion(r bitwise.StreamReader) *GenericRegion {
 	return &GenericRegion{RegionSegment: NewRegionSegment(r), r: r}
 }
 
@@ -66,7 +65,7 @@ func NewGenericRegion(r reader.StreamReader) *GenericRegion {
 var _ SegmentEncoder = &GenericRegion{}
 
 // Encode implements SegmentEncoder interface.
-func (g *GenericRegion) Encode(w writer.BinaryWriter) (n int, err error) {
+func (g *GenericRegion) Encode(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "GenericRegion.Encode"
 	if g.Bitmap == nil {
 		return 0, errors.Error(processName, "provided nil bitmap")
@@ -209,7 +208,7 @@ func (g *GenericRegion) GetRegionInfo() *RegionSegment {
 }
 
 // Init implements Segmenter interface.
-func (g *GenericRegion) Init(h *Header, r reader.StreamReader) error {
+func (g *GenericRegion) Init(h *Header, r bitwise.StreamReader) error {
 	g.RegionSegment = NewRegionSegment(r)
 	g.r = r
 	return g.parseHeader()
@@ -1218,7 +1217,7 @@ func (g *GenericRegion) setParametersMMR(
 
 }
 
-func (g *GenericRegion) writeGBAtPixels(w writer.BinaryWriter) (n int, err error) {
+func (g *GenericRegion) writeGBAtPixels(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "writeGBAtPixels"
 	if g.UseMMR {
 		return 0, nil

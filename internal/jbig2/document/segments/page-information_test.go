@@ -11,9 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // TestPageInformationSegment tests the jbig2 page information segment.
@@ -27,7 +26,7 @@ func TestPageInformationSegment(t *testing.T) {
 			0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x38, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
 		}
-		r := reader.New(data)
+		r := bitwise.NewReader(data)
 		d := &document{}
 		h, err := NewHeader(d, r, 0, OSequential)
 		require.NoError(t, err)
@@ -54,7 +53,7 @@ func TestEncodePageInformationSegment(t *testing.T) {
 	h := &Header{SegmentNumber: 1, PageAssociation: 1, Type: TPageInformation, SegmentData: p}
 
 	// initialize buffered writer
-	w := writer.BufferedMSB()
+	w := bitwise.BufferedMSB()
 	// encode page information segment
 	n, err := h.Encode(w)
 	require.NoError(t, err)

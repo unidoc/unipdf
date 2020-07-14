@@ -6,7 +6,7 @@
 package huffman
 
 import (
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 )
 
 // Compile time check for the encoded table.
@@ -33,7 +33,7 @@ func NewEncodedTable(table BasicTabler) (*EncodedTable, error) {
 }
 
 // Decode implenets Node interface.
-func (e *EncodedTable) Decode(r reader.StreamReader) (int64, error) {
+func (e *EncodedTable) Decode(r bitwise.StreamReader) (int64, error) {
 	return e.rootNode.Decode(r)
 }
 

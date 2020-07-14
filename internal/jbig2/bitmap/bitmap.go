@@ -11,10 +11,9 @@ import (
 	"math"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // tab8 contains number of '1' bits in each possible 8 bit value stored at it's index.
@@ -57,7 +56,7 @@ type Bitmap struct {
 	XResolution, YResolution int
 }
 
-// New creates new bitmap with the parameters as provided in the arguments.
+// NewReader creates new bitmap with the parameters as provided in the arguments.
 func New(width, height int) *Bitmap {
 	bm := newBitmap(width, height)
 	bm.Data = make([]byte, height*bm.RowStride)
@@ -286,7 +285,7 @@ func (b *Bitmap) GetUnpaddedData() ([]byte, error) {
 	}
 
 	data := make([]byte, size)
-	w := writer.NewMSB(data)
+	w := bitwise.NewWriterMSB(data)
 
 	const processName = "GetUnpaddedData"
 	for y := 0; y < b.Height; y++ {
@@ -554,9 +553,9 @@ func (b *Bitmap) addPadBits() (err error) {
 	fullBytes := b.Width / 8
 	//	mask := rmaskByte[endbits]
 
-	r := reader.New(b.Data)
+	r := bitwise.NewReader(b.Data)
 	data := make([]byte, b.Height*b.RowStride)
-	w := writer.NewMSB(data)
+	w := bitwise.NewWriterMSB(data)
 	temp := make([]byte, fullBytes)
 	var (
 		i    int

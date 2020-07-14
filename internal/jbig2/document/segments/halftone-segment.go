@@ -10,14 +10,14 @@ import (
 	"math"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
 // HalftoneRegion is the model for the jbig2 halftone region segment implementation - 7.4.5.1.
 type HalftoneRegion struct {
-	r                reader.StreamReader
+	r                bitwise.StreamReader
 	h                *Header
 	DataHeaderOffset int64
 	DataHeaderLength int64
@@ -58,7 +58,7 @@ type HalftoneRegion struct {
 }
 
 // Init implements Segmenter interface.
-func (h *HalftoneRegion) Init(hd *Header, r reader.StreamReader) error {
+func (h *HalftoneRegion) Init(hd *Header, r bitwise.StreamReader) error {
 	h.r = r
 	h.h = hd
 	h.RegionSegment = NewRegionSegment(r)

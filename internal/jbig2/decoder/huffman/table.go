@@ -8,12 +8,12 @@ package huffman
 import (
 	"fmt"
 
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 )
 
 // Tabler is the interface for all types of the huffman tables.
 type Tabler interface {
-	Decode(r reader.StreamReader) (int64, error)
+	Decode(r bitwise.StreamReader) (int64, error)
 	InitTree(codeTable []*Code) error
 	String() string
 	RootNode() *InternalNode
@@ -23,7 +23,7 @@ type Tabler interface {
 type BasicTabler interface {
 	HtHigh() int32
 	HtLow() int32
-	StreamReader() reader.StreamReader
+	StreamReader() bitwise.StreamReader
 	HtPS() int32
 	HtRS() int32
 	HtOOB() int32

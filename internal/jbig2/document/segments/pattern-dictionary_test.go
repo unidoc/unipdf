@@ -13,9 +13,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
 // TestDecodePatternDictionary tests the decode process of the pattern dictionary segment.
@@ -37,7 +37,7 @@ func TestDecodePatternDictionary(t *testing.T) {
 				0x2F, 0xEE, 0xEC, 0x44, 0x62, 0x22, 0x35, 0x2A, 0x0A, 0x83,
 				0xB9, 0xDC, 0xEE, 0x77, 0x80,
 			}
-			r := reader.New(data)
+			r := bitwise.NewReader(data)
 			d := &document{}
 			h, err := NewHeader(d, r, 0, OSequential)
 			require.NoError(t, err)

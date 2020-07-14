@@ -434,6 +434,7 @@ func (img *Image) samplesTrimPadding(samples []uint32) []uint32 {
 	}
 	return trimmed
 }
+
 func imageFromBase(src *imageutil.ImageBase) (dst Image) {
 	dst.Width = int64(src.Width)
 	dst.Height = int64(src.Height)
@@ -443,4 +444,9 @@ func imageFromBase(src *imageutil.ImageBase) (dst Image) {
 	dst.decode = src.Decode
 	dst.alphaData = src.Alpha
 	return dst
+}
+
+func (img Image) getBase() imageutil.ImageBase {
+	return imageutil.NewImageBase(int(img.Width), int(img.Height), int(img.BitsPerComponent), img.ColorComponents, img.Data, img.alphaData, img.decode)
+
 }

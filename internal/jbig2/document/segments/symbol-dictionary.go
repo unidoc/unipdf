@@ -13,19 +13,18 @@ import (
 	"strings"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder/arithmetic"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder/huffman"
 	encoder "github.com/unidoc/unipdf/v3/internal/jbig2/encoder/arithmetic"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // SymbolDictionary is the model for the JBIG2 Symbol Dictionary Segment - see 7.4.2.
 type SymbolDictionary struct {
-	r reader.StreamReader
+	r bitwise.StreamReader
 
 	// Symbol Dictionary flags, 7.4.2.1.1
 	SdrTemplate                 int8
@@ -119,7 +118,7 @@ const BorderSize = 6
 
 // Encode encodes the symbol dictionary structure into 'w' writer. Returns
 // number of bytes written and the error if occurs.
-func (s *SymbolDictionary) Encode(w writer.BinaryWriter) (n int, err error) {
+func (s *SymbolDictionary) Encode(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "SymbolDictionary.Encode"
 	if s == nil {
 		return 0, errors.Error(processName, "symbol dictionary not defined")
@@ -157,7 +156,7 @@ func (s *SymbolDictionary) Encode(w writer.BinaryWriter) (n int, err error) {
 	return n, nil
 }
 
-func (s *SymbolDictionary) encodeATFlags(w writer.BinaryWriter) (n int, err error) {
+func (s *SymbolDictionary) encodeATFlags(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "encodeATFlags"
 	if s.IsHuffmanEncoded || s.SdTemplate != 0 {
 		return 0, nil
@@ -182,7 +181,7 @@ func (s *SymbolDictionary) encodeATFlags(w writer.BinaryWriter) (n int, err erro
 	return n, nil
 }
 
-func (s *SymbolDictionary) encodeRefinementATFlags(w writer.BinaryWriter) (n int, err error) {
+func (s *SymbolDictionary) encodeRefinementATFlags(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "encodeRefinementATFlags"
 	if !s.UseRefinementAggregation || s.SdrTemplate != 0 {
 		// no refinement aggregation AT flags
@@ -202,7 +201,7 @@ func (s *SymbolDictionary) encodeRefinementATFlags(w writer.BinaryWriter) (n int
 	return n, nil
 }
 
-func (s *SymbolDictionary) encodeNumSyms(w writer.BinaryWriter) (n int, err error) {
+func (s *SymbolDictionary) encodeNumSyms(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "encodeNumSyms"
 
 	// SDNUMEXSYMS
@@ -221,7 +220,7 @@ func (s *SymbolDictionary) encodeNumSyms(w writer.BinaryWriter) (n int, err erro
 	return n + tmp, nil
 }
 
-func (s *SymbolDictionary) encodeSymbols(w writer.BinaryWriter) (n int, err error) {
+func (s *SymbolDictionary) encodeSymbols(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "encodeSymbol"
 	ectx := encoder.New()
 	ectx.Init()
@@ -312,7 +311,7 @@ func (s *SymbolDictionary) getSymbol(i int) (*bitmap.Bitmap, error) {
 	return bm, nil
 }
 
-func (s *SymbolDictionary) encodeFlags(w writer.BinaryWriter) (n int, err error) {
+func (s *SymbolDictionary) encodeFlags(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "encodeFlags"
 	// skip three bits
 	if err = w.SkipBits(3); err != nil {
@@ -560,7 +559,7 @@ func (s *SymbolDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 }
 
 // Init implements Segmenter interface.
-func (s *SymbolDictionary) Init(h *Header, r reader.StreamReader) error {
+func (s *SymbolDictionary) Init(h *Header, r bitwise.StreamReader) error {
 	s.Header = h
 	s.r = r
 	return s.parseHeader()

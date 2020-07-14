@@ -279,7 +279,7 @@ func (oi *PdfOutlineItem) ToPdfObject() core.PdfObject {
 		dict.Set("Count", core.MakeInteger(*oi.Count))
 	}
 	if oi.Next != nil {
-		dict.Set("Next", oi.Next.ToPdfObject())
+		dict.Set("ReadSample", oi.Next.ToPdfObject())
 	}
 	if oi.First != nil {
 		dict.Set("First", oi.First.ToPdfObject())

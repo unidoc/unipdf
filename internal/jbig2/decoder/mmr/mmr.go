@@ -8,8 +8,8 @@ package mmr
 import (
 	"errors"
 
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
 // Decoder is the jbig2 mmr data decoder.
@@ -22,13 +22,13 @@ type Decoder struct {
 	modeTable  []*code
 }
 
-// New creates new jbig2 mmr decoder for the provided data stream.
-func New(r reader.StreamReader, width, height int, dataOffset, dataLength int64) (*Decoder, error) {
+// NewReader creates new jbig2 mmr decoder for the provided data stream.
+func New(r bitwise.StreamReader, width, height int, dataOffset, dataLength int64) (*Decoder, error) {
 	m := &Decoder{
 		width:  width,
 		height: height,
 	}
-	s, err := reader.NewSubstreamReader(r, uint64(dataOffset), uint64(dataLength))
+	s, err := bitwise.NewSubstreamReader(r, uint64(dataOffset), uint64(dataLength))
 	if err != nil {
 		return nil, err
 	}

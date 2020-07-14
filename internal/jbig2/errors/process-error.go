@@ -44,7 +44,7 @@ func Errorf(processName, message string, arguments ...interface{}) error {
 }
 
 func newProcessError(message, processName string) *processError {
-	return &processError{header: "[JBIG2]", message: message, process: processName}
+	return &processError{header: "[UniPDF]", message: message, process: processName}
 }
 
 // Wrap wraps the error with the message and provided process.

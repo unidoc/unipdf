@@ -12,11 +12,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder/arithmetic"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
-
-
 
 // TestEncoder tests the encoder using the standard H.2 test sequence.
 func TestEncoder(t *testing.T) {
@@ -79,7 +77,7 @@ func TestEncodeInteger(t *testing.T) {
 	_, err = e.WriteTo(buf)
 	require.NoError(t, err)
 
-	r := reader.New(buf.Bytes())
+	r := bitwise.NewReader(buf.Bytes())
 
 	dec, err := arithmetic.New(r)
 	require.NoError(t, err)
@@ -105,7 +103,7 @@ func TestEncoder_EncodeIAID(t *testing.T) {
 	_, err = e.WriteTo(buf)
 	require.NoError(t, err)
 
-	r := reader.New(buf.Bytes())
+	r := bitwise.NewReader(buf.Bytes())
 	d, err := arithmetic.New(r)
 	require.NoError(t, err)
 

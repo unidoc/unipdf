@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/basic"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
@@ -19,13 +20,11 @@ import (
 	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder/huffman"
 	encoder "github.com/unidoc/unipdf/v3/internal/jbig2/encoder/arithmetic"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // TextRegion is the model for the jbig2 text region segment - see 7.4.1.
 type TextRegion struct {
-	r reader.StreamReader
+	r bitwise.StreamReader
 
 	// Region segment information field 7.4.1.
 	RegionInfo *RegionSegment
@@ -116,7 +115,7 @@ var (
 )
 
 // Encode writes the TextRegion segment data into 'w' binary writer.
-func (t *TextRegion) Encode(w writer.BinaryWriter) (n int, err error) {
+func (t *TextRegion) Encode(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "TextRegion.Encode"
 	// region info
 	if n, err = t.RegionInfo.Encode(w); err != nil {
@@ -186,7 +185,7 @@ func (t *TextRegion) GetRegionInfo() *RegionSegment {
 }
 
 // Init implements Segmenter interface.
-func (t *TextRegion) Init(header *Header, r reader.StreamReader) error {
+func (t *TextRegion) Init(header *Header, r bitwise.StreamReader) error {
 	t.Header = header
 	t.r = r
 	t.RegionInfo = NewRegionSegment(t.r)
@@ -913,7 +912,7 @@ func (t *TextRegion) decodeSymInRefSize() (int64, error) {
 	return temp, nil
 }
 
-func (t *TextRegion) encodeFlags(w writer.BinaryWriter) (n int, err error) {
+func (t *TextRegion) encodeFlags(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "encodeFlags"
 	if err = w.WriteBit(int(t.SbrTemplate)); err != nil {
 		return n, errors.Wrap(err, processName, "sbrTemplate")
@@ -954,7 +953,7 @@ func (t *TextRegion) encodeFlags(w writer.BinaryWriter) (n int, err error) {
 	return n, nil
 }
 
-func (t *TextRegion) encodeSymbols(w writer.BinaryWriter) (n int, err error) {
+func (t *TextRegion) encodeSymbols(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "encodeSymbols"
 	// store the number of new symbols value.
 	tm := make([]byte, 4)
@@ -1575,7 +1574,7 @@ func (t *TextRegion) symbolIDCodeLengths() error {
 	return err
 }
 
-func newTextRegion(r reader.StreamReader, h *Header) *TextRegion {
+func newTextRegion(r bitwise.StreamReader, h *Header) *TextRegion {
 	t := &TextRegion{
 		r:          r,
 		Header:     h,

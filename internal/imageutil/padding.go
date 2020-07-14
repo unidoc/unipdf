@@ -1,8 +1,7 @@
 package imageutil
 
 import (
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 )
 
 // AddDataPadding adds the row bit padding to the given data slice if it is required by the image parameters.
@@ -16,12 +15,12 @@ func AddDataPadding(width, height, bitsPerComponent, colorComponents int, data [
 	bitsPerLineNew := bytesPerLine * 8
 	diffBitsPerLine := 8 - (bitsPerLineNew - bitsPerLineOld)
 
-	r := reader.New(data)
+	r := bitwise.NewReader(data)
 
 	fullBytesNumber := bytesPerLine - 1
 	fullBytesPerLine := make([]byte, fullBytesNumber)
 	output := make([]byte, height*bytesPerLine)
-	w := writer.NewMSB(output)
+	w := bitwise.NewWriterMSB(output)
 	var bits uint64
 	var err error
 	for y := 0; y < height; y++ {

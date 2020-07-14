@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package reader
+package bitwise
 
 import (
 	"bytes"
@@ -25,7 +25,7 @@ func TestSubstream(t *testing.T) {
 	t.Run("Read", func(t *testing.T) {
 		t.Run("Valid", func(t *testing.T) {
 			// get the base reader
-			r := New(sampleData)
+			r := NewReader(sampleData)
 			var (
 				offset uint64 = 3
 				length uint64 = 2
@@ -45,7 +45,7 @@ func TestSubstream(t *testing.T) {
 
 		t.Run("ReadPart", func(t *testing.T) {
 			// get the base reader
-			r := New(sampleData)
+			r := NewReader(sampleData)
 			var (
 				offset uint64 = 3
 				length uint64 = 2
@@ -66,7 +66,7 @@ func TestSubstream(t *testing.T) {
 
 		t.Run("EOF", func(t *testing.T) {
 			// get the base reader
-			r := New(sampleData)
+			r := NewReader(sampleData)
 			var (
 				offset uint64 = 3
 				length uint64 = 1
@@ -90,7 +90,7 @@ func TestSubstream(t *testing.T) {
 
 	t.Run("BaseOnReader", func(t *testing.T) {
 		data := []byte{0x00, 3, 255, 0xcc, 0x1a, 0xbc, 0xde, 0x80, 0x01, 0x02, 0xf8, 0x08, 0xf0}
-		br := New(data)
+		br := NewReader(data)
 		r, err := NewSubstreamReader(br, 1, uint64(len(data)-1))
 		require.NoError(t, err)
 
@@ -148,7 +148,7 @@ func TestSubstream(t *testing.T) {
 
 	t.Run("SubstreamOfSubtream", func(t *testing.T) {
 		data := []byte{0x00, 3, 255, 0xcc, 0x1a, 0xbc, 0xde, 0x80, 0x01, 0x02, 0xf8, 0x08, 0xf0}
-		reader := New(data)
+		reader := NewReader(data)
 
 		sub1, err := NewSubstreamReader(reader, 1, 10)
 		require.NoError(t, err)

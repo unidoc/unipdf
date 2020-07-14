@@ -2087,7 +2087,7 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 			dParams = dict
 		}
 
-		common.Log.Trace("Next name: %s, dp: %v, dParams: %v", *name, dp, dParams)
+		common.Log.Trace("ReadSample name: %s, dp: %v, dParams: %v", *name, dp, dParams)
 		if *name == StreamEncodingFilterNameFlate {
 			// TODO: need to separate out the DecodeParms..
 			encoder, err := newFlateEncoderFromStream(streamObj, dParams)

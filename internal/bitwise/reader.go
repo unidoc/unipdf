@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package reader
+package bitwise
 
 import (
 	"encoding/binary"
@@ -35,8 +35,8 @@ var (
 	_ StreamReader  = &Reader{}
 )
 
-// New creates a new reader.Reader using the byte slice data as input.
-func New(data []byte) *Reader {
+// NewReader creates a new reader.Reader using the byte slice data as input.
+func NewReader(data []byte) *Reader {
 	return &Reader{in: data}
 }
 

@@ -12,10 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // TestDecodeGenericRegion tests the decode process of the jbig2 Generic Region.
@@ -36,7 +35,7 @@ func TestDecodeGenericRegion(t *testing.T) {
 				0xFE, 0xFE, 0x04, 0xEE, 0xED, 0x87, 0xFB, 0xCB, 0x2B, 0xFF, 0xAC,
 			}
 
-			r := reader.New(data)
+			r := bitwise.NewReader(data)
 			d := &document{}
 			h, err := NewHeader(d, r, 0, OSequential)
 			require.NoError(t, err)
@@ -74,7 +73,7 @@ func TestDecodeGenericRegion(t *testing.T) {
 				0xA7, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xF8, 0xF0,
 			}
-			r := reader.New(data)
+			r := bitwise.NewReader(data)
 			d := &document{}
 			h, err := NewHeader(d, r, 0, OSequential)
 			require.NoError(t, err)
@@ -117,7 +116,7 @@ func TestEncodeGenericRegion(t *testing.T) {
 		require.NoError(t, err)
 
 		// prepare writer
-		w := writer.BufferedMSB()
+		w := bitwise.BufferedMSB()
 
 		// encode the generic region header
 		n, err := h.Encode(w)
@@ -125,7 +124,7 @@ func TestEncodeGenericRegion(t *testing.T) {
 
 		assert.Equal(t, len(w.Data()), n)
 
-		r := reader.New(w.Data())
+		r := bitwise.NewReader(w.Data())
 		d := &document{}
 		hd, err := NewHeader(d, r, 0, OSequential)
 		require.NoError(t, err)
@@ -162,7 +161,7 @@ func TestEncodeGenericRegion(t *testing.T) {
 		err := genericRegion.InitEncode(bm, 0, 0, 0, true)
 		require.NoError(t, err)
 
-		w := writer.BufferedMSB()
+		w := bitwise.BufferedMSB()
 
 		// encode the header
 		n, err := h.Encode(w)
@@ -171,7 +170,7 @@ func TestEncodeGenericRegion(t *testing.T) {
 		// check the number of bytes written match the 'n' number.
 		assert.Equal(t, len(w.Data()), n)
 
-		r := reader.New(w.Data())
+		r := bitwise.NewReader(w.Data())
 		d := &document{}
 		hd, err := NewHeader(d, r, 0, OSequential)
 		require.NoError(t, err)

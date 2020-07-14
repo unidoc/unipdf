@@ -6,7 +6,7 @@
 package huffman
 
 import (
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 )
 
 // FixedSizeTable defines the table with the fixed size.
@@ -28,7 +28,7 @@ func NewFixedSizeTable(codeTable []*Code) (*FixedSizeTable, error) {
 }
 
 // Decode implements Tabler interface.
-func (f *FixedSizeTable) Decode(r reader.StreamReader) (int64, error) {
+func (f *FixedSizeTable) Decode(r bitwise.StreamReader) (int64, error) {
 	return f.rootNode.Decode(r)
 }
 

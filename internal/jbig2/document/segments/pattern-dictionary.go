@@ -11,14 +11,14 @@ import (
 	"math"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
 // PatternDictionary is the jbig2 model for the pattern dictionary segment - 7.4.4.
 type PatternDictionary struct {
-	r reader.StreamReader
+	r bitwise.StreamReader
 
 	DataHeaderOffset int64
 	DataHeaderLength int64
@@ -69,7 +69,7 @@ func (p *PatternDictionary) GetDictionary() ([]*bitmap.Bitmap, error) {
 }
 
 // Init implements Segmenter interface.
-func (p *PatternDictionary) Init(h *Header, r reader.StreamReader) error {
+func (p *PatternDictionary) Init(h *Header, r bitwise.StreamReader) error {
 	p.r = r
 	return p.parseHeader()
 }

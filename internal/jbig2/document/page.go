@@ -10,12 +10,12 @@ import (
 	"math"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/basic"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/document/segments"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // EncodingMethod defines the method of encoding for given page,
@@ -152,7 +152,7 @@ func (p *Page) addTextRegionSegment(referredTo []*segments.Header, globalSymbols
 }
 
 // Encode encodes segments into provided 'w' writer.
-func (p *Page) Encode(w writer.BinaryWriter) (n int, err error) {
+func (p *Page) Encode(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "Page.Encode"
 	var temp int
 	for _, seg := range p.Segments {

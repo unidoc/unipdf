@@ -13,11 +13,10 @@ import (
 	"strings"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/basic"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // Header is the segment header used to define the segment parameters - see 7.2.
@@ -31,7 +30,7 @@ type Header struct {
 	HeaderLength             int64
 	SegmentDataLength        uint64
 	SegmentDataStartOffset   uint64
-	Reader                   reader.StreamReader
+	Reader                   bitwise.StreamReader
 	SegmentData              Segmenter
 	// RTSNumbers is the list of numbers where the segment is referred to.
 	RTSNumbers []int
@@ -40,7 +39,7 @@ type Header struct {
 }
 
 // NewHeader creates new segment header for the provided document from the stream reader.
-func NewHeader(d Documenter, r reader.StreamReader, offset int64, organizationType OrganizationType) (*Header, error) {
+func NewHeader(d Documenter, r bitwise.StreamReader, offset int64, organizationType OrganizationType) (*Header, error) {
 	h := &Header{Reader: r}
 	if err := h.parse(d, r, offset, organizationType); err != nil {
 		return nil, errors.Wrap(err, "NewHeader", "")
@@ -86,9 +85,9 @@ func (h *Header) GetSegmentData() (Segmenter, error) {
 }
 
 // Encode encodes the jbi2 header structure to the provided 'w' BinaryWriter.
-func (h *Header) Encode(w writer.BinaryWriter) (n int, err error) {
+func (h *Header) Encode(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "Header.Write"
-	var tw writer.BinaryWriter
+	var tw bitwise.BinaryWriter
 	common.Log.Trace("[SEGMENT-HEADER][ENCODE] Begins")
 	defer func() {
 		if err != nil {
@@ -108,7 +107,7 @@ func (h *Header) Encode(w writer.BinaryWriter) (n int, err error) {
 		}
 
 		// create temporary writer for the segment data
-		tw = writer.BufferedMSB()
+		tw = bitwise.BufferedMSB()
 
 		// encode the segment data
 		n, err = se.Encode(tw)
@@ -219,7 +218,7 @@ func (h *Header) pageSize() uint {
 
 // parses the current segment header for the provided document 'd'.
 func (h *Header) parse(
-	d Documenter, r reader.StreamReader,
+	d Documenter, r bitwise.StreamReader,
 	offset int64, organizationType OrganizationType,
 ) (err error) {
 	const processName = "parse"
@@ -280,7 +279,7 @@ func (h *Header) parse(
 }
 
 // readSegmentNumber reads the segment number.
-func (h *Header) readSegmentNumber(r reader.StreamReader) error {
+func (h *Header) readSegmentNumber(r bitwise.StreamReader) error {
 	const processName = "readSegmentNumber"
 	// 7.2.2
 	b := make([]byte, 4)
@@ -329,7 +328,7 @@ func (h *Header) readHeaderFlags() error {
 }
 
 // readNumberOfReferredToSegments gets the amount of referred-to segments.
-func (h *Header) readNumberOfReferredToSegments(r reader.StreamReader) (uint64, error) {
+func (h *Header) readNumberOfReferredToSegments(r bitwise.StreamReader) (uint64, error) {
 	const processName = "readNumberOfReferredToSegments"
 	// 7.2.4
 	countOfRTS, err := r.ReadBits(3)
@@ -374,7 +373,7 @@ func (h *Header) readNumberOfReferredToSegments(r reader.StreamReader) (uint64, 
 
 // readReferredToSegmentNumbers gathers all segment numbers of referred-to segments. The
 // segment itself is in rtSegments the array.
-func (h *Header) readReferredToSegmentNumbers(r reader.StreamReader, countOfRTS int) ([]int, error) {
+func (h *Header) readReferredToSegmentNumbers(r bitwise.StreamReader, countOfRTS int) ([]int, error) {
 	const processName = "readReferredToSegmentNumbers"
 	// 7.2.5
 	rtsNumbers := make([]int, countOfRTS)
@@ -397,7 +396,7 @@ func (h *Header) readReferredToSegmentNumbers(r reader.StreamReader, countOfRTS 
 }
 
 // readSegmentPageAssociation gets the segment's associated page number.
-func (h *Header) readSegmentPageAssociation(d Documenter, r reader.StreamReader, countOfRTS uint64, rtsNumbers ...int) (err error) {
+func (h *Header) readSegmentPageAssociation(d Documenter, r bitwise.StreamReader, countOfRTS uint64, rtsNumbers ...int) (err error) {
 	const processName = "readSegmentPageAssociation"
 	// 7.2.6
 	if !h.PageAssociationFieldSize {
@@ -454,7 +453,7 @@ func (h *Header) readSegmentPageAssociation(d Documenter, r reader.StreamReader,
 }
 
 // readSegmentDataLength contains the length of the data part in bytes.
-func (h *Header) readSegmentDataLength(r reader.StreamReader) (err error) {
+func (h *Header) readSegmentDataLength(r bitwise.StreamReader) (err error) {
 	// 7.2.7
 	h.SegmentDataLength, err = r.ReadBits(32)
 	if err != nil {
@@ -468,13 +467,13 @@ func (h *Header) readSegmentDataLength(r reader.StreamReader) (err error) {
 
 // readDataStartOffset sets the offset of the current reader if
 // the organization type is OSequential.
-func (h *Header) readDataStartOffset(r reader.StreamReader, organizationType OrganizationType) {
+func (h *Header) readDataStartOffset(r bitwise.StreamReader, organizationType OrganizationType) {
 	if organizationType == OSequential {
 		h.SegmentDataStartOffset = uint64(r.StreamPosition())
 	}
 }
 
-func (h *Header) readHeaderLength(r reader.StreamReader, offset int64) {
+func (h *Header) readHeaderLength(r bitwise.StreamReader, offset int64) {
 	h.HeaderLength = r.StreamPosition() - offset
 }
 
@@ -491,10 +490,10 @@ func (h *Header) referenceSize() uint {
 	}
 }
 
-func (h *Header) subInputReader() (reader.StreamReader, error) {
-	return reader.NewSubstreamReader(h.Reader, h.SegmentDataStartOffset, h.SegmentDataLength)
+func (h *Header) subInputReader() (bitwise.StreamReader, error) {
+	return bitwise.NewSubstreamReader(h.Reader, h.SegmentDataStartOffset, h.SegmentDataLength)
 }
-func (h *Header) writeFlags(w writer.BinaryWriter) (err error) {
+func (h *Header) writeFlags(w bitwise.BinaryWriter) (err error) {
 	const processName = "Header.writeFlags"
 	// the header flags is composed of 8 bits.
 	// MSB 00000000 LSB
@@ -544,7 +543,7 @@ func (h *Header) writeFlags(w writer.BinaryWriter) (err error) {
 	return nil
 }
 
-func (h *Header) writeReferredToCount(w writer.BinaryWriter) (n int, err error) {
+func (h *Header) writeReferredToCount(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "writeReferredToCount"
 	// the referred to count segment is one byte long if there are up to maximum of 4
 	// referred to other headers.
@@ -585,7 +584,7 @@ func (h *Header) writeReferredToCount(w writer.BinaryWriter) (n int, err error) 
 	return n, nil
 }
 
-func (h *Header) writeReferredToSegments(w writer.BinaryWriter) (n int, err error) {
+func (h *Header) writeReferredToSegments(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "writeReferredToSegments"
 	var (
 		short uint16
@@ -624,7 +623,7 @@ func (h *Header) writeReferredToSegments(w writer.BinaryWriter) (n int, err erro
 	return n, nil
 }
 
-func (h *Header) writeSegmentDataLength(w writer.BinaryWriter) (n int, err error) {
+func (h *Header) writeSegmentDataLength(w bitwise.BinaryWriter) (n int, err error) {
 	// uint32 segment number
 	temp := make([]byte, 4)
 	// the multibytes integers are stored in the big endian manner.
@@ -635,7 +634,7 @@ func (h *Header) writeSegmentDataLength(w writer.BinaryWriter) (n int, err error
 	return n, nil
 }
 
-func (h *Header) writeSegmentNumber(w writer.BinaryWriter) (n int, err error) {
+func (h *Header) writeSegmentNumber(w bitwise.BinaryWriter) (n int, err error) {
 	// uint32 segment number
 	temp := make([]byte, 4)
 	// the multibytes integers are stored in the big endian manner.
@@ -646,7 +645,7 @@ func (h *Header) writeSegmentNumber(w writer.BinaryWriter) (n int, err error) {
 	return n, nil
 }
 
-func (h *Header) writeSegmentPageAssociation(w writer.BinaryWriter) (n int, err error) {
+func (h *Header) writeSegmentPageAssociation(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "writeSegmentPageAssociation"
 	if h.pageSize() != 4 {
 		if err = w.WriteByte(byte(h.PageAssociation)); err != nil {

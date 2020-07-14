@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package reader
+package bitwise
 
 import (
 	"encoding/binary"
@@ -45,7 +45,7 @@ func NewSubstreamReader(r StreamReader, offset, length uint64) (*SubstreamReader
 		return nil, errors.New("root reader is nil")
 	}
 
-	common.Log.Trace("New substream at offset: %d with length: %d", offset, length)
+	common.Log.Trace("NewReader substream at offset: %d with length: %d", offset, length)
 	return &SubstreamReader{
 		wrapped: r,
 		offset:  offset,

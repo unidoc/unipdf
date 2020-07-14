@@ -10,8 +10,7 @@ import (
 	"math"
 
 	"github.com/unidoc/unipdf/v3/common"
-
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 )
 
 // Define the constant arithmetic decoder tables.
@@ -42,7 +41,7 @@ type Decoder struct {
 	ContextSize          []uint32
 	ReferedToContextSize []uint32
 
-	r              reader.StreamReader
+	r              bitwise.StreamReader
 	b              uint8
 	c              uint64
 	a              uint32
@@ -52,8 +51,8 @@ type Decoder struct {
 	streamPosition int64
 }
 
-// New creates new arithmetic Decoder.
-func New(r reader.StreamReader) (*Decoder, error) {
+// NewReader creates new arithmetic Decoder.
+func New(r bitwise.StreamReader) (*Decoder, error) {
 	d := &Decoder{
 		r:                    r,
 		ContextSize:          []uint32{16, 13, 10, 10},

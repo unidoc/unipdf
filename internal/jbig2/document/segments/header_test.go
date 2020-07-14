@@ -12,8 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 )
 
 // TestDecodeHeader test the segment header model decode process.
@@ -28,7 +27,7 @@ func TestDecodeHeader(t *testing.T) {
 		0xFE, 0xFE, 0x04, 0xEE, 0xED, 0x87, 0xFB, 0xCB, 0x2B, 0xFF, 0xAC,
 	}
 
-	r := reader.New(data)
+	r := bitwise.NewReader(data)
 	d := &document{}
 	h, err := NewHeader(d, r, 0, OSequential)
 	require.NoError(t, err)
@@ -65,7 +64,7 @@ func TestWriteHeader(t *testing.T) {
 			SegmentNumber:     2,
 			Type:              TImmediateTextRegion,
 		}
-		w := writer.BufferedMSB()
+		w := bitwise.BufferedMSB()
 
 		n, err := initial.Encode(w)
 		require.NoError(t, err)
@@ -92,7 +91,7 @@ func TestWriteHeader(t *testing.T) {
 		// check if the encoded data is now decodable with the same results.
 		// as the 'SegmentDataLength' = 64 the source data needs 64 bytes of empty data to
 		// read the header properly.
-		r := reader.New(append(w.Data(), make([]byte, 64)...))
+		r := bitwise.NewReader(append(w.Data(), make([]byte, 64)...))
 		d := &document{pages: []Pager{&page{segments: []*Header{{}, {}, {}, {}, {}}}, &page{}}}
 
 		h, err := NewHeader(d, r, 0, OSequential)
@@ -123,7 +122,7 @@ func TestWriteHeader(t *testing.T) {
 		for _, nm := range initial.RTSNumbers {
 			initial.RTSegments = append(initial.RTSegments, &Header{SegmentNumber: uint32(nm)})
 		}
-		w := writer.BufferedMSB()
+		w := bitwise.BufferedMSB()
 
 		n, err := initial.Encode(w)
 		require.NoError(t, err)
@@ -157,7 +156,7 @@ func TestWriteHeader(t *testing.T) {
 		require.True(t, f && s)
 
 		// check if the decoder would decode that header.
-		r := reader.New(append(w.Data(), make([]byte, 64)...))
+		r := bitwise.NewReader(append(w.Data(), make([]byte, 64)...))
 		p := &page{segments: make([]*Header, 7)}
 		d := &document{pages: []Pager{&page{}, p}}
 
@@ -189,7 +188,7 @@ func TestWriteHeader(t *testing.T) {
 		for i := uint32(0); i < 256; i++ {
 			initial.RTSegments[i] = &Header{SegmentNumber: i + initial.SegmentNumber}
 		}
-		w := writer.BufferedMSB()
+		w := bitwise.BufferedMSB()
 
 		n, err := initial.Encode(w)
 		require.NoError(t, err)
@@ -237,7 +236,7 @@ func TestWriteHeader(t *testing.T) {
 		require.True(t, f && s)
 
 		// check if the decoder would decode that header.
-		r := reader.New(append(w.Data(), make([]byte, 64)...))
+		r := bitwise.NewReader(append(w.Data(), make([]byte, 64)...))
 		// initialize testing document with the page no 256
 		d := &document{pages: make([]Pager, 257)}
 		// initialize page segments

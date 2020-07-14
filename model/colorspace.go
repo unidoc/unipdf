@@ -8,11 +8,13 @@ package model
 import (
 	"errors"
 	"fmt"
+	"io"
 	"math"
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/internal/imageutil"
+	"github.com/unidoc/unipdf/v3/internal/sampling"
 )
 
 // PdfColorspace interface defines the common methods of a PDF colorspace.
@@ -893,44 +895,56 @@ func (cs *PdfColorspaceCalGray) ColorToRGB(color PdfColor) (PdfColor, error) {
 
 // ImageToRGB converts image in CalGray color space to RGB (A, B, C -> X, Y, Z).
 func (cs *PdfColorspaceCalGray) ImageToRGB(img Image) (Image, error) {
-	rgbImage := img
+	r := sampling.NewReader(img.getBase())
+	dest := imageutil.NewImageBase(int(img.Width), int(img.Height), int(img.BitsPerComponent), 3, nil, nil, nil)
+	w := sampling.NewWriter(dest)
 
-	samples := img.GetSamples()
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 
-	var rgbSamples []uint32
-	for i := 0; i < len(samples); i++ {
+	pixel := make([]uint32, 3)
+	var (
+		sample                     uint32
+		ANorm, X, Y, Z, rr, gg, bb float64
+		err                        error
+	)
+	// for i := 0; i < len(samples); i++ {
+	for {
+		sample, err = r.ReadSample()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return img, err
+		}
 		// A represents the gray component of calibrated gray space.
 		// It shall be in the range 0.0 - 1.0
-		ANorm := float64(samples[i]) / maxVal
+		ANorm = float64(sample) / maxVal
 
 		// A -> X,Y,Z
-		X := cs.WhitePoint[0] * math.Pow(ANorm, cs.Gamma)
-		Y := cs.WhitePoint[1] * math.Pow(ANorm, cs.Gamma)
-		Z := cs.WhitePoint[2] * math.Pow(ANorm, cs.Gamma)
+		X = cs.WhitePoint[0] * math.Pow(ANorm, cs.Gamma)
+		Y = cs.WhitePoint[1] * math.Pow(ANorm, cs.Gamma)
+		Z = cs.WhitePoint[2] * math.Pow(ANorm, cs.Gamma)
 
 		// X,Y,Z -> rgb
 		// http://stackoverflow.com/questions/21576719/how-to-convert-cie-color-space-into-rgb-or-hex-color-code-in-php
-		r := 3.240479*X + -1.537150*Y + -0.498535*Z
-		g := -0.969256*X + 1.875992*Y + 0.041556*Z
-		b := 0.055648*X + -0.204043*Y + 1.057311*Z
+		rr = 3.240479*X + -1.537150*Y + -0.498535*Z
+		gg = -0.969256*X + 1.875992*Y + 0.041556*Z
+		bb = 0.055648*X + -0.204043*Y + 1.057311*Z
 
 		// Clip.
-		r = math.Min(math.Max(r, 0), 1.0)
-		g = math.Min(math.Max(g, 0), 1.0)
-		b = math.Min(math.Max(b, 0), 1.0)
+		rr = math.Min(math.Max(rr, 0), 1.0)
+		gg = math.Min(math.Max(gg, 0), 1.0)
+		bb = math.Min(math.Max(bb, 0), 1.0)
 
 		// Convert to uint32.
-		R := uint32(r * maxVal)
-		G := uint32(g * maxVal)
-		B := uint32(b * maxVal)
-
-		rgbSamples = append(rgbSamples, R, G, B)
+		pixel[0] = uint32(rr * maxVal)
+		pixel[1] = uint32(gg * maxVal)
+		pixel[2] = uint32(bb * maxVal)
+		if err = w.WriteSamples(pixel); err != nil {
+			return img, err
+		}
 	}
-	rgbImage.ColorComponents = 3
-	rgbImage.SetSamples(rgbSamples)
 
-	return rgbImage, nil
+	return imageFromBase(&dest), nil
 }
 
 // PdfColorCalRGB represents a color in the Colorimetric CIE RGB colorspace.
@@ -1239,47 +1253,54 @@ func (cs *PdfColorspaceCalRGB) ColorToRGB(color PdfColor) (PdfColor, error) {
 
 // ImageToRGB converts CalRGB colorspace image to RGB and returns the result.
 func (cs *PdfColorspaceCalRGB) ImageToRGB(img Image) (Image, error) {
-	rgbImage := img
-
-	samples := img.GetSamples()
+	r := sampling.NewReader(img.getBase())
+	dest := imageutil.NewImageBase(int(img.Width), int(img.Height), int(img.BitsPerComponent), 3, nil, nil, nil)
+	w := sampling.NewWriter(dest)
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
-
-	var rgbSamples []uint32
-	for i := 0; i < len(samples)-2; i += 3 {
+	samples := make([]uint32, 3)
+	var (
+		err                    error
+		rr, gg, bb, xx, yy, zz float64
+	)
+	for {
+		err = r.ReadSamples(samples)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return img, err
+		}
 		// A, B, C in range 0.0 to 1.0
-		aVal := float64(samples[i]) / maxVal
-		bVal := float64(samples[i+1]) / maxVal
-		cVal := float64(samples[i+2]) / maxVal
+		rr = float64(samples[0]) / maxVal
+		gg = float64(samples[1]) / maxVal
+		bb = float64(samples[2]) / maxVal
 
 		// A, B, C -> X,Y,Z
 		// Gamma [GR GC GB]
 		// Matrix [XA YA ZA XB YB ZB XC YC ZC]
-		X := cs.Matrix[0]*math.Pow(aVal, cs.Gamma[0]) + cs.Matrix[3]*math.Pow(bVal, cs.Gamma[1]) + cs.Matrix[6]*math.Pow(cVal, cs.Gamma[2])
-		Y := cs.Matrix[1]*math.Pow(aVal, cs.Gamma[0]) + cs.Matrix[4]*math.Pow(bVal, cs.Gamma[1]) + cs.Matrix[7]*math.Pow(cVal, cs.Gamma[2])
-		Z := cs.Matrix[2]*math.Pow(aVal, cs.Gamma[0]) + cs.Matrix[5]*math.Pow(bVal, cs.Gamma[1]) + cs.Matrix[8]*math.Pow(cVal, cs.Gamma[2])
+		xx = cs.Matrix[0]*math.Pow(rr, cs.Gamma[0]) + cs.Matrix[3]*math.Pow(gg, cs.Gamma[1]) + cs.Matrix[6]*math.Pow(bb, cs.Gamma[2])
+		yy = cs.Matrix[1]*math.Pow(rr, cs.Gamma[0]) + cs.Matrix[4]*math.Pow(gg, cs.Gamma[1]) + cs.Matrix[7]*math.Pow(bb, cs.Gamma[2])
+		zz = cs.Matrix[2]*math.Pow(rr, cs.Gamma[0]) + cs.Matrix[5]*math.Pow(gg, cs.Gamma[1]) + cs.Matrix[8]*math.Pow(bb, cs.Gamma[2])
 
-		// X, Y, Z -> R, G, B
+		// xx, yy, zz -> R, G, B
 		// http://stackoverflow.com/questions/21576719/how-to-convert-cie-color-space-into-rgb-or-hex-color-code-in-php
-		r := 3.240479*X + -1.537150*Y + -0.498535*Z
-		g := -0.969256*X + 1.875992*Y + 0.041556*Z
-		b := 0.055648*X + -0.204043*Y + 1.057311*Z
+		rr = 3.240479*xx + -1.537150*yy + -0.498535*zz
+		gg = -0.969256*xx + 1.875992*yy + 0.041556*zz
+		bb = 0.055648*xx + -0.204043*yy + 1.057311*zz
 
 		// Clip.
-		r = math.Min(math.Max(r, 0), 1.0)
-		g = math.Min(math.Max(g, 0), 1.0)
-		b = math.Min(math.Max(b, 0), 1.0)
+		rr = math.Min(math.Max(rr, 0), 1.0)
+		gg = math.Min(math.Max(gg, 0), 1.0)
+		bb = math.Min(math.Max(bb, 0), 1.0)
 
 		// Convert to uint32.
-		R := uint32(r * maxVal)
-		G := uint32(g * maxVal)
-		B := uint32(b * maxVal)
-
-		rgbSamples = append(rgbSamples, R, G, B)
+		samples[0] = uint32(rr * maxVal)
+		samples[1] = uint32(gg * maxVal)
+		samples[2] = uint32(bb * maxVal)
+		if err = w.WriteSamples(samples); err != nil {
+			return img, err
+		}
 	}
-	rgbImage.ColorComponents = 3
-	rgbImage.SetSamples(rgbSamples)
-
-	return rgbImage, nil
+	return imageFromBase(&dest), nil
 }
 
 // PdfColorLab represents a color in the L*, a*, b* 3 component colorspace.
@@ -1598,14 +1619,12 @@ func (cs *PdfColorspaceLab) ColorToRGB(color PdfColor) (PdfColor, error) {
 
 // ImageToRGB converts Lab colorspace image to RGB and returns the result.
 func (cs *PdfColorspaceLab) ImageToRGB(img Image) (Image, error) {
-	g := func(x float64) float64 {
+	gf := func(x float64) float64 {
 		if x >= 6.0/29 {
 			return x * x * x
 		}
 		return 108.0 / 841 * (x - 4/29)
 	}
-
-	rgbImage := img
 
 	// Each n-bit unit within the bit stream shall be interpreted as an unsigned integer in the range 0 to 2n- 1,
 	// with the high-order bit first.
@@ -1618,37 +1637,48 @@ func (cs *PdfColorspaceLab) ImageToRGB(img Image) (Image, error) {
 		common.Log.Trace("Image - Lab Decode range != 6... use [0 100 amin amax bmin bmax] default decode array")
 		componentRanges = cs.DecodeArray()
 	}
-
-	samples := img.GetSamples()
+	sr := sampling.NewReader(img.getBase())
+	dest := imageutil.NewImageBase(int(img.Width), int(img.Height), int(img.BitsPerComponent), 3, nil, img.alphaData, img.decode)
+	w := sampling.NewWriter(dest)
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 
-	var rgbSamples []uint32
-	for i := 0; i < len(samples); i += 3 {
+	samples := make([]uint32, 3)
+	var (
+		err                                   error
+		Ls, As, Bs, L, M, N, X, Y, Z, r, g, b float64
+	)
+	for {
+		err = sr.ReadSamples(samples)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return img, err
+		}
 		// Get normalized L*, a*, b* values. [0-1]
-		LNorm := float64(samples[i]) / maxVal
-		ANorm := float64(samples[i+1]) / maxVal
-		BNorm := float64(samples[i+2]) / maxVal
+		Ls = float64(samples[0]) / maxVal
+		As = float64(samples[1]) / maxVal
+		Bs = float64(samples[2]) / maxVal
 
-		LStar := imageutil.LinearInterpolate(LNorm, 0.0, 1.0, componentRanges[0], componentRanges[1])
-		AStar := imageutil.LinearInterpolate(ANorm, 0.0, 1.0, componentRanges[2], componentRanges[3])
-		BStar := imageutil.LinearInterpolate(BNorm, 0.0, 1.0, componentRanges[4], componentRanges[5])
+		Ls = imageutil.LinearInterpolate(Ls, 0.0, 1.0, componentRanges[0], componentRanges[1])
+		As = imageutil.LinearInterpolate(As, 0.0, 1.0, componentRanges[2], componentRanges[3])
+		Bs = imageutil.LinearInterpolate(Bs, 0.0, 1.0, componentRanges[4], componentRanges[5])
 
 		// Convert L*,a*,b* -> L, M, N
-		L := (LStar+16)/116 + AStar/500
-		M := (LStar + 16) / 116
-		N := (LStar+16)/116 - BStar/200
+		L = (Ls+16)/116 + As/500
+		M = (Ls + 16) / 116
+		N = (Ls+16)/116 - Bs/200
 
 		// L, M, N -> X,Y,Z
-		X := cs.WhitePoint[0] * g(L)
-		Y := cs.WhitePoint[1] * g(M)
-		Z := cs.WhitePoint[2] * g(N)
+		X = cs.WhitePoint[0] * gf(L)
+		Y = cs.WhitePoint[1] * gf(M)
+		Z = cs.WhitePoint[2] * gf(N)
 
 		// Convert to RGB.
 		// X, Y, Z -> R, G, B
 		// http://stackoverflow.com/questions/21576719/how-to-convert-cie-color-space-into-rgb-or-hex-color-code-in-php
-		r := 3.240479*X + -1.537150*Y + -0.498535*Z
-		g := -0.969256*X + 1.875992*Y + 0.041556*Z
-		b := 0.055648*X + -0.204043*Y + 1.057311*Z
+		r = 3.240479*X + -1.537150*Y + -0.498535*Z
+		g = -0.969256*X + 1.875992*Y + 0.041556*Z
+		b = 0.055648*X + -0.204043*Y + 1.057311*Z
 
 		// Clip.
 		r = math.Min(math.Max(r, 0), 1.0)
@@ -1656,16 +1686,14 @@ func (cs *PdfColorspaceLab) ImageToRGB(img Image) (Image, error) {
 		b = math.Min(math.Max(b, 0), 1.0)
 
 		// Convert to uint32.
-		R := uint32(r * maxVal)
-		G := uint32(g * maxVal)
-		B := uint32(b * maxVal)
-
-		rgbSamples = append(rgbSamples, R, G, B)
+		samples[0] = uint32(r * maxVal)
+		samples[1] = uint32(g * maxVal)
+		samples[2] = uint32(b * maxVal)
+		if err = w.WriteSamples(samples); err != nil {
+			return img, err
+		}
 	}
-	rgbImage.ColorComponents = 3
-	rgbImage.SetSamples(rgbSamples)
-
-	return rgbImage, nil
+	return imageFromBase(&dest), nil
 }
 
 //////////////////////
@@ -2339,27 +2367,32 @@ func (cs *PdfColorspaceSpecialIndexed) ColorToRGB(color PdfColor) (PdfColor, err
 // ImageToRGB convert an indexed image to RGB.
 func (cs *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 	// Make a new representation of the image to be converted with the base colorspace.
-	baseImage := Image{}
-	baseImage.Height = img.Height
-	baseImage.Width = img.Width
-	baseImage.alphaData = img.alphaData
-	baseImage.BitsPerComponent = 8
-	baseImage.hasAlpha = img.hasAlpha
-	baseImage.ColorComponents = cs.Base.GetNumComponents()
-
-	samples := img.GetSamples()
 	N := cs.Base.GetNumComponents()
-
 	if N < 1 {
 		return Image{}, fmt.Errorf("bad base colorspace NumComponents=%d", N)
 	}
+	dest := imageutil.NewImageBase(int(img.Width), int(img.Height), 8, N, nil, img.alphaData, img.decode)
+	r := sampling.NewReader(img.getBase())
+	w := sampling.NewWriter(dest)
 
-	var baseSamples []uint32
+	var (
+		sample  uint32
+		index   int
+		err     error
+		cValues []byte
+	)
 	// Convert the indexed data to base color map data.
-	for i := 0; i < len(samples); i++ {
+	// for i := 0; i < len(samples); i++ {
+	for {
+		sample, err = r.ReadSample()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return img, err
+		}
 		// Each data point represents an index location.
 		// For each entry there are N values.
-		index := int(samples[i])
+		index = int(sample)
 		common.Log.Trace("Indexed: index=%d N=%d lut=%d", index, N, len(cs.colorLookup))
 		// Ensure does not go out of bounds.
 		if (index+1)*N > len(cs.colorLookup) {
@@ -2372,20 +2405,17 @@ func (cs *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 			}
 		}
 
-		cvals := cs.colorLookup[index*N : (index+1)*N]
-		common.Log.Trace("C Vals: % d", cvals)
-		for _, val := range cvals {
-			baseSamples = append(baseSamples, uint32(val))
+		cValues = cs.colorLookup[index*N : (index+1)*N]
+		common.Log.Trace("C Vals: % d", cValues)
+		for i := range cValues {
+			if err = w.WriteSample(uint32(cValues[i])); err != nil {
+				return img, err
+			}
 		}
 	}
-	baseImage.ColorComponents = N
-	baseImage.SetSamples(baseSamples)
-
-	common.Log.Trace("Input samples: %d", samples)
-	common.Log.Trace("-> Output samples: %d", baseSamples)
 
 	// Convert to rgb.
-	return cs.Base.ImageToRGB(baseImage)
+	return cs.Base.ImageToRGB(imageFromBase(&dest))
 }
 
 // ToPdfObject converts colorspace to a PDF object. [/Indexed base hival lookup]
@@ -2568,50 +2598,50 @@ func (cs *PdfColorspaceSpecialSeparation) ColorToRGB(color PdfColor) (PdfColor, 
 // ImageToRGB converts an image with samples in Separation CS to an image with samples specified in
 // DeviceRGB CS.
 func (cs *PdfColorspaceSpecialSeparation) ImageToRGB(img Image) (Image, error) {
-	altImage := img
+	r := sampling.NewReader(img.getBase())
 
-	samples := img.GetSamples()
+	alt := imageutil.NewImageBase(int(img.Width), int(img.Height), int(img.BitsPerComponent), cs.AlternateSpace.GetNumComponents(), nil, img.alphaData, nil)
+	w := sampling.NewWriter(alt)
+
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 
 	common.Log.Trace("Separation color space -> ToRGB conversion")
-	common.Log.Trace("samples in: %d", len(samples))
 	common.Log.Trace("TintTransform: %+v", cs.TintTransform)
 
 	altDecode := cs.AlternateSpace.DecodeArray()
 
-	var altSamples []uint32
+	var (
+		sample uint32
+		err    error
+	)
+
 	// Convert tints to color data in the alternate colorspace.
-	for _, sample := range samples {
+	for {
+		sample, err = r.ReadSample()
+		if err == io.EOF {
+			break
+		}
 		// A single tint component is in the range 0.0 - 1.0
 		tint := float64(sample) / maxVal
 
 		// Convert the tint value to the alternate space value.
 		outputs, err := cs.TintTransform.Evaluate([]float64{tint})
-		//common.Log.Trace("%v Converting tint value: %f -> [% f]", cs.AlternateSpace, tint, outputs)
-
 		if err != nil {
 			return img, err
 		}
-
 		for i, val := range outputs {
 			// Convert component value to 0-1 range.
 			altVal := imageutil.LinearInterpolate(val, altDecode[i*2], altDecode[i*2+1], 0, 1)
 
 			// Rescale to [0, maxVal]
-			altComponent := uint32(altVal * maxVal)
-
-			altSamples = append(altSamples, altComponent)
+			if err = w.WriteSample(uint32(altVal * maxVal)); err != nil {
+				return img, err
+			}
 		}
 	}
-	common.Log.Trace("Samples out: %d", len(altSamples))
-	altImage.ColorComponents = cs.AlternateSpace.GetNumComponents()
-	altImage.SetSamples(altSamples)
-
-	// Set the image's decode parameters for interpretation in the alternative CS.
-	// altImage.decode = altDecode
 
 	// Convert to RGB via the alternate colorspace.
-	return cs.AlternateSpace.ImageToRGB(altImage)
+	return cs.AlternateSpace.ImageToRGB(imageFromBase(&alt))
 }
 
 // PdfColorspaceDeviceN represents a DeviceN color space. DeviceN color spaces are similar to Separation color
@@ -2787,22 +2817,31 @@ func (cs *PdfColorspaceDeviceN) ColorToRGB(color PdfColor) (PdfColor, error) {
 
 // ImageToRGB converts an Image in a given PdfColorspace to an RGB image.
 func (cs *PdfColorspaceDeviceN) ImageToRGB(img Image) (Image, error) {
-	altImage := img
-
-	samples := img.GetSamples()
+	r := sampling.NewReader(img.getBase())
+	alt := imageutil.NewImageBase(int(img.Width), int(img.Height), int(img.BitsPerComponent), img.ColorComponents, nil, img.alphaData, img.decode)
+	w := sampling.NewWriter(alt)
 	maxVal := math.Pow(2, float64(img.BitsPerComponent)) - 1
 
 	// Convert tints to color data in the alternate colorspace.
-	var altSamples []uint32
-	for i := 0; i < len(samples); i += cs.GetNumComponents() {
+	numComponents := cs.GetNumComponents()
+	samples := make([]uint32, numComponents)
+	inputs := make([]float64, numComponents)
+	// for i := 0; i < len(samples); i += cs.GetNumComponents() {
+	for {
+		err := r.ReadSamples(samples)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return img, err
+		}
+
 		// The input to the tint transformation is the tint
 		// for each color component.
 		//
 		// A single tint component is in the range 0.0 - 1.0
-		var inputs []float64
-		for j := 0; j < cs.GetNumComponents(); j++ {
-			tint := float64(samples[i+j]) / maxVal
-			inputs = append(inputs, tint)
+		for j := 0; j < numComponents; j++ {
+			tint := float64(samples[j]) / maxVal
+			inputs[j] = tint
 		}
 
 		// Transform the tints to the alternate colorspace.
@@ -2816,14 +2855,14 @@ func (cs *PdfColorspaceDeviceN) ImageToRGB(img Image) (Image, error) {
 			// Clip.
 			val = math.Min(math.Max(0, val), 1.0)
 			// Rescale to [0, maxVal]
-			altComponent := uint32(val * maxVal)
-			altSamples = append(altSamples, altComponent)
+			if err = w.WriteSample(uint32(val * maxVal)); err != nil {
+				return img, err
+			}
 		}
 	}
-	altImage.SetSamples(altSamples)
 
 	// Convert to RGB via the alternate colorspace.
-	return cs.AlternateSpace.ImageToRGB(altImage)
+	return cs.AlternateSpace.ImageToRGB(imageFromBase(&alt))
 }
 
 // PdfColorspaceDeviceNAttributes contains additional information about the components of colour space that

@@ -177,7 +177,7 @@ func removeLastRune(text string) string {
 }
 
 // getSpace returns the space to insert between lines of depth `depth1` and `depth2`.
-// Next line is the same depth so it's the same line as this one in the extracted text
+// ReadSample line is the same depth so it's the same line as this one in the extracted text
 func getSpace(depth1, depth2 float64) string {
 	eol := !isZero(depth1 - depth2)
 	if eol {

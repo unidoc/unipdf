@@ -8,15 +8,15 @@ package decoder
 import (
 	"image"
 
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/document"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
 // Decoder is the structure used to decode JBIG2 encoded byte streams.
 type Decoder struct {
-	inputReader reader.StreamReader
+	inputReader bitwise.StreamReader
 	document    *document.Document
 
 	currentDecodedPage int
@@ -114,7 +114,7 @@ func (d *Decoder) decodePageImage(pageNumber int) (image.Image, error) {
 // with optional 'parameters' and optional Globally encoded
 // data segments - 'globals'.
 func Decode(input []byte, parameters Parameters, globals *document.Globals) (*Decoder, error) {
-	r := reader.New(input)
+	r := bitwise.NewReader(input)
 
 	doc, err := document.DecodeDocument(r, globals)
 	if err != nil {

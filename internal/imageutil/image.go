@@ -71,19 +71,7 @@ func (i *ImageBase) copy() ImageBase {
 
 // NewImage creates new image for provided image parameters and image data byte slice.
 func NewImage(width, height, bitsPerComponent, colorComponents int, data, alpha []byte, decode []float64) (Image, error) {
-	base := ImageBase{
-		Width:            width,
-		Height:           height,
-		BitsPerComponent: bitsPerComponent,
-		ColorComponents:  colorComponents,
-		Data:             data,
-		Alpha:            alpha,
-		Decode:           decode,
-		BytesPerLine:     BytesPerLine(width, bitsPerComponent, colorComponents),
-	}
-	if data == nil {
-		base.Data = make([]byte, height*base.BytesPerLine)
-	}
+	base := NewImageBase(width, height, bitsPerComponent, colorComponents, data, alpha, decode)
 
 	var img Image
 	switch colorComponents {
@@ -119,6 +107,24 @@ func NewImage(width, height, bitsPerComponent, colorComponents int, data, alpha 
 	// 	return nil, err
 	// }
 	return img, nil
+}
+
+// NewImageBase creates new image base.
+func NewImageBase(width int, height int, bitsPerComponent int, colorComponents int, data []byte, alpha []byte, decode []float64) ImageBase {
+	base := ImageBase{
+		Width:            width,
+		Height:           height,
+		BitsPerComponent: bitsPerComponent,
+		ColorComponents:  colorComponents,
+		Data:             data,
+		Alpha:            alpha,
+		Decode:           decode,
+		BytesPerLine:     BytesPerLine(width, bitsPerComponent, colorComponents),
+	}
+	if data == nil {
+		base.Data = make([]byte, height*base.BytesPerLine)
+	}
+	return base
 }
 
 // BytesPerLine gets the number of bytes per line for given width, bits per color and color components number.

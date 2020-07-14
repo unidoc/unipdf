@@ -56,7 +56,7 @@ func GlyphToRune(glyph GlyphName) (rune, bool) {
 		return r, true
 	}
 
-	// Next try all the glyph naming conventions.
+	// ReadSample try all the glyph naming conventions.
 	if groups := reUniEncoding.FindStringSubmatch(string(glyph)); groups != nil {
 		n, err := strconv.ParseInt(groups[1], 16, 32)
 		if err == nil {

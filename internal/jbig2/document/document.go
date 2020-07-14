@@ -11,20 +11,19 @@ import (
 	"runtime/debug"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/document/segments"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/encoder/classer"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // fileHeaderID first byte slices of the jbig2 encoded file, see D.4.1.
 var fileHeaderID = []byte{0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A}
 
 // Document is the jbig2 document model containing pages and global segments.
-// By creating new document with method New or NewWithGlobals all the jbig2
+// By creating new document with method NewReader or NewWithGlobals all the jbig2
 // encoded data segment headers are decoded. In order to decode whole
 // document, all of it's pages should be decoded using GetBitmap method.
 // PDF encoded documents should contains only one Page with the number 1.
@@ -38,7 +37,7 @@ type Document struct {
 	// GBUseExtTemplate defines wether extended Template is used.
 	GBUseExtTemplate bool
 	// SubInputStream is the source data stream wrapped into a SubInputStream.
-	InputStream reader.StreamReader
+	InputStream bitwise.StreamReader
 	// GlobalSegments contains all segments that aren't associated with a page.
 	GlobalSegments *Globals
 	// OrganizationType is the document segment organization.
@@ -64,7 +63,7 @@ type Document struct {
 
 	fileHeaderLength uint8
 
-	w *writer.Buffer
+	w *bitwise.BufferedWriter
 
 	EncodeGlobals bool
 	// globalSymbolsNumber is the number of globally defined symbols.
@@ -84,13 +83,13 @@ type Document struct {
 
 // DecodeDocument decodes provided document based on the provided 'input' data stream
 // and with optional Global defined segments 'globals'.
-func DecodeDocument(input reader.StreamReader, globals *Globals) (*Document, error) {
+func DecodeDocument(input bitwise.StreamReader, globals *Globals) (*Document, error) {
 	return decodeWithGlobals(input, globals)
 }
 
 // InitEncodeDocument initializes the jbig2 document for the encoding process.
 func InitEncodeDocument(fullHeaders bool) *Document {
-	return &Document{FullHeaders: fullHeaders, w: writer.BufferedMSB(), Pages: map[int]*Page{}, singleUseSymbols: map[int][]int{}, symbolIndexMap: map[int]int{}, pageComponents: map[int][]int{}}
+	return &Document{FullHeaders: fullHeaders, w: bitwise.BufferedMSB(), Pages: map[int]*Page{}, singleUseSymbols: map[int][]int{}, symbolIndexMap: map[int]int{}, pageComponents: map[int][]int{}}
 }
 
 // AddGenericPage creates the jbig2 page based on the provided bitmap. The data provided
@@ -572,7 +571,7 @@ func (d *Document) determineRandomDataOffsets(segmentHeaders []*segments.Header,
 }
 
 // encodeEOFHeader writes the end of file header segment into 'w' writer.
-func (d *Document) encodeEOFHeader(w writer.BinaryWriter) (n int, err error) {
+func (d *Document) encodeEOFHeader(w bitwise.BinaryWriter) (n int, err error) {
 	h := &segments.Header{SegmentNumber: d.nextSegmentNumber(), Type: segments.TEndOfFile}
 	if n, err = h.Encode(w); err != nil {
 		return 0, errors.Wrap(err, "encodeEOFHeader", "")
@@ -581,7 +580,7 @@ func (d *Document) encodeEOFHeader(w writer.BinaryWriter) (n int, err error) {
 }
 
 // encodeFileHeader writes the file header segment into the 'w' writer.
-func (d *Document) encodeFileHeader(w writer.BinaryWriter) (n int, err error) {
+func (d *Document) encodeFileHeader(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "encodeFileHeader"
 	// file header contains following fields:
 	// ID string - constant 8-byte sequence
@@ -782,7 +781,7 @@ func (d *Document) reachedEOF(offset int64) (bool, error) {
 	return false, nil
 }
 
-func decodeWithGlobals(input reader.StreamReader, globals *Globals) (*Document, error) {
+func decodeWithGlobals(input bitwise.StreamReader, globals *Globals) (*Document, error) {
 	d := &Document{
 		Pages:                make(map[int]*Page),
 		InputStream:          input,

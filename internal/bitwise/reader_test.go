@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package reader
+package bitwise
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ import (
 func TestReader(t *testing.T) {
 	data := []byte{3, 255, 0xcc, 0x1a, 0xbc, 0xde, 0x80, 0x01, 0x02, 0xf8, 0x08, 0xf0}
 
-	r := New(data)
+	r := NewReader(data)
 	b, err := r.ReadByte()
 	require.NoError(t, err)
 	assert.Equal(t, byte(3), b)
@@ -68,7 +68,7 @@ func TestReader(t *testing.T) {
 		// having the data:
 		// 11110000 11011011
 		data := []byte{0xf0, 0xdb}
-		r := New(data)
+		r := NewReader(data)
 
 		bits, err := r.ReadBits(4)
 		require.NoError(t, err)
@@ -108,7 +108,7 @@ func TestSeeker(t *testing.T) {
 
 	t.Run("SeekStart", func(t *testing.T) {
 		t.Run("Valid", func(t *testing.T) {
-			r := New(data)
+			r := NewReader(data)
 			_, err := r.Seek(3, io.SeekStart)
 			require.NoError(t, err)
 
@@ -117,7 +117,7 @@ func TestSeeker(t *testing.T) {
 			assert.Equal(t, data[3], b)
 		})
 		t.Run("Invalid", func(t *testing.T) {
-			r := New(data)
+			r := NewReader(data)
 			_, err := r.Seek(int64(len(data)+1), io.SeekStart)
 			assert.Equal(t, nil, err)
 
@@ -126,7 +126,7 @@ func TestSeeker(t *testing.T) {
 		})
 	})
 	t.Run("SeekCurrent", func(t *testing.T) {
-		r := New(data)
+		r := NewReader(data)
 
 		_, err := r.ReadByte()
 		assert.Equal(t, nil, err)
@@ -140,7 +140,7 @@ func TestSeeker(t *testing.T) {
 		assert.Equal(t, data[2+1], b)
 	})
 	t.Run("SeekEnd", func(t *testing.T) {
-		r := New(data)
+		r := NewReader(data)
 
 		_, err := r.Seek(int64(-1), io.SeekEnd)
 		assert.Equal(t, nil, err)

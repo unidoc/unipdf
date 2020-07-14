@@ -12,10 +12,10 @@ import (
 	"time"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder/arithmetic"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
 // GenericRefinementRegion represtents jbig2 generic refinement region segment - 7.4.7.
@@ -23,7 +23,7 @@ type GenericRefinementRegion struct {
 	t0 templater
 	t1 templater
 
-	r reader.StreamReader
+	r bitwise.StreamReader
 	h *Header
 
 	// Region segment information flags 7.4.1.
@@ -55,7 +55,7 @@ type GenericRefinementRegion struct {
 }
 
 // Init implements Segmenter interface.
-func (g *GenericRefinementRegion) Init(header *Header, r reader.StreamReader) error {
+func (g *GenericRefinementRegion) Init(header *Header, r bitwise.StreamReader) error {
 	g.h = header
 	g.r = r
 	g.RegionInfo = NewRegionSegment(r)
@@ -994,7 +994,7 @@ func (g *GenericRefinementRegion) String() string {
 }
 
 // newGenericRefinementRegion is a creator for the Generic Refinement Region.
-func newGenericRefinementRegion(r reader.StreamReader, h *Header) *GenericRefinementRegion {
+func newGenericRefinementRegion(r bitwise.StreamReader, h *Header) *GenericRefinementRegion {
 	return &GenericRefinementRegion{
 		r:          r,
 		RegionInfo: NewRegionSegment(r),

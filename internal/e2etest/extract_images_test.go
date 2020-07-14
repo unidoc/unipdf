@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -69,6 +70,7 @@ func TestExtractImages(t *testing.T) {
 			t.Fatalf("UNIDOC_EXTRACT_IMAGES_TESTDATA not set")
 		}
 	}
+	ts := time.Now()
 
 	files, err := ioutil.ReadDir(extractImagesCorpusFolder)
 	if err != nil {
@@ -87,6 +89,7 @@ func TestExtractImages(t *testing.T) {
 	}
 
 	matchcount := 0
+	var measures []memoryMeasure
 	for _, file := range files {
 		t.Run(file.Name(), func(t *testing.T) {
 			basename := filepath.Base(file.Name())
@@ -98,7 +101,8 @@ func TestExtractImages(t *testing.T) {
 				inputPath: fpath,
 				outPath:   filepath.Join(tempdir, "extract_images_"+outName),
 			}
-			extractImagesSinglePdf(t, params)
+			ms := extractImagesSinglePdf(t, params)
+			measures = append(measures, ms)
 
 			hash, err := hashFile(params.outPath)
 			require.NoError(t, err)
@@ -116,7 +120,22 @@ func TestExtractImages(t *testing.T) {
 	// Ensure all the defined hashes were found.
 	require.Equal(t, len(knownExtrImgsHashes), matchcount)
 
-	t.Logf("Extract images benchmark complete for %d files in %s", len(files), extractImagesCorpusFolder)
+	t.Logf("Extract images benchmark complete for %d files in directory: %s", len(files), extractImagesCorpusFolder)
+	var (
+		alloc          float64
+		mallocs, frees int64
+	)
+	for _, ms := range measures {
+		alloc += float64(ms.end.TotalAlloc) - float64(ms.start.TotalAlloc)
+		mallocs += int64(ms.end.Mallocs) - int64(ms.start.Mallocs)
+		frees += int64(ms.end.Frees) - int64(ms.start.Frees)
+	}
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("Duration: %.2f seconds\n", time.Since(ts).Seconds()))
+	b.WriteString(fmt.Sprintf("Alloc: %.2f MB\n", alloc/1024.0/1024.0))
+	b.WriteString(fmt.Sprintf("Mallocs: %d\n", mallocs))
+	b.WriteString(fmt.Sprintf("Frees: %d\n", frees))
+	t.Logf(b.String())
 }
 
 type extractImagesParams struct {
@@ -124,7 +143,7 @@ type extractImagesParams struct {
 	outPath   string
 }
 
-func extractImagesSinglePdf(t *testing.T, params extractImagesParams) {
+func extractImagesSinglePdf(t *testing.T, params extractImagesParams) memoryMeasure {
 	measure := startMemoryMeasurement()
 
 	// Create PDF reader.
@@ -149,7 +168,7 @@ func extractImagesSinglePdf(t *testing.T, params extractImagesParams) {
 
 	if numPages < 1 {
 		common.Log.Debug("Empty pdf - nothing to be done!")
-		return
+		return measure
 	}
 
 	// Create output zip file.
@@ -190,4 +209,5 @@ func extractImagesSinglePdf(t *testing.T, params extractImagesParams) {
 	measure.Stop()
 	summary := measure.Summary()
 	t.Logf("%s - summary %s", params.inputPath, summary)
+	return measure
 }

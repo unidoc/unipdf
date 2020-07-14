@@ -12,8 +12,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/document"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
 // BenchmarkDecodeJBIG2Files benchmarks the decoding process of  jbig2 encoded images stored within pdf files.
@@ -36,7 +36,7 @@ func BenchmarkDecodeJBIG2Files(b *testing.B) {
 			for _, image := range images {
 				b.Run(fmt.Sprintf("Page#%d/Image#%d-%d", image.pageNo, image.idx, len(image.jbig2Data)), func(b *testing.B) {
 					for n := 0; n < b.N; n++ {
-						d, err := document.DecodeDocument(reader.New(image.jbig2Data), image.globals)
+						d, err := document.DecodeDocument(bitwise.NewReader(image.jbig2Data), image.globals)
 						require.NoError(b, err)
 
 						p, err := d.GetPage(1)

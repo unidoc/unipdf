@@ -13,10 +13,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/document/segments"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
 // TestDecodeDocument test the DecodeDocument function.
@@ -83,7 +83,7 @@ func TestDecodeDocument(t *testing.T) {
 			0x00, 0x00, 0x00, 0x00, 0x14, 0x33, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		}
 
-		r := reader.New(data)
+		r := bitwise.NewReader(data)
 		// create the document
 		d, err := DecodeDocument(r, nil)
 		require.NoError(t, err)
@@ -475,7 +475,7 @@ func TestDecodeDocument(t *testing.T) {
 			0x27, 0xF2, 0xB5, 0x3D, 0x4E, 0x37, 0xEF, 0x79, 0x5C, 0xC5, 0x50, 0x6D, 0xFF, 0xAC,
 		}
 
-		gdoc, err := DecodeDocument(reader.New(globalsData), nil)
+		gdoc, err := DecodeDocument(bitwise.NewReader(globalsData), nil)
 		require.NoError(t, err)
 
 		data := []byte{
@@ -499,7 +499,7 @@ func TestDecodeDocument(t *testing.T) {
 		}
 
 		// get the document
-		d, err := DecodeDocument(reader.New(data), gdoc.GlobalSegments)
+		d, err := DecodeDocument(bitwise.NewReader(data), gdoc.GlobalSegments)
 		require.NoError(t, err)
 
 		assert.Len(t, d.GlobalSegments.Segments, 1)
@@ -526,7 +526,7 @@ func TestEncodeDocument(t *testing.T) {
 			require.NoError(t, err, "%v", d.Pages)
 
 			// decode the
-			decoded, err := DecodeDocument(reader.New(data), nil)
+			decoded, err := DecodeDocument(bitwise.NewReader(data), nil)
 			require.NoError(t, err)
 
 			// number of pages is known
@@ -595,7 +595,7 @@ func TestEncodeDocument(t *testing.T) {
 
 						t.Logf("%s, encoded: %d, originalSize: %d", name, len(data), len(sbm.Data))
 						// decode the
-						decoded, err := DecodeDocument(reader.New(data), nil)
+						decoded, err := DecodeDocument(bitwise.NewReader(data), nil)
 						require.NoError(t, err)
 
 						assert.False(t, decoded.FullHeaders)
@@ -638,7 +638,7 @@ func TestEncodeDocument(t *testing.T) {
 
 						t.Logf("%s, encoded: %d, originalSize: %d", name, len(data), len(sbm.Data))
 						// decode the
-						decoded, err := DecodeDocument(reader.New(data), nil)
+						decoded, err := DecodeDocument(bitwise.NewReader(data), nil)
 						require.NoError(t, err)
 
 						assert.False(t, decoded.FullHeaders)

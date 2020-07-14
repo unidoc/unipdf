@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package writer
+package bitwise
 
 import (
 	"testing"
@@ -12,18 +12,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestBufferFinishByte tests the FinishByte method of the Buffer.
+// TestBufferFinishByte tests the FinishByte method of the BufferedWriter.
 func TestBufferFinishByte(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		// Having a buffer with some bits already written.
 		var (
 			name string
-			w    *Buffer
+			w    *BufferedWriter
 		)
 		switch i {
 		case 0:
 			name = "LSB"
-			w = &Buffer{}
+			w = &BufferedWriter{}
 		case 1:
 			name = "MSB"
 			w = BufferedMSB()
@@ -175,7 +175,7 @@ func TestBufferSkipBits(t *testing.T) {
 // TestBufferWrite tests the Write method of the Writer.
 func TestBufferWrite(t *testing.T) {
 	t.Run("Valid", func(t *testing.T) {
-		w := &Buffer{}
+		w := &BufferedWriter{}
 
 		toWrite := []byte{0x3f, 0x12, 0x86}
 
@@ -196,7 +196,7 @@ func TestBufferWrite(t *testing.T) {
 	})
 
 	t.Run("Shifted", func(t *testing.T) {
-		w := &Buffer{}
+		w := &BufferedWriter{}
 		// write empty byte and reset it's byte index to 0.
 		require.NoError(t, w.WriteByte(0x00))
 		w.byteIndex = 0
@@ -303,7 +303,7 @@ func TestBufferWrite(t *testing.T) {
 // TestBufferWriteBit tests the WriteBit method of the Writer.
 func TestBufferWriteBit(t *testing.T) {
 	t.Run("Valid", func(t *testing.T) {
-		buf := &Buffer{}
+		buf := &BufferedWriter{}
 		// 10010011 11000111
 		// 0x93 	0xC7
 		bits := []int{1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1}
@@ -319,7 +319,7 @@ func TestBufferWriteBit(t *testing.T) {
 
 	t.Run("BitShifted", func(t *testing.T) {
 		t.Run("Empty", func(t *testing.T) {
-			buf := &Buffer{}
+			buf := &BufferedWriter{}
 			// fill thee buffer with 3 bits
 			for i := 0; i < 3; i++ {
 				err := buf.WriteBit(int(0))
@@ -340,7 +340,7 @@ func TestBufferWriteBit(t *testing.T) {
 	})
 
 	t.Run("ByteShifted", func(t *testing.T) {
-		buf := &Buffer{}
+		buf := &BufferedWriter{}
 		require.NoError(t, buf.WriteByte(0x00))
 
 		// write 8 bits that should look like a byte 0xe3
@@ -359,7 +359,7 @@ func TestBufferWriteBit(t *testing.T) {
 	})
 
 	t.Run("Finished", func(t *testing.T) {
-		buf := &Buffer{}
+		buf := &BufferedWriter{}
 
 		// write some bits to the first byte.
 		firstBits := []int{1, 0, 1}
@@ -471,7 +471,7 @@ func TestBufferWriteBit(t *testing.T) {
 // TestBufferWriteByte tests the WriteByte method of the Writer.
 func TestBufferWriteByte(t *testing.T) {
 	t.Run("Valid", func(t *testing.T) {
-		w := &Buffer{}
+		w := &BufferedWriter{}
 
 		input := []byte{0x4f, 0xff, 0x13, 0x2}
 
@@ -487,7 +487,7 @@ func TestBufferWriteByte(t *testing.T) {
 	})
 
 	t.Run("ByteShifted", func(t *testing.T) {
-		w := &Buffer{}
+		w := &BufferedWriter{}
 		err := w.WriteByte(0xff)
 		require.NoError(t, err)
 		err = w.WriteByte(0x00)
@@ -502,7 +502,7 @@ func TestBufferWriteByte(t *testing.T) {
 	})
 
 	t.Run("BitShifted", func(t *testing.T) {
-		w := &Buffer{}
+		w := &BufferedWriter{}
 
 		// insert empty byte and reset the byte index to 0
 		require.NoError(t, w.WriteByte(0x00))
@@ -614,7 +614,7 @@ func TestBufferWriteByte(t *testing.T) {
 // TestWriteBits tests the WriteBits function.
 func TestWriteBits(t *testing.T) {
 	t.Run("NonMSB", func(t *testing.T) {
-		b := &Buffer{}
+		b := &BufferedWriter{}
 
 		// having empty buffered MSB.
 		n, err := b.WriteBits(0xb, 4)

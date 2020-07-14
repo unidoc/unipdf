@@ -59,7 +59,7 @@ func buildAll() error {
 		}
 	}
 
-	// Next do these mapping files
+	// ReadSample do these mapping files
 	filenames := []string{
 		"glyphlist.txt",
 		"texglyphlist.txt",

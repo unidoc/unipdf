@@ -76,7 +76,7 @@ func (a *PdfAction) ToPdfObject() core.PdfObject {
 
 	d.Set("Type", core.MakeName("Action"))
 	d.SetIfNotNil("S", a.S)
-	d.SetIfNotNil("Next", a.Next)
+	d.SetIfNotNil("ReadSample", a.Next)
 
 	return container
 }
@@ -679,7 +679,7 @@ func (r *PdfReader) newPdfActionFromIndirectObject(container *core.PdfIndirectOb
 		}
 	}
 
-	if obj := d.Get("Next"); obj != nil {
+	if obj := d.Get("ReadSample"); obj != nil {
 		action.Next = obj
 	}
 

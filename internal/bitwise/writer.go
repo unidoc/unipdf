@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package writer
+package bitwise
 
 import (
 	"io"
@@ -17,7 +17,7 @@ import (
 // It allows to write the bits in two modes. The first and default
 // writes bytes with the initial bitIndex 0 as the LSB (Least Significant Bit)
 // The second mode writes bits in an opposite manner starting from the MSB (Most Significant Bit).
-// The writer is being created by the methods: 'New' and 'NewMSB', where the first
+// The writer is being created by the methods: 'NewWriter' and 'NewWriterMSB', where the first
 // creates default writer and the second the 'msb' flagged writer.
 // Implements io.Writer, io.ByteWriter interfaces.
 type Writer struct {
@@ -31,12 +31,12 @@ type Writer struct {
 // compile time check for the BinaryWriter interface.
 var _ BinaryWriter = &Writer{}
 
-// New creates new writer for the provided data.
-func New(data []byte) *Writer {
+// NewWriter creates new writer for the provided data.
+func NewWriter(data []byte) *Writer {
 	return &Writer{data: data}
 }
 
-// NewMSB creates new writer with the msb flag.
+// NewWriterMSB creates new writer with the msb flag.
 // While default writer writes single bits into LSB, the msbWriter writes single bits
 // starting from the MSB.
 // Example:
@@ -46,7 +46,7 @@ func New(data []byte) *Writer {
 // 		The default current bit index is pointed by '^'.
 // 		Writing new '1' bit to the following data would result as:
 //		data - 10010100 01001110 10000000
-func NewMSB(data []byte) *Writer {
+func NewWriterMSB(data []byte) *Writer {
 	return &Writer{data: data, msb: true}
 }
 
@@ -153,6 +153,20 @@ func (w *Writer) WriteBits(bits uint64, number int) (n int, err error) {
 		return 0, nil
 	}
 
+	fullBytes := number / 8
+	if fullBytes > 0 {
+		d := number - fullBytes*8
+		for i := fullBytes - 1; i >= 0; i-- {
+			bt := byte((bits >> uint(i*8+d)) & 0xff)
+			if err = w.WriteByte(bt); err != nil {
+				return n, errors.Wrapf(err, processName, "byte: '%d'", fullBytes-i+1)
+			}
+		}
+		number -= fullBytes * 8
+		if number == 0 {
+			return fullBytes, nil
+		}
+	}
 	var bit int
 	for i := 0; i < number; i++ {
 		if w.msb {
@@ -165,7 +179,7 @@ func (w *Writer) WriteBits(bits uint64, number int) (n int, err error) {
 			return n, errors.Wrapf(err, processName, "bit: %d", i)
 		}
 	}
-	return number / 8, nil
+	return fullBytes, nil
 }
 
 func (w *Writer) byteCapacity() int {

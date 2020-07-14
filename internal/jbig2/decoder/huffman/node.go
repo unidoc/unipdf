@@ -11,12 +11,12 @@ import (
 	"math"
 	"strings"
 
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 )
 
 // Node is the interface defined for all huffman tree nodes.
 type Node interface {
-	Decode(r reader.StreamReader) (int64, error)
+	Decode(r bitwise.StreamReader) (int64, error)
 	String() string
 }
 
@@ -28,7 +28,7 @@ var _ Node = &OutOfBandNode{}
 
 // Decode implements Node interface.
 // Decodes the out of band node by returning max int64 value.
-func (o *OutOfBandNode) Decode(r reader.StreamReader) (int64, error) {
+func (o *OutOfBandNode) Decode(r bitwise.StreamReader) (int64, error) {
 	return int64(math.MaxInt64), nil
 }
 
@@ -52,7 +52,7 @@ type ValueNode struct {
 var _ Node = &ValueNode{}
 
 // Decode implements Node interface.
-func (v *ValueNode) Decode(r reader.StreamReader) (int64, error) {
+func (v *ValueNode) Decode(r bitwise.StreamReader) (int64, error) {
 	bits, err := r.ReadBits(byte(v.rangeLen))
 	if err != nil {
 		return 0, err
@@ -91,7 +91,7 @@ type InternalNode struct {
 var _ Node = &InternalNode{}
 
 // Decode implements Node interface.
-func (i *InternalNode) Decode(r reader.StreamReader) (int64, error) {
+func (i *InternalNode) Decode(r bitwise.StreamReader) (int64, error) {
 	b, err := r.ReadBit()
 	if err != nil {
 		return 0, err

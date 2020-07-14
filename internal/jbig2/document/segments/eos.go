@@ -8,17 +8,17 @@ package segments
 import (
 	"math"
 
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 )
 
 // EndOfStripe flags an end of stripe - see 7.4.9.
 type EndOfStripe struct {
-	r          reader.StreamReader
+	r          bitwise.StreamReader
 	lineNumber int
 }
 
 // Init implements Segmenter interface.
-func (e *EndOfStripe) Init(h *Header, r reader.StreamReader) error {
+func (e *EndOfStripe) Init(h *Header, r bitwise.StreamReader) error {
 	e.r = r
 	return e.parseHeader(h, r)
 }
@@ -28,7 +28,7 @@ func (e *EndOfStripe) LineNumber() int {
 	return e.lineNumber
 }
 
-func (e *EndOfStripe) parseHeader(h *Header, r reader.StreamReader) error {
+func (e *EndOfStripe) parseHeader(h *Header, r bitwise.StreamReader) error {
 	temp, err := e.r.ReadBits(32)
 	if err != nil {
 		return err

@@ -3,7 +3,7 @@
  * file 'LICENSE.md', which is part of this source code package.
  */
 
-package writer
+package bitwise
 
 import (
 	"testing"
@@ -16,7 +16,7 @@ import (
 func TestWriteBit(t *testing.T) {
 	t.Run("Valid", func(t *testing.T) {
 		data := make([]byte, 4)
-		w := New(data)
+		w := NewWriter(data)
 
 		// 10010011 11000111
 		// 0x93 	0xC7
@@ -34,7 +34,7 @@ func TestWriteBit(t *testing.T) {
 	t.Run("BitShifted", func(t *testing.T) {
 		t.Run("Empty", func(t *testing.T) {
 			data := make([]byte, 4)
-			w := New(data)
+			w := NewWriter(data)
 			w.bitIndex = 3
 
 			// bits 11101
@@ -51,7 +51,7 @@ func TestWriteBit(t *testing.T) {
 
 		t.Run("PreFilled", func(t *testing.T) {
 			data := make([]byte, 4)
-			w := New(data)
+			w := NewWriter(data)
 
 			w.bitIndex = 3
 			// 0x01 - 00000001
@@ -73,7 +73,7 @@ func TestWriteBit(t *testing.T) {
 
 	t.Run("ByteShifted", func(t *testing.T) {
 		data := make([]byte, 4)
-		w := New(data)
+		w := NewWriter(data)
 		w.byteIndex = 2
 
 		// 11100011 - 0xe3
@@ -89,7 +89,7 @@ func TestWriteBit(t *testing.T) {
 
 	t.Run("Overflow", func(t *testing.T) {
 		data := make([]byte, 4)
-		w := New(data)
+		w := NewWriter(data)
 
 		w.byteIndex = 3
 
@@ -109,7 +109,7 @@ func TestWriteBit(t *testing.T) {
 	t.Run("Inverse", func(t *testing.T) {
 		t.Run("Valid", func(t *testing.T) {
 			data := make([]byte, 4)
-			w := NewMSB(data)
+			w := NewWriterMSB(data)
 
 			// 	10010111 10101100
 			//	0x97	 0xac
@@ -129,7 +129,7 @@ func TestWriteBit(t *testing.T) {
 
 		t.Run("ByteShifted", func(t *testing.T) {
 			data := make([]byte, 4)
-			w := NewMSB(data)
+			w := NewWriterMSB(data)
 			w.byteIndex = 2
 
 			// 11100011 - 0xe3
@@ -144,7 +144,7 @@ func TestWriteBit(t *testing.T) {
 
 		t.Run("BitShifted", func(t *testing.T) {
 			data := make([]byte, 4)
-			w := NewMSB(data)
+			w := NewWriterMSB(data)
 			w.bitIndex = 5
 
 			// 0xE0 - 11100000
@@ -164,7 +164,7 @@ func TestWriteBit(t *testing.T) {
 
 		t.Run("Overflow", func(t *testing.T) {
 			data := make([]byte, 4)
-			w := NewMSB(data)
+			w := NewWriterMSB(data)
 
 			w.byteIndex = 3
 
@@ -187,7 +187,7 @@ func TestWriteBit(t *testing.T) {
 func TestWriteByte(t *testing.T) {
 	t.Run("Valid", func(t *testing.T) {
 		data := make([]byte, 4)
-		w := New(data)
+		w := NewWriter(data)
 
 		input := []byte{0x4f, 0xff, 0x13, 0x2}
 
@@ -205,7 +205,7 @@ func TestWriteByte(t *testing.T) {
 		data := make([]byte, 4)
 		data[0] = 0xff
 
-		w := New(data)
+		w := NewWriter(data)
 		w.byteIndex = 2
 
 		err := w.WriteByte(0x23)
@@ -218,7 +218,7 @@ func TestWriteByte(t *testing.T) {
 
 	t.Run("BitShifted", func(t *testing.T) {
 		data := make([]byte, 4)
-		w := New(data)
+		w := NewWriter(data)
 
 		w.bitIndex = 5
 
@@ -263,7 +263,7 @@ func TestWriteByte(t *testing.T) {
 
 	t.Run("Overflow", func(t *testing.T) {
 		data := make([]byte, 4)
-		w := New(data)
+		w := NewWriter(data)
 
 		input := []byte{0x4f, 0xff, 0x13, 0xff, 0x12}
 
@@ -280,7 +280,7 @@ func TestWriteByte(t *testing.T) {
 
 	t.Run("BitOverflow", func(t *testing.T) {
 		data := make([]byte, 4)
-		w := New(data)
+		w := NewWriter(data)
 
 		w.bitIndex = 5
 
@@ -300,7 +300,7 @@ func TestWriteByte(t *testing.T) {
 	t.Run("MSB", func(t *testing.T) {
 		t.Run("Valid", func(t *testing.T) {
 			data := make([]byte, 4)
-			w := NewMSB(data)
+			w := NewWriterMSB(data)
 
 			input := []byte{0x4f, 0xff, 0x13, 0x2}
 
@@ -318,7 +318,7 @@ func TestWriteByte(t *testing.T) {
 			data := make([]byte, 4)
 			data[0] = 0xff
 
-			w := NewMSB(data)
+			w := NewWriterMSB(data)
 			w.byteIndex = 2
 
 			err := w.WriteByte(0x23)
@@ -331,7 +331,7 @@ func TestWriteByte(t *testing.T) {
 
 		t.Run("BitShifted", func(t *testing.T) {
 			data := make([]byte, 4)
-			w := NewMSB(data)
+			w := NewWriterMSB(data)
 
 			w.bitIndex = 5
 
@@ -376,7 +376,7 @@ func TestWriteByte(t *testing.T) {
 func TestWrite(t *testing.T) {
 	t.Run("Valid", func(t *testing.T) {
 		data := make([]byte, 4)
-		w := New(data)
+		w := NewWriter(data)
 
 		toWrite := []byte{0x3f, 0x12, 0x86}
 
@@ -394,7 +394,7 @@ func TestWrite(t *testing.T) {
 	t.Run("Shifted", func(t *testing.T) {
 		data := make([]byte, 4)
 
-		w := New(data)
+		w := NewWriter(data)
 		w.bitIndex = 3
 
 		toWrite := []byte{0x3f, 0x12, 0x86}
@@ -427,7 +427,7 @@ func TestWrite(t *testing.T) {
 
 	t.Run("OutOfRange", func(t *testing.T) {
 		data := make([]byte, 4)
-		w := New(data)
+		w := NewWriter(data)
 
 		// 5 byte values into 4 byte size data.
 		overflow := []byte{0x21, 0x66, 0x14, 0xff, 0x12}
@@ -438,7 +438,7 @@ func TestWrite(t *testing.T) {
 
 	t.Run("BitIndexOverflow", func(t *testing.T) {
 		data := make([]byte, 4)
-		w := New(data)
+		w := NewWriter(data)
 		// set bit index greater than 0 - some bits are already written.
 		w.bitIndex = 3
 
@@ -454,7 +454,7 @@ func TestWrite(t *testing.T) {
 	t.Run("MSB", func(t *testing.T) {
 		t.Run("Valid", func(t *testing.T) {
 			data := make([]byte, 4)
-			w := NewMSB(data)
+			w := NewWriterMSB(data)
 
 			toWrite := []byte{0x3f, 0x12, 0x86}
 
@@ -471,7 +471,7 @@ func TestWrite(t *testing.T) {
 
 		t.Run("Overflow", func(t *testing.T) {
 			data := make([]byte, 4)
-			w := NewMSB(data)
+			w := NewWriterMSB(data)
 
 			toWrite := []byte{0x3f, 0x12, 0x86}
 
@@ -489,7 +489,7 @@ func TestWrite(t *testing.T) {
 		t.Run("Shifted", func(t *testing.T) {
 			data := make([]byte, 4)
 
-			w := NewMSB(data)
+			w := NewWriterMSB(data)
 			w.bitIndex = 3
 
 			toWrite := []byte{0x3f, 0x12, 0x86}
@@ -529,7 +529,7 @@ func TestWrite(t *testing.T) {
 
 		t.Run("BitIndexOverflow", func(t *testing.T) {
 			data := make([]byte, 4)
-			w := NewMSB(data)
+			w := NewWriterMSB(data)
 			// set bit index greater than 0 - some bits are already written.
 			w.bitIndex = 3
 
@@ -542,4 +542,9 @@ func TestWrite(t *testing.T) {
 			require.Error(t, err)
 		})
 	})
+}
+
+//
+func TestWriterWriteBits(t *testing.T) {
+
 }

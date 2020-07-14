@@ -12,16 +12,15 @@ import (
 	"strings"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // RegionSegment is the model representing base jbig2 segment region - see 7.4.1.
 type RegionSegment struct {
-	r reader.StreamReader
+	r bitwise.StreamReader
 	// Region segment bitmap width, 7.4.1.1
 	BitmapWidth uint32
 	// Region segment bitmap height, 7.4.1.2
@@ -35,7 +34,7 @@ type RegionSegment struct {
 }
 
 // NewRegionSegment creates new Region segment model.
-func NewRegionSegment(r reader.StreamReader) *RegionSegment {
+func NewRegionSegment(r bitwise.StreamReader) *RegionSegment {
 	return &RegionSegment{r: r}
 }
 
@@ -43,7 +42,7 @@ func NewRegionSegment(r reader.StreamReader) *RegionSegment {
 var _ SegmentEncoder = &RegionSegment{}
 
 // Encode implements the SegmentEncoder interface.
-func (r *RegionSegment) Encode(w writer.BinaryWriter) (n int, err error) {
+func (r *RegionSegment) Encode(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "RegionSegment.Encode"
 	// the region segment encodes as follows:
 	// segment bitmap width 		- big endian uint32

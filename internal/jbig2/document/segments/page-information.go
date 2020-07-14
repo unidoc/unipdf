@@ -12,16 +12,15 @@ import (
 	"strings"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // PageInformationSegment represents the segment type Page Information 7.4.8.
 type PageInformationSegment struct {
-	r reader.StreamReader
+	r bitwise.StreamReader
 
 	// Page bitmap height, four byte, 7.4.8.1
 	PageBMHeight int
@@ -46,7 +45,7 @@ type PageInformationSegment struct {
 }
 
 // Encode implements SegmentEncoder interface.
-func (p *PageInformationSegment) Encode(w writer.BinaryWriter) (n int, err error) {
+func (p *PageInformationSegment) Encode(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "PageInformationSegment.Encode"
 	tm := make([]byte, 4)
 
@@ -96,7 +95,7 @@ func (p *PageInformationSegment) Encode(w writer.BinaryWriter) (n int, err error
 }
 
 // Init implements Segmenter interface.
-func (p *PageInformationSegment) Init(h *Header, r reader.StreamReader) (err error) {
+func (p *PageInformationSegment) Init(h *Header, r bitwise.StreamReader) (err error) {
 	p.r = r
 	if err = p.parseHeader(); err != nil {
 		return errors.Wrap(err, "PageInformationSegment.Init", "")
@@ -160,7 +159,7 @@ func (p *PageInformationSegment) checkInput() error {
 	return nil
 }
 
-func (p *PageInformationSegment) encodeFlags(w writer.BinaryWriter) (err error) {
+func (p *PageInformationSegment) encodeFlags(w bitwise.BinaryWriter) (err error) {
 	const processName = "encodeFlags"
 	// reserved bits
 	if err = w.SkipBits(1); err != nil {
@@ -218,7 +217,7 @@ func (p *PageInformationSegment) encodeFlags(w writer.BinaryWriter) (err error) 
 	return nil
 }
 
-func (p *PageInformationSegment) encodeStripingInformation(w writer.BinaryWriter) (n int, err error) {
+func (p *PageInformationSegment) encodeStripingInformation(w bitwise.BinaryWriter) (n int, err error) {
 	const processName = "encodeStripingInformation"
 	if !p.IsStripe {
 		// if there is no page striping write two empty bytes

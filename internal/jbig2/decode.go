@@ -6,10 +6,10 @@
 package jbig2
 
 import (
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/decoder"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/document"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/errors"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
 // DecodeBytes decodes jbig2 'encode' byte slice data, with provided 'parameters' and optional 'globals'.
@@ -29,7 +29,7 @@ func DecodeBytes(encoded []byte, parameters decoder.Parameters, globals ...Globa
 // DecodeGlobals decodes globally defined data segments from the provided 'encoded' byte slice.
 func DecodeGlobals(encoded []byte) (Globals, error) {
 	const processName = "DecodeGlobals"
-	r := reader.New(encoded)
+	r := bitwise.NewReader(encoded)
 
 	doc, err := document.DecodeDocument(r, nil)
 	if err != nil {

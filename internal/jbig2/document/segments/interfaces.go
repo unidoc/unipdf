@@ -6,9 +6,8 @@
 package segments
 
 import (
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/writer"
 )
 
 // Documenter is the interface used for the document model.
@@ -30,13 +29,13 @@ type Pager interface {
 // Segmenter is the interface for all data pars of segments.
 type Segmenter interface {
 	// Init initializes the segment from the provided data stream 'r'.
-	Init(header *Header, r reader.StreamReader) error
+	Init(header *Header, r bitwise.StreamReader) error
 }
 
 // SegmentEncoder is the interface used for encoding single segment instances.
 type SegmentEncoder interface {
 	// Encode encodes the segment and write into 'w' writer.
-	Encode(w writer.BinaryWriter) (n int, err error)
+	Encode(w bitwise.BinaryWriter) (n int, err error)
 }
 
 // EncodeInitializer is the interface used to initialize the segments for the encode process.

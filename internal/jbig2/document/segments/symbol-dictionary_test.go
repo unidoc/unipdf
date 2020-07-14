@@ -12,9 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/internal/bitwise"
 
 	"github.com/unidoc/unipdf/v3/internal/jbig2/bitmap"
-	"github.com/unidoc/unipdf/v3/internal/jbig2/reader"
 )
 
 // TestSymbolDictionaryDecode tests the symbol dictionary decode process.
@@ -28,7 +28,7 @@ func TestSymbolDictionaryDecode(t *testing.T) {
 			0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0xE9, 0xCB,
 			0xF4, 0x00, 0x26, 0xAF, 0x04, 0xBF, 0xF0, 0x78, 0x2F, 0xE0, 0x00, 0x40,
 		}
-		r := reader.New(data)
+		r := bitwise.NewReader(data)
 		d := &document{}
 		h, err := NewHeader(d, r, 0, OSequential)
 		require.NoError(t, err)
@@ -69,7 +69,7 @@ func TestSymbolDictionaryDecode(t *testing.T) {
 			0xF8, 0x00, 0x79, 0xE0, 0x84, 0x10, 0x81, 0xF0, 0x82, 0x10, 0x86, 0x10,
 			0x79, 0xF0, 0x00, 0x80,
 		}
-		r := reader.New(data)
+		r := bitwise.NewReader(data)
 		d := &document{}
 		h, err := NewHeader(d, r, 0, OSequential)
 		require.NoError(t, err)
@@ -111,7 +111,7 @@ func TestSymbolDictionaryDecode(t *testing.T) {
 			0x4F, 0xE7, 0x8C, 0x20, 0x0E, 0x1D, 0xC7, 0xCF, 0x01, 0x11, 0xC4, 0xB2,
 			0x6F, 0xFF, 0xAC,
 		}
-		r := reader.New(data)
+		r := bitwise.NewReader(data)
 		d := &document{}
 		h, err := NewHeader(d, r, 0, OSequential)
 		require.NoError(t, err)
@@ -168,7 +168,7 @@ func TestSymbolDictionaryDecode(t *testing.T) {
 			0xA7, 0xFB, 0x6D, 0x14, 0x98, 0x3F, 0xFF, 0xAC,
 		}
 
-		r := reader.New(data)
+		r := bitwise.NewReader(data)
 		p3 := &page{segments: []*Header{}}
 		d := &document{pages: []Pager{nil, nil, p3}}
 		h, err := NewHeader(d, r, 0, OSequential)

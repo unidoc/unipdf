@@ -636,7 +636,7 @@ func (a *PdfAppender) Write(w io.Writer) error {
 					}
 				}
 				parent, hasParent = parentDict.Get("Parent").(*core.PdfIndirectObject)
-				common.Log.Trace("Next parent: %T", parentDict.Get("Parent"))
+				common.Log.Trace("ReadSample parent: %T", parentDict.Get("Parent"))
 			}
 			pDict.Set("Parent", writer.pages)
 		}
