@@ -11,6 +11,7 @@
 package textencoding
 
 import (
+	"bytes"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -83,6 +84,16 @@ func RuneToGlyph(r rune) (GlyphName, bool) {
 	return glyph, ok
 }
 
+// ExpandLigatures returns `runes` as a string with ligatures expanded
+func ExpandLigatures(runes []rune) string {
+	var buffer bytes.Buffer
+	for _, r := range runes {
+		s := RuneToString(r)
+		buffer.WriteString(s)
+	}
+	return buffer.String()
+}
+
 // RuneToString converts rune `r` to a string. It unpacks `ligatures`.
 func RuneToString(r rune) string {
 	if s, ok := ligatureToString[r]; ok {
@@ -137,8 +148,6 @@ var ligatureToString = map[rune]string{
 	'œ':          "oe",
 	'Ꝏ':          "OO",
 	'ꝏ':          "oo",
-	'ẞ':          "fs",
-	'ß':          "fz",
 	'ﬆ':          "st",
 	'ﬅ':          "ſt",
 	'Ꜩ':          "TZ",

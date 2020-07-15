@@ -14,15 +14,11 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	goimage "image"
-	"image/png"
-	"io"
 	"io/ioutil"
 	"math"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -37,6 +33,8 @@ import (
 	"github.com/unidoc/unipdf/v3/extractor"
 	"github.com/unidoc/unipdf/v3/model"
 	"github.com/unidoc/unipdf/v3/model/optimize"
+
+	"github.com/unidoc/unipdf/v3/internal/testutils"
 )
 
 func init() {
@@ -1045,7 +1043,7 @@ func TestSubchapters(t *testing.T) {
 	require.NoError(t, c.Finalize())
 
 	// Get outline data as JSON.
-	srcJson, err := json.Marshal(c.outline)
+	srcJSON, err := json.Marshal(c.outline)
 	require.NoError(t, err)
 
 	// Write output file.
@@ -1063,9 +1061,9 @@ func TestSubchapters(t *testing.T) {
 	// Compare outlines JSON data.
 	dstOutline, err := reader.GetOutlines()
 	require.NoError(t, err)
-	dstJson, err := json.Marshal(dstOutline)
+	dstJSON, err := json.Marshal(dstOutline)
 	require.NoError(t, err)
-	require.Equal(t, srcJson, dstJson)
+	require.Equal(t, srcJSON, dstJSON)
 }
 
 // Test creating and drawing a table.
@@ -3067,92 +3065,148 @@ func TestPageLabels(t *testing.T) {
 	require.Equal(t, core.EqualObjects(genPageLabels, pageLabels), true)
 }
 
-var errRenderNotSupported = errors.New("rendering pdf is not supported on this system")
+func TestReferencedPageDestinations(t *testing.T) {
+	testPages := func(buf *bytes.Buffer, expectedPages, expectedNullDestPages int) {
+		reader, err := model.NewPdfReader(bytes.NewReader(buf.Bytes()))
+		require.NoError(t, err)
 
-// renderPDFToPNGs uses ghostscript (gs) to render specified PDF file into a set of PNG images (one per page).
-// PNG images will be named xxx-N.png where N is the number of page, starting from 1.
-func renderPDFToPNGs(pdfPath string, dpi int, outpathTpl string) error {
-	if dpi == 0 {
-		dpi = 100
-	}
-	if _, err := exec.LookPath("gs"); err != nil {
-		return errRenderNotSupported
-	}
-	return exec.Command("gs", "-sDEVICE=pngalpha", "-o", outpathTpl, fmt.Sprintf("-r%d", dpi), pdfPath).Run()
-}
+		// Check number of pages in catalog.
+		numPages, err := reader.GetNumPages()
+		require.NoError(t, err)
+		require.Equal(t, expectedPages, numPages)
 
-func readPNG(file string) (goimage.Image, error) {
-	f, err := os.Open(file)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	return png.Decode(f)
-}
+		// Check outline destionation pages.
+		outlines, err := reader.GetOutlines()
+		require.NoError(t, err)
 
-func comparePNGFiles(file1, file2 string) (bool, error) {
-	// fast path - compare hashes
-	h1, err := hashFile(file1)
-	if err != nil {
-		return false, err
-	}
-	h2, err := hashFile(file2)
-	if err != nil {
-		return false, err
-	}
-	if h1 == h2 {
-		return true, nil
-	}
-	// slow path - compare pixel by pixel
-	img1, err := readPNG(file1)
-	if err != nil {
-		return false, err
-	}
-	img2, err := readPNG(file2)
-	if err != nil {
-		return false, err
-	}
-	if img1.Bounds() != img2.Bounds() {
-		return false, nil
-	}
-	return compareImages(img1, img2)
-}
+		var nullDestPages int
+		var validDestPages int
+		for _, entry := range outlines.Entries {
+			pageObj := entry.Dest.PageObj
+			require.NotNil(t, pageObj)
 
-func compareImages(img1, img2 goimage.Image) (bool, error) {
-	rect := img1.Bounds()
-	diff := 0
-	for x := 0; x < rect.Size().X; x++ {
-		for y := 0; y < rect.Size().Y; y++ {
-			r1, g1, b1, _ := img1.At(x, y).RGBA()
-			r2, g2, b2, _ := img2.At(x, y).RGBA()
-			if r1 != r2 || g1 != g2 || b1 != b2 {
-				diff++
+			if core.IsNullObject(entry.Dest.PageObj) {
+				nullDestPages++
+				continue
 			}
+
+			_, _, err := reader.PageFromIndirectObject(pageObj)
+			require.NoError(t, err)
+			validDestPages++
+		}
+
+		require.Equal(t, expectedPages, validDestPages)
+		require.Equal(t, expectedNullDestPages, nullDestPages)
+	}
+
+	// Generate and test input file.
+	c := New()
+	c.AddTOC = true
+
+	numPages := 10
+	for i := 0; i < numPages; i++ {
+		chapter := c.NewChapter(fmt.Sprintf("Chapter %d", i+1))
+		paragraph := c.NewParagraph(fmt.Sprintf("Content for chapter %d", i+1))
+		chapter.Add(paragraph)
+		require.NoError(t, c.Draw(chapter))
+
+		if i < numPages-1 {
+			c.NewPage()
 		}
 	}
 
-	diffFraction := float64(diff) / float64(rect.Dx()*rect.Dy())
-	if diffFraction > 0.0001 {
-		fmt.Printf("diff fraction: %v (%d)\n", diffFraction, diff)
-		return false, nil
-	}
+	buf := bytes.NewBuffer(nil)
+	require.NoError(t, c.Write(buf))
+	testPages(buf, 11, 0)
 
-	return true, nil
+	// Generate and test split input file.
+	reader, err := model.NewPdfReader(bytes.NewReader(buf.Bytes()))
+	require.NoError(t, err)
+
+	writer := model.NewPdfWriter()
+	for i, page := range reader.PageList {
+		if i%2 == 0 {
+			require.NoError(t, writer.AddPage(page))
+		}
+	}
+	writer.AddOutlineTree(reader.GetOutlineTree())
+
+	buf = bytes.NewBuffer(nil)
+	require.NoError(t, writer.Write(buf))
+	testPages(buf, 6, 5)
 }
 
-func hashFile(file string) (string, error) {
-	f, err := os.Open(file)
-	if err != nil {
-		return "", err
+func TestExtractTextColor(t *testing.T) {
+	red := ColorRGBFrom8bit(255, 0, 0)
+	green := ColorRGBFrom8bit(0, 255, 0)
+	blue := ColorRGBFrom8bit(0, 0, 255)
+
+	// Test data.
+	type textMark struct {
+		text  string
+		color Color
 	}
-	defer f.Close()
-	h := md5.New()
-	_, err = io.Copy(h, f)
-	if err != nil {
-		return "", err
+
+	lines := [][]textMark{
+		[]textMark{
+			textMark{text: "a", color: red},
+			textMark{text: "b", color: green},
+			textMark{text: "c", color: blue},
+		},
+		[]textMark{
+			textMark{text: "x", color: green},
+			textMark{text: "y", color: blue},
+			textMark{text: "z", color: red},
+		},
 	}
-	return hex.EncodeToString(h.Sum(nil)), nil
+
+	// Create output file.
+	c := New()
+
+	for _, line := range lines {
+		p := c.NewStyledParagraph()
+		for _, mark := range line {
+			p.Append(mark.text).Style.Color = mark.color
+		}
+		require.NoError(t, c.Draw(p))
+	}
+
+	buf := bytes.NewBuffer(nil)
+	require.NoError(t, c.Write(buf))
+
+	// Extract output file.
+	reader, err := model.NewPdfReader(bytes.NewReader(buf.Bytes()))
+	require.NoError(t, err)
+
+	for _, page := range reader.PageList {
+		ex, err := extractor.New(page)
+		require.NoError(t, err)
+
+		pageText, _, _, err := ex.ExtractPageText()
+		require.NoError(t, err)
+		marks := pageText.Marks().Elements()
+
+		for i, line := range lines {
+			lenLine := len(line)
+			for j, inMark := range line {
+				outMark := marks[i*lenLine+i+j]
+				outR, outG, outB, _ := outMark.FillColor.RGBA()
+
+				// Compare the fill color of the input mark with the one
+				// of the extracted mark.
+				inR, inG, inB := inMark.color.ToRGB()
+				require.Equal(t, inMark.text, outMark.Text)
+				require.Equal(t, uint32(inR*255), outR>>8)
+				require.Equal(t, uint32(inG*255), outG>>8)
+				require.Equal(t, uint32(inB*255), outB>>8)
+			}
+		}
+	}
 }
+
+//
+// Rendering test helpers.
+//
 
 func testWriteAndRender(t *testing.T, c *Creator, pname string) string {
 	pname = testWrite(t, c, pname)
@@ -3162,8 +3216,7 @@ func testWriteAndRender(t *testing.T, c *Creator, pname string) string {
 
 func testWrite(t *testing.T, c *Creator, pname string) string {
 	pname = tempFile(pname)
-	err := c.WriteToFile(pname)
-	if err != nil {
+	if err := c.WriteToFile(pname); err != nil {
 		t.Errorf("Fail: %v\n", err)
 		return pname
 	}
@@ -3174,6 +3227,7 @@ func testRender(t *testing.T, pdfPath string) {
 	if baselineRenderPath == "" {
 		t.Skip("skipping render tests; set UNIDOC_RENDERTEST_BASELINE_PATH to run")
 	}
+
 	// Set to true to create the baseline.
 	saveBaseline := false
 
@@ -3184,59 +3238,5 @@ func testRender(t *testing.T, pdfPath string) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	tplName := strings.TrimSuffix(filepath.Base(pdfPath), filepath.Ext(pdfPath))
-	t.Run("render", func(t *testing.T) {
-		imgPathPrefix := filepath.Join(tempDir, tplName)
-		imgPathTpl := imgPathPrefix + "-%d.png"
-		// will emit /tmp/dir/template-x.png for each page x.
-		err := renderPDFToPNGs(pdfPath, 0, imgPathTpl)
-		if err != nil {
-			t.Skip(err)
-		}
-		for i := 1; true; i++ {
-			imgPath := fmt.Sprintf("%s-%d.png", imgPathPrefix, i)
-			expImgPath := filepath.Join(baselineRenderPath, fmt.Sprintf("%s-%d_exp.png", tplName, i))
-
-			if _, err := os.Stat(imgPath); err != nil {
-				break
-			}
-			t.Logf("%s", expImgPath)
-			if _, err := os.Stat(expImgPath); os.IsNotExist(err) {
-				if saveBaseline {
-					t.Logf("Copying %s -> %s", imgPath, expImgPath)
-					copyFile(imgPath, expImgPath)
-					continue
-				}
-				break
-			}
-
-			t.Run(fmt.Sprintf("page%d", i), func(t *testing.T) {
-				t.Logf("Comparing %s vs %s", imgPath, expImgPath)
-				ok, err := comparePNGFiles(imgPath, expImgPath)
-				if os.IsNotExist(err) {
-					t.Fatal("image file missing")
-				} else if !ok {
-					t.Fatal("wrong page rendered")
-				}
-			})
-		}
-	})
-}
-
-// copyFile copies file from src to dst.
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, in)
-	return err
+	testutils.RunRenderTest(t, pdfPath, tempDir, baselineRenderPath, saveBaseline)
 }
