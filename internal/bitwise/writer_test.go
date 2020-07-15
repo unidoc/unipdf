@@ -544,7 +544,48 @@ func TestWrite(t *testing.T) {
 	})
 }
 
-//
+// TestWriterWriteBits
 func TestWriterWriteBits(t *testing.T) {
+	t.Run("NonMSB", func(t *testing.T) {
+		w := NewWriter(make([]byte, 2))
 
+		// having empty buffered MSB.
+		n, err := w.WriteBits(0xb, 4)
+		require.NoError(t, err)
+		assert.Zero(t, n)
+
+		assert.Equal(t, byte(0xb), w.data[0])
+
+		n, err = w.WriteBits(0xdf, 8)
+		require.NoError(t, err)
+		assert.Equal(t, 1, n)
+
+		assert.Equal(t, byte(0xd), w.data[1])
+		assert.Equal(t, byte(0xfb), w.data[0])
+	})
+
+	t.Run("MSB", func(t *testing.T) {
+		w := NewWriterMSB(make([]byte, 2))
+
+		n, err := w.WriteBits(0xf, 4)
+		require.NoError(t, err)
+
+		assert.Zero(t, n)
+
+		// the output now should be
+		// 11110000
+		//     ^
+		assert.Equal(t, byte(0xf0), w.data[0], "%08b", w.data[0])
+
+		// write 10111 = 0x17, 5
+		n, err = w.WriteBits(0x17, 5)
+		require.NoError(t, err)
+
+		// current output should be
+		// 11111011 10000000
+		//           ^
+		assert.Equal(t, byte(0xfb), w.data[0])
+		assert.Equal(t, byte(0x80), w.data[1])
+		assert.Equal(t, uint8(1), w.bitIndex)
+	})
 }

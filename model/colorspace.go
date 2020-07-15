@@ -2376,10 +2376,9 @@ func (cs *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 	w := sampling.NewWriter(dest)
 
 	var (
-		sample  uint32
-		index   int
-		err     error
-		cValues []byte
+		sample uint32
+		index  int
+		err    error
 	)
 	// Convert the indexed data to base color map data.
 	// for i := 0; i < len(samples); i++ {
@@ -2405,10 +2404,9 @@ func (cs *PdfColorspaceSpecialIndexed) ImageToRGB(img Image) (Image, error) {
 			}
 		}
 
-		cValues = cs.colorLookup[index*N : (index+1)*N]
-		common.Log.Trace("C Vals: % d", cValues)
-		for i := range cValues {
-			if err = w.WriteSample(uint32(cValues[i])); err != nil {
+		// cValues = cs.colorLookup[index*N : (index+1)*N]
+		for i := index * N; i < (index+1)*N; i++ {
+			if err = w.WriteSample(uint32(cs.colorLookup[i])); err != nil {
 				return img, err
 			}
 		}

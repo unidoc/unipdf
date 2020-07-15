@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package imageutil
 
 import (
@@ -92,19 +97,27 @@ func AutoThresholdTriangle(histogram [256]int) uint8 {
 	return uint8(split)
 }
 
-// GrayHistogram gets histogram for the provided Gray8 'img'.
+// Histogramer is an interface that allows to get a histogram from the image.
+type Histogramer interface {
+	Histogram() [256]int
+}
+
+// GrayHistogram gets histogram for the provided Gray image.
 func GrayHistogram(g Gray) (histogram [256]int) {
-	img, ok := g.(image.Image)
-	if !ok {
+	switch img := g.(type) {
+	case Histogramer:
+		return img.Histogram()
+	case image.Image:
+		bounds := img.Bounds()
+		for x := 0; x < bounds.Max.X; x++ {
+			for y := 0; y < bounds.Max.Y; y++ {
+				histogram[g.GrayAt(x, y).Y]++
+			}
+		}
+		return histogram
+	default:
 		return [256]int{}
 	}
-	bounds := img.Bounds()
-	for x := 0; x < bounds.Max.X; x++ {
-		for y := 0; y < bounds.Max.Y; y++ {
-			histogram[g.GrayAt(x, y).Y]++
-		}
-	}
-	return histogram
 }
 
 // ImgToBinary gets the binary (black/white) image from the given image 'i' and provided threshold 'threshold'

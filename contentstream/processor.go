@@ -124,7 +124,7 @@ func (proc *ContentStreamProcessor) getColorspace(name string, resources *model.
 		return model.NewPdfColorspaceSpecialPattern(), nil
 	}
 
-	// ReadSample check the colorspace dictionary.
+	// Next check the colorspace dictionary.
 	cs, has := resources.GetColorspaceByName(core.PdfObjectName(name))
 	if has {
 		return cs, nil

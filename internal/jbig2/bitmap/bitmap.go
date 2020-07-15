@@ -56,7 +56,7 @@ type Bitmap struct {
 	XResolution, YResolution int
 }
 
-// NewReader creates new bitmap with the parameters as provided in the arguments.
+// New creates new bitmap with the parameters as provided in the arguments.
 func New(width, height int) *Bitmap {
 	bm := newBitmap(width, height)
 	bm.Data = make([]byte, height*bm.RowStride)

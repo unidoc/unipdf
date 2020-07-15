@@ -22,7 +22,7 @@ type Decoder struct {
 	modeTable  []*code
 }
 
-// NewReader creates new jbig2 mmr decoder for the provided data stream.
+// New creates new jbig2 mmr decoder for the provided data stream.
 func New(r bitwise.StreamReader, width, height int, dataOffset, dataLength int64) (*Decoder, error) {
 	m := &Decoder{
 		width:  width,

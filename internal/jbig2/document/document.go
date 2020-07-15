@@ -23,18 +23,18 @@ import (
 var fileHeaderID = []byte{0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A}
 
 // Document is the jbig2 document model containing pages and global segments.
-// By creating new document with method NewReader or NewWithGlobals all the jbig2
+// By creating new document with method New or NewWithGlobals all the jbig2
 // encoded data segment headers are decoded. In order to decode whole
 // document, all of it's pages should be decoded using GetBitmap method.
 // PDF encoded documents should contains only one Page with the number 1.
 type Document struct {
 	// Pages contains all pages of this document.
 	Pages map[int]*Page
-	// NumberOfPagesUnknown defines if the amout of the pages is known.
+	// NumberOfPagesUnknown defines if the amount of the pages is known.
 	NumberOfPagesUnknown bool
 	// NumberOfPages - D.4.3 - Number of pages field (4 bytes). Only presented if NumberOfPagesUnknown is true.
 	NumberOfPages uint32
-	// GBUseExtTemplate defines wether extended Template is used.
+	// GBUseExtTemplate defines whether extended Template is used.
 	GBUseExtTemplate bool
 	// SubInputStream is the source data stream wrapped into a SubInputStream.
 	InputStream bitwise.StreamReader

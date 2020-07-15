@@ -281,10 +281,10 @@ func (f *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 	// Fall back to default Encode/Decode params if not set.
 	encode := f.Encode
 	if encode == nil {
-		encode = []float64{}
+		encode = make([]float64, len(f.Size)*2)
 		for i := 0; i < len(f.Size); i++ {
-			encode = append(encode, 0)
-			encode = append(encode, float64(f.Size[i]-1))
+			encode[i*2] = 0
+			encode[i*2+1] = float64(f.Size[i] - 1)
 		}
 	}
 	decode := f.Decode
@@ -292,7 +292,7 @@ func (f *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 		decode = f.Range
 	}
 
-	var indices []int
+	indices := make([]int, len(x))
 	// Start with nearest neighbour interpolation.
 	for i := 0; i < len(x); i++ {
 		xi := x[i]
@@ -315,7 +315,7 @@ func (f *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 		} else if index > f.Size[i] {
 			index = f.Size[i] - 1
 		}
-		indices = append(indices, index)
+		indices[i] = index
 	}
 
 	// Calculate the index
@@ -338,7 +338,7 @@ func (f *PdfFunctionType0) Evaluate(x []float64) ([]float64, error) {
 			continue
 		}
 
-		rj := f.data[rjIdx]		
+		rj := f.data[rjIdx]
 		rjp := imageutil.LinearInterpolate(float64(rj), 0, math.Pow(2, float64(f.BitsPerSample)), decode[2*j], decode[2*j+1])
 		yj := math.Min(math.Max(rjp, f.Range[2*j]), f.Range[2*j+1])
 		outputs = append(outputs, yj)

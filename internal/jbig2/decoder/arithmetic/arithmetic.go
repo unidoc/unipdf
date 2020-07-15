@@ -51,7 +51,7 @@ type Decoder struct {
 	streamPosition int64
 }
 
-// NewReader creates new arithmetic Decoder.
+// New creates new arithmetic Decoder.
 func New(r bitwise.StreamReader) (*Decoder, error) {
 	d := &Decoder{
 		r:                    r,

@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package imageutil
 
 import (
@@ -11,7 +16,7 @@ func init() {
 	makePixelSumAtByte()
 }
 
-// Gray is an interface used for creating histograms for given image.
+// Gray is an interface that allows to get and set color.Gray for grayscale images.
 type Gray interface {
 	GrayAt(x, y int) color.Gray
 	SetGray(x, y int, g color.Gray)
@@ -111,7 +116,7 @@ func (m *Monochrome) Copy() Image {
 // Compile time check if Monochrome implements image.Image interface.
 var _ image.Image = &Monochrome{}
 
-// At implements image.Image interface
+// At implements image.Image interface.
 func (m *Monochrome) At(x, y int) color.Color {
 	c, _ := m.ColorAt(x, y)
 	return c
@@ -173,7 +178,7 @@ func (m *Monochrome) Validate() error {
 // Compile time check if Monochrome implements Gray interface.
 var _ Gray = &Monochrome{}
 
-// Histogram implements Gray interface.
+// Histogram implements Histogramer interface.
 func (m *Monochrome) Histogram() (histogram [256]int) {
 	for _, bt := range m.Data {
 		histogram[0xff] += int(tab8[m.Data[bt]])
@@ -229,12 +234,7 @@ func ColorAtGray1BPC(x, y, bytesPerLine int, data []byte, decode []float64) (col
 	return color.Gray{Y: c * 255}, nil
 }
 
-// Compile time check if Gray2 implements Image interface.
-var (
-	_ Gray = &Gray2{}
-)
-
-// Gray2 is an image
+// Gray2 is a 2-bit base grayscale image. It implements image.Image, draw.Image, Image and Gray interfaces.
 type Gray2 struct {
 	ImageBase
 }
@@ -285,7 +285,8 @@ func (i *Gray2) Validate() error {
 // Gray2 image.Image methods.
 //
 
-// Compile time check if Gray2 implements Gray interface.
+// Compile time check if Gray2 implements image.Image interface.
+var _ image.Image = &Gray2{}
 
 // At implements image.Image interface.
 func (i *Gray2) At(x, y int) color.Color {
@@ -319,6 +320,9 @@ func gray2ModelGray(g color.Gray) color.Gray {
 // Gray2 - Gray interface.
 //
 
+// Compile time check if Gray2 implements Gray interface.
+var _ Gray = &Gray2{}
+
 // GrayAt implements Gray interface.
 func (i *Gray2) GrayAt(x, y int) color.Gray {
 	c, _ := ColorAtGray2BPC(x, y, i.BytesPerLine, i.Data, i.Decode)
@@ -335,6 +339,16 @@ func (i *Gray2) SetGray(x, y int, gray color.Gray) {
 	}
 	value := g.Y >> 6
 	i.Data[index] = (i.Data[index] & (^(0xc0 >> uint(2*((x)&3))))) | (value << uint(6-2*(x&3)))
+}
+
+// Histogram implements Histogramer interface.
+func (i *Gray2) Histogram() (histogram [256]int) {
+	for x := 0; x < i.Width; x++ {
+		for y := 0; y < i.Height; y++ {
+			histogram[i.GrayAt(x, y).Y]++
+		}
+	}
+	return histogram
 }
 
 // ColorAtGray2BPC gets the color of image in grayscale color space with two bits per component specific 'width',
@@ -413,7 +427,7 @@ func (i *Gray4) Validate() error {
 // Gray4 image.Image interface methods.
 //
 
-// Compile time check if Gray4 implements Gray interface.
+// Compile time check if Gray4 implements image.Image interface.
 var _ image.Image = &Gray4{}
 
 // At implements image.Image interface.
@@ -445,7 +459,7 @@ func (i *Gray4) GrayAt(x, y int) color.Gray {
 	return c
 }
 
-// Histogram implements Gray interface.
+// Histogram implements Histogramer interface.
 func (i *Gray4) Histogram() (histogram [256]int) {
 	for x := 0; x < i.Width; x++ {
 		for y := 0; y < i.Height; y++ {
@@ -587,7 +601,7 @@ func (i *Gray8) ColorModel() color.Model {
 // Compile time check if Gray8 implements Gray interface.
 var _ Gray = &Gray8{}
 
-// Histogram creates histogram based on the given image.
+// Histogram implements Histogramer interface.
 func (i *Gray8) Histogram() (histogram [256]int) {
 	for j := 0; j < len(i.Data); j++ {
 		histogram[i.Data[j]]++
@@ -718,7 +732,7 @@ func (i *Gray16) GrayAt(x, y int) color.Gray {
 	return color.Gray{Y: uint8(c.(color.Gray16).Y >> 8)}
 }
 
-// Histogram implements Gray interface.
+// Histogram implements Histogramer interface.
 func (i *Gray16) Histogram() (histogram [256]int) {
 	for x := 0; x < i.Width; x++ {
 		for y := 0; y < i.Height; y++ {

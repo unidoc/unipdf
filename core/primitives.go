@@ -1035,7 +1035,7 @@ func (streams *PdfObjectStreams) WriteString() string {
 	return b.String()
 }
 
-func (d *PdfObjectDictionary) extractImage() (img *imageutil.ImageBase) {
+func dictExtractImage(d *PdfObjectDictionary) (img *imageutil.ImageBase) {
 	var (
 		integer *PdfObjectInteger
 		ok      bool

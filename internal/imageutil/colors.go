@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package imageutil
 
 import (
@@ -6,7 +11,7 @@ import (
 	"image/color"
 )
 
-// ColorConverter is an enum that defines image color colorConverter.
+// ColorConverter is an interface that allows to convert images between different color spaces.
 type ColorConverter interface {
 	// Convert converts images to given color colorConverter.
 	Convert(src image.Image) (Image, error)
@@ -34,7 +39,7 @@ var (
 	CMYKConverter       = ConverterFunc(cmykConverter)
 )
 
-// Models
+// Additional models for images.
 var (
 	Gray2Model   = color.ModelFunc(gray2Model)
 	Gray4Model   = color.ModelFunc(gray4Model)

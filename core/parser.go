@@ -1540,7 +1540,7 @@ func (parser *PdfParser) ParseIndirectObject() (PdfObject, error) {
 					nextObjectOffset := parser.xrefNextObjectOffset(streamStartOffset)
 					if streamStartOffset+int64(streamLength) > nextObjectOffset && nextObjectOffset > streamStartOffset {
 						common.Log.Debug("Expected ending at %d", streamStartOffset+int64(streamLength))
-						common.Log.Debug("ReadSample object starting at %d", nextObjectOffset)
+						common.Log.Debug("Next object starting at %d", nextObjectOffset)
 						// endstream + "\n" endobj + "\n" (17)
 						newLength := nextObjectOffset - streamStartOffset - 17
 						if newLength < 0 {

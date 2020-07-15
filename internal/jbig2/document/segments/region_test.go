@@ -37,9 +37,9 @@ func TestEncodeRegion(t *testing.T) {
 		0x00, 0x00, 0x00, 0x1E,
 		// Second four bytes should be the height - 150 uint32
 		0x00, 0x00, 0x00, 0x96,
-		// ReadSample four bytes should be the x location of the region - 40 uint32
+		// Next four bytes should be the x location of the region - 40 uint32
 		0x00, 0x00, 0x00, 0x28,
-		// ReadSample four bytes should be the y location of the region - 35 uint32
+		// Next four bytes should be the y location of the region - 35 uint32
 		0x00, 0x00, 0x00, 0x23,
 		// The last byte should define the region flags
 		// 5 empty bits and 3 bits for the combination operator

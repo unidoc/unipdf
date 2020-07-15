@@ -188,7 +188,7 @@ func newFlateEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObje
 		return encoder, nil
 	}
 
-	encoder.img = encDict.extractImage()
+	encoder.img = dictExtractImage(encDict)
 
 	// If decodeParams not provided, see if we can get from the stream.
 	if decodeParams == nil {
@@ -2087,7 +2087,7 @@ func newMultiEncoderFromStream(streamObj *PdfObjectStream) (*MultiEncoder, error
 			dParams = dict
 		}
 
-		common.Log.Trace("ReadSample name: %s, dp: %v, dParams: %v", *name, dp, dParams)
+		common.Log.Trace("Next name: %s, dp: %v, dParams: %v", *name, dp, dParams)
 		if *name == StreamEncodingFilterNameFlate {
 			// TODO: need to separate out the DecodeParms..
 			encoder, err := newFlateEncoderFromStream(streamObj, dParams)

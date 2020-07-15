@@ -1,3 +1,8 @@
+/*
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.md', which is part of this source code package.
+ */
+
 package imageutil
 
 import (
@@ -103,9 +108,7 @@ func NewImage(width, height, bitsPerComponent, colorComponents int, data, alpha 
 	if img == nil {
 		return nil, ErrInvalidImage
 	}
-	// if err := img.Validate(); err != nil {
-	// 	return nil, err
-	// }
+
 	return img, nil
 }
 

@@ -642,7 +642,7 @@ func (w *PdfWriter) AddPage(page *PdfPage) error {
 			}
 		}
 		parent, hasParent = core.GetIndirect(parentDict.Get("Parent"))
-		common.Log.Trace("ReadSample parent: %T", parentDict.Get("Parent"))
+		common.Log.Trace("Next parent: %T", parentDict.Get("Parent"))
 	}
 
 	common.Log.Trace("Traversal done")
