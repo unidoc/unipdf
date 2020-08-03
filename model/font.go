@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/core"
@@ -38,6 +39,31 @@ type pdfFont interface {
 // etc.
 type PdfFont struct {
 	context pdfFont // The underlying font: Type0, Type1, Truetype, etc..
+}
+
+// SubsetRegistered subsets the font to only the glyphs that have been registered by the encoder.
+// NOTE: This only works on fonts that support subsetting. For unsupported fonts this is a no-op, although a debug
+//   message is emitted.  Currently supported fonts are embedded Truetype CID fonts (type 0).
+// NOTE: Make sure to call this soon before writing (once all needed runes have been registered).
+// If using package creator, use its EnableFontSubsetting method instead.
+func (font *PdfFont) SubsetRegistered() error {
+	switch t := font.context.(type) {
+	case *pdfFontType0:
+		err := t.subsetRegistered()
+		if err != nil {
+			common.Log.Debug("Subset error: %v", err)
+			return err
+		}
+		if t.container != nil {
+			if t.encoder != nil {
+				t.encoder.ToPdfObject() // Forced update of encoder object.
+			}
+			t.ToPdfObject() // Forced update of object.
+		}
+	default:
+		common.Log.Debug("Font %T does not support subsetting", t)
+	}
+	return nil
 }
 
 // GetFontDescriptor returns the font descriptor for `font`.
@@ -377,6 +403,7 @@ func (font *PdfFont) BytesToCharcodes(data []byte) []textencoding.CharCode {
 
 	charcodes := make([]textencoding.CharCode, 0, len(data)+len(data)%2)
 	if font.baseFields().isCIDFont() {
+		// Identity only?
 		if len(data) == 1 {
 			data = []byte{0, data[0]}
 		}
@@ -389,6 +416,7 @@ func (font *PdfFont) BytesToCharcodes(data []byte) []textencoding.CharCode {
 			charcodes = append(charcodes, textencoding.CharCode(b))
 		}
 	} else {
+		// Simple font: byte -> charcode.
 		for _, b := range data {
 			charcodes = append(charcodes, textencoding.CharCode(b))
 		}
@@ -396,16 +424,26 @@ func (font *PdfFont) BytesToCharcodes(data []byte) []textencoding.CharCode {
 	return charcodes
 }
 
-// CharcodesToUnicodeWithStats is identical to CharcodesToUnicode except returns more statistical
+// CharcodesToUnicodeWithStats is identical to CharcodesToUnicode except it returns more statistical
 // information about hits and misses from the reverse mapping process.
+// NOTE: The number of runes returned may be greater than the number of charcodes.
+// TODO(peterwilliams97): Deprecate in v4 and use only CharcodesToStrings()
 func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCode) (runelist []rune, numHits, numMisses int) {
+	texts, numHits, numMisses := font.CharcodesToStrings(charcodes)
+	return []rune(strings.Join(texts, "")), numHits, numMisses
+}
+
+// CharcodesToStrings returns the unicode strings corresponding to `charcodes`.
+// The int returns are the number of strings and the number of unconvereted codes.
+// NOTE: The number of strings returned is equal to the number of charcodes
+func (font *PdfFont) CharcodesToStrings(charcodes []textencoding.CharCode) ([]string, int, int) {
 	fontBase := font.baseFields()
-	runes := make([]rune, 0, len(charcodes))
-	numMisses = 0
+	texts := make([]string, 0, len(charcodes))
+	numMisses := 0
 	for _, code := range charcodes {
 		if fontBase.toUnicodeCmap != nil {
-			if r, ok := fontBase.toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code)); ok {
-				runes = append(runes, r)
+			if s, ok := fontBase.toUnicodeCmap.CharcodeToUnicode(cmap.CharCode(code)); ok {
+				texts = append(texts, s)
 				continue
 			}
 		}
@@ -414,7 +452,7 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCo
 		encoder := font.Encoder()
 		if encoder != nil {
 			if r, ok := encoder.CharcodeToRune(code); ok {
-				runes = append(runes, r)
+				texts = append(texts, string(r))
 				continue
 			}
 		}
@@ -423,7 +461,7 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCo
 			"\tfont=%s\n\tencoding=%s",
 			code, charcodes, fontBase.isCIDFont(), font, encoder)
 		numMisses++
-		runes = append(runes, cmap.MissingCodeRune)
+		texts = append(texts, cmap.MissingCodeString)
 	}
 
 	if numMisses != 0 {
@@ -433,7 +471,7 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCo
 			len(charcodes), numMisses, font)
 	}
 
-	return runes, len(runes), numMisses
+	return texts, len(texts), numMisses
 }
 
 // CharcodeBytesToUnicode converts PDF character codes `data` to a Go unicode string.
@@ -448,14 +486,8 @@ func (font *PdfFont) CharcodesToUnicodeWithStats(charcodes []textencoding.CharCo
 //   encoding and use the glyph indices as character codes, as described following Table 118.
 func (font *PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 	runes, _, numMisses := font.CharcodesToUnicodeWithStats(font.BytesToCharcodes(data))
-
-	var buffer bytes.Buffer
-	for _, r := range runes {
-		buffer.WriteString(textencoding.RuneToString(r))
-	}
-
-	str := buffer.String()
-	return str, len([]rune(str)), numMisses
+	str := textencoding.ExpandLigatures(runes)
+	return str, utf8.RuneCountInString(str), numMisses
 }
 
 // CharcodesToUnicode converts the character codes `charcodes` to a slice of runes.
@@ -463,8 +495,8 @@ func (font *PdfFont) CharcodeBytesToUnicode(data []byte) (string, int, int) {
 //  1) Use the ToUnicode CMap if there is one.
 //  2) Use the underlying font's encoding.
 func (font *PdfFont) CharcodesToUnicode(charcodes []textencoding.CharCode) []rune {
-	strlist, _, _ := font.CharcodesToUnicodeWithStats(charcodes)
-	return strlist
+	runes, _, _ := font.CharcodesToUnicodeWithStats(charcodes)
+	return runes
 }
 
 // RunesToCharcodeBytes maps the provided runes to charcode bytes and it
@@ -651,7 +683,6 @@ type fontCommon struct {
 // It is for use in font ToPdfObject functions.
 // NOTE: The returned dict's "Subtype" field is set to `subtype` if `base` doesn't have a subtype.
 func (base fontCommon) asPdfObjectDictionary(subtype string) *core.PdfObjectDictionary {
-
 	if subtype != "" && base.subtype != "" && subtype != base.subtype {
 		common.Log.Debug("ERROR: asPdfObjectDictionary. Overriding subtype to %#q %s", subtype, base)
 	} else if subtype == "" && base.subtype == "" {
@@ -671,10 +702,9 @@ func (base fontCommon) asPdfObjectDictionary(subtype string) *core.PdfObjectDict
 	if base.toUnicode != nil {
 		d.Set("ToUnicode", base.toUnicode)
 	} else if base.toUnicodeCmap != nil {
-		data := base.toUnicodeCmap.Bytes()
-		o, err := core.MakeStream(data, nil)
+		o, err := base.toUnicodeCmap.Stream()
 		if err != nil {
-			common.Log.Debug("MakeStream failed. err=%v", err)
+			common.Log.Debug("WARN: could not get CMap stream. err=%v", err)
 		} else {
 			d.Set("ToUnicode", o)
 		}
@@ -722,8 +752,7 @@ func (base fontCommon) isCIDFont() bool {
 // newFontBaseFieldsFromPdfObject returns `fontObj` as a dictionary the common fields from that
 // dictionary in the fontCommon return.  If there is a problem an error is returned.
 // The fontCommon is the group of fields common to all PDF fonts.
-func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDictionary, *fontCommon,
-	error) {
+func newFontBaseFieldsFromPdfObject(fontObj core.PdfObject) (*core.PdfObjectDictionary, *fontCommon, error) {
 	font := &fontCommon{}
 
 	if obj, ok := fontObj.(*core.PdfIndirectObject); ok {

@@ -240,20 +240,17 @@ func NewXObjectImageFromImage(img *Image, cs PdfColorspace, encoder core.StreamE
 // If `encoder` is nil, uses raw encoding (none).
 func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorspace,
 	encoder core.StreamEncoder) (*XObjectImage, error) {
-	xobj := NewXObjectImage()
-
 	if encoder == nil {
 		encoder = core.NewRawEncoder()
 	}
+	encoder.UpdateParams(img.GetParamsDict())
 
 	encoded, err := encoder.EncodeBytes(img.Data)
 	if err != nil {
 		common.Log.Debug("Error with encoding: %v", err)
 		return nil, err
 	}
-
-	xobj.Filter = encoder
-	xobj.Stream = encoded
+	xobj := NewXObjectImage()
 
 	// Width and height.
 	imWidth := img.Width
@@ -261,8 +258,12 @@ func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorsp
 	xobj.Width = &imWidth
 	xobj.Height = &imHeight
 
-	// Bits.
-	xobj.BitsPerComponent = &img.BitsPerComponent
+	// Bits per Component.
+	imBPC := img.BitsPerComponent
+	xobj.BitsPerComponent = &imBPC
+
+	xobj.Filter = encoder
+	xobj.Stream = encoded
 
 	// Guess colorspace if not explicitly set.
 	if cs == nil {
@@ -284,6 +285,7 @@ func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorsp
 		// Has same width and height as original and stored in same
 		// bits per component (1 component, hence the DeviceGray channel).
 		smask := NewXObjectImage()
+
 		smask.Filter = encoder
 		encoded, err := encoder.EncodeBytes(img.alphaData)
 		if err != nil {
@@ -291,7 +293,7 @@ func UpdateXObjectImageFromImage(xobjIn *XObjectImage, img *Image, cs PdfColorsp
 			return nil, err
 		}
 		smask.Stream = encoded
-		smask.BitsPerComponent = &img.BitsPerComponent
+		smask.BitsPerComponent = xobj.BitsPerComponent
 		smask.Width = &img.Width
 		smask.Height = &img.Height
 		smask.ColorSpace = NewPdfColorspaceDeviceGray()
@@ -448,6 +450,8 @@ func NewXObjectImageFromStream(stream *core.PdfObjectStream) (*XObjectImage, err
 
 // SetImage updates XObject Image with new image data.
 func (ximg *XObjectImage) SetImage(img *Image, cs PdfColorspace) error {
+	// update image parameters of the filter encoder.
+	ximg.Filter.UpdateParams(img.GetParamsDict())
 	encoded, err := ximg.Filter.EncodeBytes(img.Data)
 	if err != nil {
 		return err
@@ -493,6 +497,7 @@ func (ximg *XObjectImage) SetFilter(encoder core.StreamEncoder) error {
 	}
 
 	ximg.Filter = encoder
+	encoder.UpdateParams(ximg.getParamsDict())
 	encoded, err = encoder.EncodeBytes(decoded)
 	if err != nil {
 		return err
@@ -595,4 +600,14 @@ func (ximg *XObjectImage) ToPdfObject() core.PdfObject {
 	stream.Stream = ximg.Stream
 
 	return stream
+}
+
+// getParamsDict returns *core.PdfObjectDictionary with a set of basic image parameters.
+func (ximg *XObjectImage) getParamsDict() *core.PdfObjectDictionary {
+	params := core.MakeDict()
+	params.Set("Width", core.MakeInteger(*ximg.Width))
+	params.Set("Height", core.MakeInteger(*ximg.Height))
+	params.Set("ColorComponents", core.MakeInteger(int64(ximg.ColorSpace.GetNumComponents())))
+	params.Set("BitsPerComponent", core.MakeInteger(*ximg.BitsPerComponent))
+	return params
 }

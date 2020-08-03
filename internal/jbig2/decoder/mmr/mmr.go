@@ -390,9 +390,13 @@ decodeLoop:
 			// Possibly MMR Decoded
 			if rd.offset == 12 && c.runLength == EOL {
 				rd.offset = 0
-				m.uncompress1d(rd, referenceOffsets, width)
+				if _, err = m.uncompress1d(rd, referenceOffsets, width); err != nil {
+					return 0, err
+				}
 				rd.offset++
-				m.uncompress1d(rd, runOffsets, width)
+				if _, err = m.uncompress1d(rd, runOffsets, width); err != nil {
+					return 0, err
+				}
 				retCode, err := m.uncompress1d(rd, referenceOffsets, width)
 				if err != nil {
 					return EOF, err

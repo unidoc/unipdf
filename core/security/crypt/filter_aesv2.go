@@ -19,7 +19,8 @@ func init() {
 func NewFilterAESV2() Filter {
 	f, err := newFilterAESV2(FilterDict{})
 	if err != nil {
-		panic(err)
+		common.Log.Error("ERROR: could not create AES V2 crypt filter: %v", err)
+		return filterAESV2{}
 	}
 	return f
 }

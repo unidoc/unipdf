@@ -206,9 +206,7 @@ func (p *StyledParagraph) Width() float64 {
 // Height returns the height of the Paragraph. The height is calculated based on the input text and how it is wrapped
 // within the container. Does not include Margins.
 func (p *StyledParagraph) Height() float64 {
-	if p.lines == nil || len(p.lines) == 0 {
-		p.wrapText()
-	}
+	p.wrapText()
 
 	var height float64
 	for _, line := range p.lines {
@@ -296,7 +294,7 @@ func (p *StyledParagraph) getTextWidth() float64 {
 			width += style.FontSize * metrics.Wx
 
 			// Do not add character spacing for the last character of the line.
-			if i != lenChunks-1 || j != lenRunes-1 {
+			if r != ' ' && (i != lenChunks-1 || j != lenRunes-1) {
 				width += style.CharSpacing * 1000.0
 			}
 		}
@@ -331,7 +329,7 @@ func (p *StyledParagraph) getTextLineWidth(line []*TextChunk) float64 {
 			width += style.FontSize * metrics.Wx
 
 			// Do not add character spacing for the last character of the line.
-			if i != lenChunks-1 || j != lenRunes-1 {
+			if r != ' ' && (i != lenChunks-1 || j != lenRunes-1) {
 				width += style.CharSpacing * 1000.0
 			}
 		}
@@ -425,15 +423,19 @@ func (p *StyledParagraph) wrapText() error {
 				widths = nil
 				continue
 			}
+			isSpace := r == ' '
 
 			metrics, found := style.Font.GetRuneMetrics(r)
 			if !found {
 				common.Log.Debug("Rune char metrics not found! %v\n", r)
 				return errors.New("glyph char metrics missing")
 			}
-
 			w := style.FontSize * metrics.Wx
-			charWidth := w + style.CharSpacing*1000.0
+
+			charWidth := w
+			if !isSpace {
+				charWidth = w + style.CharSpacing*1000.0
+			}
 
 			if lineWidth+w > p.wrapWidth*1000.0 {
 				// Goes out of bounds: Wrap.
@@ -441,10 +443,12 @@ func (p *StyledParagraph) wrapText() error {
 				// TODO: when goes outside: back up to next space,
 				// otherwise break on the character.
 				idx := -1
-				for j := len(part) - 1; j >= 0; j-- {
-					if part[j] == ' ' {
-						idx = j
-						break
+				if !isSpace {
+					for j := len(part) - 1; j >= 0; j-- {
+						if part[j] == ' ' {
+							idx = j
+							break
+						}
 					}
 				}
 
@@ -462,9 +466,15 @@ func (p *StyledParagraph) wrapText() error {
 						lineWidth += width
 					}
 				} else {
-					lineWidth = charWidth
-					part = []rune{r}
-					widths = []float64{charWidth}
+					if isSpace {
+						lineWidth = 0
+						part = []rune{}
+						widths = []float64{}
+					} else {
+						lineWidth = charWidth
+						part = []rune{r}
+						widths = []float64{charWidth}
+					}
 				}
 
 				line = append(line, &TextChunk{
@@ -497,7 +507,7 @@ func (p *StyledParagraph) wrapText() error {
 	return nil
 }
 
-// GeneratePageBlocks generates the page blocks.  Multiple blocks are generated
+// GeneratePageBlocks generates the page blocks. Multiple blocks are generated
 // if the contents wrap over multiple pages. Implements the Drawable interface.
 func (p *StyledParagraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContext, error) {
 	origContext := ctx
@@ -513,29 +523,9 @@ func (p *StyledParagraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawCon
 
 		// Use available space.
 		p.SetWidth(ctx.Width)
-
-		if p.Height() > ctx.Height {
-			// Goes out of the bounds.  Write on a new template instead and create a new context at upper
-			// left corner.
-			// TODO: Handle case when Paragraph is larger than the Page...
-			// Should be fine if we just break on the paragraph, i.e. splitting it up over 2+ pages
-
-			blocks = append(blocks, blk)
-			blk = NewBlock(ctx.PageWidth, ctx.PageHeight)
-
-			// New Page.
-			ctx.Page++
-			newContext := ctx
-			newContext.Y = ctx.Margins.top // + p.Margins.top
-			newContext.X = ctx.Margins.left + p.margins.left
-			newContext.Height = ctx.PageHeight - ctx.Margins.top - ctx.Margins.bottom - p.margins.bottom
-			newContext.Width = ctx.PageWidth - ctx.Margins.left - ctx.Margins.right - p.margins.left - p.margins.right
-			ctx = newContext
-		}
 	} else {
-		// Absolute.
+		// Absolute. Use necessary space.
 		if int(p.wrapWidth) <= 0 {
-			// Use necessary space.
 			p.SetWidth(p.getTextWidth())
 		}
 		ctx.X = p.xPos
@@ -546,14 +536,40 @@ func (p *StyledParagraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawCon
 		p.beforeRender(p, ctx)
 	}
 
-	// Place the Paragraph on the template at position (x,y) based on the ctx.
-	ctx, err := drawStyledParagraphOnBlock(blk, p, ctx)
-	if err != nil {
-		common.Log.Debug("ERROR: %v", err)
+	// Wrap paragraph chunks into lines, based on the available context width.
+	if err := p.wrapText(); err != nil {
 		return nil, ctx, err
 	}
 
-	blocks = append(blocks, blk)
+	// Draw paragraph blocks.
+	lines := p.lines
+	for {
+		// Draw paragraph on block.
+		newCtx, remaining, err := drawStyledParagraphOnBlock(blk, p, lines, ctx)
+		if err != nil {
+			common.Log.Debug("ERROR: %v", err)
+			return nil, ctx, err
+		}
+		ctx = newCtx
+		blocks = append(blocks, blk)
+
+		// If the current block height was not sufficient for all the paragraph
+		// lines, create a new block to draw the remaining lines on.
+		if lines = remaining; len(remaining) == 0 {
+			break
+		}
+
+		// Create new page block.
+		blk = NewBlock(ctx.PageWidth, ctx.PageHeight)
+		ctx.Page++
+		newCtx = ctx
+		newCtx.Y = ctx.Margins.top
+		newCtx.X = ctx.Margins.left + p.margins.left
+		newCtx.Height = ctx.PageHeight - ctx.Margins.top - ctx.Margins.bottom - p.margins.bottom
+		newCtx.Width = ctx.PageWidth - ctx.Margins.left - ctx.Margins.right - p.margins.left - p.margins.right
+		ctx = newCtx
+	}
+
 	if p.positioning.isRelative() {
 		ctx.X -= p.margins.left // Move back.
 		ctx.Width = origContext.Width
@@ -564,7 +580,7 @@ func (p *StyledParagraph) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawCon
 }
 
 // Draw block on specified location on Page, adding to the content stream.
-func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext) (DrawContext, error) {
+func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, lines [][]*TextChunk, ctx DrawContext) (DrawContext, [][]*TextChunk, error) {
 	// Find first free index for the font resources of the paragraph.
 	num := 1
 	fontName := core.PdfObjectName(fmt.Sprintf("Font%d", num))
@@ -576,34 +592,51 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 	// Add default font to the page resources.
 	err := blk.resources.SetFontByName(fontName, p.defaultStyle.Font.ToPdfObject())
 	if err != nil {
-		return ctx, err
+		return ctx, nil, err
 	}
 	num++
 
 	defaultFontName := fontName
 	defaultFontSize := p.defaultStyle.FontSize
 
-	// Wrap the text into lines.
-	p.wrapText()
-
 	// Add the fonts of all chunks to the page resources.
+	relativePos := p.positioning.isRelative()
 	var fonts [][]core.PdfObjectName
-
-	for _, line := range p.lines {
+	var yOffset float64
+	var nextBlockLines [][]*TextChunk
+	var totalHeight float64
+	for i, line := range lines {
 		var fontLine []core.PdfObjectName
-
+		var height float64
 		for _, chunk := range line {
+			style := chunk.Style
+			if i == 0 && style.FontSize > yOffset {
+				yOffset = style.FontSize
+			}
+			if style.FontSize > height {
+				height = style.FontSize
+			}
+
 			fontName = core.PdfObjectName(fmt.Sprintf("Font%d", num))
 
-			err := blk.resources.SetFontByName(fontName, chunk.Style.Font.ToPdfObject())
+			err := blk.resources.SetFontByName(fontName, style.Font.ToPdfObject())
 			if err != nil {
-				return ctx, err
+				return ctx, nil, err
 			}
 
 			fontLine = append(fontLine, fontName)
 			num++
 		}
 
+		// Check if line fits on the current block.
+		height *= p.lineHeight
+		if relativePos && totalHeight+height > ctx.Height {
+			nextBlockLines = lines[i:]
+			lines = lines[:i]
+			break
+		}
+
+		totalHeight += height
 		fonts = append(fonts, fontLine)
 	}
 
@@ -611,7 +644,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 	cc := contentstream.NewContentCreator()
 	cc.Add_q()
 
-	yPos := ctx.PageHeight - ctx.Y - defaultFontSize*p.lineHeight
+	yPos := ctx.PageHeight - ctx.Y - yOffset*p.lineHeight
 	cc.Translate(ctx.X, yPos)
 
 	if p.angle != 0 {
@@ -621,7 +654,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 	cc.Add_BT()
 
 	currY := yPos
-	for idx, line := range p.lines {
+	for idx, line := range lines {
 		currX := ctx.X
 
 		if idx != 0 {
@@ -629,7 +662,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 			cc.Add_Tstar()
 		}
 
-		isLastLine := idx == len(p.lines)-1
+		isLastLine := idx == len(lines)-1
 
 		// Get width of the line (excluding spaces).
 		var (
@@ -649,7 +682,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 
 			spaceMetrics, found := style.Font.GetRuneMetrics(' ')
 			if !found {
-				return ctx, errors.New("the font does not have a space glyph")
+				return ctx, nil, errors.New("the font does not have a space glyph")
 			}
 
 			var chunkSpaces uint
@@ -667,7 +700,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 				metrics, found := style.Font.GetRuneMetrics(r)
 				if !found {
 					common.Log.Debug("Unsupported rune %v in font\n", r)
-					return ctx, errors.New("unsupported text glyph")
+					return ctx, nil, errors.New("unsupported text glyph")
 				}
 
 				chunkWidth += style.FontSize * metrics.Wx
@@ -734,7 +767,7 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 			if p.alignment != TextAlignmentJustify || isLastLine {
 				spaceMetrics, found := style.Font.GetRuneMetrics(' ')
 				if !found {
-					return ctx, errors.New("the font does not have a space glyph")
+					return ctx, nil, errors.New("the font does not have a space glyph")
 				}
 
 				fontName = fonts[idx][k]
@@ -854,8 +887,8 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 
 	blk.addContents(ops)
 
-	if p.positioning.isRelative() {
-		pHeight := p.Height() + p.margins.bottom
+	if relativePos {
+		pHeight := totalHeight + p.margins.bottom
 		ctx.Y += pHeight
 		ctx.Height -= pHeight
 
@@ -865,5 +898,5 @@ func drawStyledParagraphOnBlock(blk *Block, p *StyledParagraph, ctx DrawContext)
 		}
 	}
 
-	return ctx, nil
+	return ctx, nextBlockLines, nil
 }

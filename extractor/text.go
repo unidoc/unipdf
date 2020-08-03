@@ -6,20 +6,26 @@
 package extractor
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"image/color"
 	"math"
 	"sort"
 	"strings"
-	"unicode"
 
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/contentstream"
 	"github.com/unidoc/unipdf/v3/core"
+	"github.com/unidoc/unipdf/v3/internal/textencoding"
 	"github.com/unidoc/unipdf/v3/internal/transform"
 	"github.com/unidoc/unipdf/v3/model"
-	"golang.org/x/text/unicode/norm"
+	"golang.org/x/xerrors"
 )
+
+// maxFormStack is the maximum form stack recursion depth. It has to be low enough to avoid a stack
+// overflow and high enough to accomodate customers' PDFs
+const maxFormStack = 20
 
 // ExtractText processes and extracts all text data in content streams and returns as a string.
 // It takes into account character encodings in the PDF file, which are decoded by
@@ -41,8 +47,10 @@ func (e *Extractor) ExtractTextWithStats() (extracted string, numChars int, numM
 }
 
 // ExtractPageText returns the text contents of `e` (an Extractor for a page) as a PageText.
+// TODO(peterwilliams97): The stats complicate this function signature and aren't very useful.
+//                        Replace with a function like Extract() (*PageText, error)
 func (e *Extractor) ExtractPageText() (*PageText, int, int, error) {
-	pt, numChars, numMisses, err := e.extractPageText(e.contents, e.resources, 0)
+	pt, numChars, numMisses, err := e.extractPageText(e.contents, e.resources, transform.IdentityMatrix(), 0)
 	if err != nil {
 		return nil, numChars, numMisses, err
 	}
@@ -55,14 +63,26 @@ func (e *Extractor) ExtractPageText() (*PageText, int, int, error) {
 // extractPageText returns the text contents of content stream `e` and resouces `resources` as a
 // PageText.
 // This can be called on a page or a form XObject.
-func (e *Extractor) extractPageText(contents string, resources *model.PdfPageResources, level int) (
+func (e *Extractor) extractPageText(contents string, resources *model.PdfPageResources,
+	parentCTM transform.Matrix, level int) (
 	*PageText, int, int, error) {
 	common.Log.Trace("extractPageText: level=%d", level)
-	pageText := &PageText{}
-	state := newTextState()
-	fontStack := fontStacker{}
-	to := newTextObject(e, resources, contentstream.GraphicsState{}, &state, &fontStack)
+	pageText := &PageText{pageSize: e.mediaBox}
+	state := newTextState(e.mediaBox)
+	var savedStates stateStack
+	to := newTextObject(e, resources, contentstream.GraphicsState{}, &state, &savedStates)
 	var inTextObj bool
+
+	if level > maxFormStack {
+		err := errors.New("form stack overflow")
+		common.Log.Debug("ERROR: extractPageText. recursion level=%d err=%v", level, err)
+		return pageText, state.numChars, state.numMisses, err
+	}
+
+	// Uncomment the following 3 statements to log the content stream.
+	// common.Log.Info("contents* %d -----------------------------", len(contents))
+	// fmt.Println(contents)
+	// common.Log.Info("contents+ -----------------------------")
 
 	cstreamParser := contentstream.NewContentStreamParser(contents)
 	operations, err := cstreamParser.Parse()
@@ -76,31 +96,21 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 	processor.AddHandler(contentstream.HandlerConditionEnumAllOperands, "",
 		func(op *contentstream.ContentStreamOperation, gs contentstream.GraphicsState,
 			resources *model.PdfPageResources) error {
-
 			operand := op.Operand
 
+			if verboseGeom {
+				common.Log.Info("&&& op=%s", op)
+			}
+
 			switch operand {
-			case "q":
-				if !fontStack.empty() {
-					common.Log.Trace("Save font state: %s\n%s",
-						fontStack.peek(), fontStack.String())
-					fontStack.push(fontStack.peek())
-				}
-				if state.tfont != nil {
-					common.Log.Trace("Save font state: %s\n->%s\n%s",
-						fontStack.peek(), state.tfont, fontStack.String())
-					fontStack.push(state.tfont)
-				}
-			case "Q":
-				if !fontStack.empty() {
-					common.Log.Trace("Restore font state: %s\n->%s\n%s",
-						fontStack.peek(), fontStack.get(-2), fontStack.String())
-					fontStack.pop()
-				}
-				if len(fontStack) >= 2 {
-					common.Log.Trace("Restore font state: %s\n->%s\n%s",
-						state.tfont, fontStack.peek(), fontStack.String())
-					state.tfont = fontStack.pop()
+			case "q": // Push current graphics state to the stack.
+				savedStates.push(&state)
+			case "Q": // Pop graphics state from the stack.
+				if !savedStates.empty() {
+					state = *savedStates.top()
+					if len(savedStates) >= 2 {
+						savedStates.pop()
+					}
 				}
 			case "BT": // Begin text
 				// Begin a text object, initializing the text matrix, Tm, and
@@ -113,7 +123,10 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 					pageText.marks = append(pageText.marks, to.marks...)
 				}
 				inTextObj = true
-				to = newTextObject(e, resources, gs, &state, &fontStack)
+
+				graphicsState := gs
+				graphicsState.CTM = parentCTM.Mult(graphicsState.CTM)
+				to = newTextObject(e, resources, graphicsState, &state, &savedStates)
 			case "ET": // End Text
 				// End text object, discarding text matrix. If the current
 				// text object contains text marks, they are added to the
@@ -186,7 +199,7 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 				to.nextLine()
 				return to.showText(charcodes)
 			case `"`: // Set word and character spacing, move to next line, and show text.
-				if ok, err := to.checkOp(op, 1, true); !ok {
+				if ok, err := to.checkOp(op, 3, true); !ok {
 					common.Log.Debug("ERROR: \" err=%v", err)
 					return err
 				}
@@ -233,7 +246,8 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 					return err
 				}
 				err = to.setFont(name, size)
-				if err != nil {
+				to.invalidFont = xerrors.Is(err, core.ErrNotSupported)
+				if err != nil && !to.invalidFont {
 					return err
 				}
 			case "Tm": // Set text matrix.
@@ -291,18 +305,28 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 					return err
 				}
 				to.setHorizScaling(y)
-
 			case "Do":
 				// Handle XObjects by recursing through form XObjects.
-				name := *op.Params[0].(*core.PdfObjectName)
-				_, xtype := resources.GetXObjectByName(name)
+				if len(op.Params) == 0 {
+					common.Log.Debug("ERROR: expected XObject name operand for Do operator. Got %+v.", op.Params)
+					return core.ErrRangeError
+				}
+
+				// Get XObject name.
+				name, ok := core.GetName(op.Params[0])
+				if !ok {
+					common.Log.Debug("ERROR: invalid Do operator XObject name operand: %+v.", op.Params[0])
+					return core.ErrTypeError
+				}
+
+				_, xtype := resources.GetXObjectByName(*name)
 				if xtype != model.XObjectTypeForm {
 					break
 				}
 				// Only process each form once.
-				formResult, ok := e.formResults[string(name)]
+				formResult, ok := e.formResults[name.String()]
 				if !ok {
-					xform, err := resources.GetXObjectFormByName(name)
+					xform, err := resources.GetXObjectFormByName(*name)
 					if err != nil {
 						common.Log.Debug("ERROR: %v", err)
 						return err
@@ -316,19 +340,28 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 					if formResources == nil {
 						formResources = resources
 					}
+
 					tList, numChars, numMisses, err := e.extractPageText(string(formContent),
-						formResources, level+1)
+						formResources, parentCTM.Mult(gs.CTM), level+1)
 					if err != nil {
 						common.Log.Debug("ERROR: %v", err)
 						return err
 					}
 					formResult = textResult{*tList, numChars, numMisses}
-					e.formResults[string(name)] = formResult
+					e.formResults[name.String()] = formResult
 				}
 
 				pageText.marks = append(pageText.marks, formResult.pageText.marks...)
 				state.numChars += formResult.numChars
 				state.numMisses += formResult.numMisses
+			case "rg", "g", "k", "cs", "sc", "scn":
+				// Set non-stroking color/colorspace.
+				to.gs.ColorspaceNonStroking = gs.ColorspaceNonStroking
+				to.gs.ColorNonStroking = gs.ColorNonStroking
+			case "RG", "G", "K", "CS", "SC", "SCN":
+				// Set stroking color/colorspace.
+				to.gs.ColorspaceStroking = gs.ColorspaceStroking
+				to.gs.ColorStroking = gs.ColorStroking
 			}
 			return nil
 		})
@@ -340,6 +373,7 @@ func (e *Extractor) extractPageText(contents string, resources *model.PdfPageRes
 	return pageText, state.numChars, state.numMisses, err
 }
 
+// textResult is used for holding results of PDF form processig
 type textResult struct {
 	pageText  PageText
 	numChars  int
@@ -413,7 +447,6 @@ func (to *textObject) showTextAdjusted(args *core.PdfObjectArray) error {
 			}
 			td := translationMatrix(transform.Point{X: dx, Y: dy})
 			to.tm.Concat(td)
-			common.Log.Trace("showTextAdjusted: dx,dy=%3f,%.3f Tm=%s", dx, dy, to.tm)
 		case *core.PdfObjectString:
 			charcodes, ok := core.GetStringBytes(o)
 			if !ok {
@@ -443,6 +476,9 @@ func (to *textObject) setCharSpacing(x float64) {
 		return
 	}
 	to.state.tc = x
+	if verboseGeom {
+		common.Log.Info("setCharSpacing: %.2f state=%s", x, to.state.String())
+	}
 }
 
 // setFont "Tf". Set font.
@@ -450,21 +486,18 @@ func (to *textObject) setFont(name string, size float64) error {
 	if to == nil {
 		return nil
 	}
+	to.state.tfs = size
 	font, err := to.getFont(name)
-	if err == nil {
-		to.state.tfont = font
-		if len(*to.fontStack) == 0 {
-			to.fontStack.push(font)
-		} else {
-			(*to.fontStack)[len(*to.fontStack)-1] = font
-		}
-	} else if err == model.ErrFontNotSupported {
-		// TODO(peterwilliams97): Do we need to handle this case in a special way?
-		return err
-	} else {
+	if err != nil {
 		return err
 	}
-	to.state.tfs = size
+	to.state.tfont = font
+	if to.savedStates.empty() {
+		to.savedStates.push(to.state)
+	} else {
+		to.savedStates.top().tfont = to.state.tfont
+	}
+
 	return nil
 }
 
@@ -539,67 +572,56 @@ func (to *textObject) checkOp(op *contentstream.ContentStreamOperation, numParam
 	return true, nil
 }
 
-// fontStacker is the PDF font stack implementation.
-type fontStacker []*model.PdfFont
+// stateStack is the PDF textState stack implementation.
+type stateStack []*textState
 
-// String returns a string describing the current state of the font stack.
-func (fontStack *fontStacker) String() string {
-	parts := []string{"---- font stack"}
-	for i, font := range *fontStack {
+// String returns a string describing the current state of the textState stack.
+func (savedStates *stateStack) String() string {
+	parts := []string{fmt.Sprintf("---- font stack: %d", len(*savedStates))}
+	for i, state := range *savedStates {
 		s := "<nil>"
-		if font != nil {
-			s = font.String()
+		if state != nil {
+			s = state.String()
 		}
 		parts = append(parts, fmt.Sprintf("\t%2d: %s", i, s))
 	}
 	return strings.Join(parts, "\n")
 }
 
-// push pushes `font` onto the font stack.
-func (fontStack *fontStacker) push(font *model.PdfFont) {
-	*fontStack = append(*fontStack, font)
+// push pushes a copy of `state` onto the textState stack.
+func (savedStates *stateStack) push(state *textState) {
+	s := *state
+	*savedStates = append(*savedStates, &s)
 }
 
-// pop pops and returns the element on the top of the font stack if there is one or nil if there isn't.
-func (fontStack *fontStacker) pop() *model.PdfFont {
-	if fontStack.empty() {
+// pop pops and returns a copy of the last state on the textState stack there is one or nil if
+// there isn't.
+func (savedStates *stateStack) pop() *textState {
+	if savedStates.empty() {
 		return nil
 	}
-	font := (*fontStack)[len(*fontStack)-1]
-	*fontStack = (*fontStack)[:len(*fontStack)-1]
-	return font
+	state := *(*savedStates)[len(*savedStates)-1]
+	*savedStates = (*savedStates)[:len(*savedStates)-1]
+	return &state
 }
 
-// peek returns the element on the top of the font stack if there is one or nil if there isn't.
-func (fontStack *fontStacker) peek() *model.PdfFont {
-	if fontStack.empty() {
+// top returns the last saved state if there is one or nil if there isn't.
+// NOTE: The return is a pointer. Modifying it will modify the stack.
+func (savedStates *stateStack) top() *textState {
+	if savedStates.empty() {
 		return nil
 	}
-	return (*fontStack)[len(*fontStack)-1]
+	return (*savedStates)[savedStates.size()-1]
 }
 
-// get returns the `idx`'th element of the font stack if there is one or nil if there isn't.
-//  idx = 0: bottom of font stack
-//  idx = len(fontstack) - 1: top of font stack
-//  idx = -n is same as dx = len(fontstack) - n, so fontstack.get(-1) is same as fontstack.peek()
-func (fontStack *fontStacker) get(idx int) *model.PdfFont {
-	if idx < 0 {
-		idx += fontStack.size()
-	}
-	if idx < 0 || idx > fontStack.size()-1 {
-		return nil
-	}
-	return (*fontStack)[idx]
+// empty returns true if the textState stack is empty.
+func (savedStates *stateStack) empty() bool {
+	return len(*savedStates) == 0
 }
 
-// empty returns true if the font stack is empty.
-func (fontStack *fontStacker) empty() bool {
-	return len(*fontStack) == 0
-}
-
-// size returns the number of elements in the font stack.
-func (fontStack *fontStacker) size() int {
-	return len(*fontStack)
+// size returns the number of elements in the textState stack.
+func (savedStates *stateStack) size() int {
+	return len(*savedStates)
 }
 
 // 9.3 Text State Parameters and Operators (page 243)
@@ -609,17 +631,28 @@ func (fontStack *fontStacker) size() int {
 
 // textState represents the text state.
 type textState struct {
-	tc    float64        // Character spacing. Unscaled text space units.
-	tw    float64        // Word spacing. Unscaled text space units.
-	th    float64        // Horizontal scaling.
-	tl    float64        // Leading. Unscaled text space units. Used by TD,T*,'," see Table 108.
-	tfs   float64        // Text font size.
-	tmode RenderMode     // Text rendering mode.
-	trise float64        // Text rise. Unscaled text space units. Set by Ts.
-	tfont *model.PdfFont // Text font.
+	tc       float64        // Character spacing. Unscaled text space units.
+	tw       float64        // Word spacing. Unscaled text space units.
+	th       float64        // Horizontal scaling.
+	tl       float64        // Leading. Unscaled text space units. Used by TD,T*,'," see Table 108.
+	tfs      float64        // Text font size.
+	tmode    RenderMode     // Text rendering mode.
+	trise    float64        // Text rise. Unscaled text space units. Set by Ts.
+	tfont    *model.PdfFont // Text font.
+	mediaBox model.PdfRectangle
 	// For debugging
 	numChars  int
 	numMisses int
+}
+
+// String returns a description of `state`.
+func (state *textState) String() string {
+	fontName := "[NOT SET]"
+	if state.tfont != nil {
+		fontName = state.tfont.BaseFont()
+	}
+	return fmt.Sprintf("tc=%.2f tw=%.2f tfs=%.2f font=%q",
+		state.tc, state.tw, state.tfs, fontName)
 }
 
 // 9.4.1 General (page 248)
@@ -639,35 +672,37 @@ type textState struct {
 
 // textObject represents a PDF text object.
 type textObject struct {
-	e         *Extractor
-	resources *model.PdfPageResources
-	gs        contentstream.GraphicsState
-	fontStack *fontStacker
-	state     *textState
-	tm        transform.Matrix // Text matrix. For the character pointer.
-	tlm       transform.Matrix // Text line matrix. For the start of line pointer.
-	marks     []textMark       // Text marks get written here.
+	e           *Extractor
+	resources   *model.PdfPageResources
+	gs          contentstream.GraphicsState
+	state       *textState
+	savedStates *stateStack
+	tm          transform.Matrix // Text matrix. For the character pointer.
+	tlm         transform.Matrix // Text line matrix. For the start of line pointer.
+	marks       []*textMark      // Text marks get written here.
+	invalidFont bool             // Flag that gets set true when we can't handle the current font.
 }
 
 // newTextState returns a default textState.
-func newTextState() textState {
+func newTextState(mediaBox model.PdfRectangle) textState {
 	return textState{
-		th:    100,
-		tmode: RenderModeFill,
+		th:       100,
+		tmode:    RenderModeFill,
+		mediaBox: mediaBox,
 	}
 }
 
 // newTextObject returns a default textObject.
 func newTextObject(e *Extractor, resources *model.PdfPageResources, gs contentstream.GraphicsState,
-	state *textState, fontStack *fontStacker) *textObject {
+	state *textState, savedStates *stateStack) *textObject {
 	return &textObject{
-		e:         e,
-		resources: resources,
-		gs:        gs,
-		fontStack: fontStack,
-		state:     state,
-		tm:        transform.IdentityMatrix(),
-		tlm:       transform.IdentityMatrix(),
+		e:           e,
+		resources:   resources,
+		gs:          gs,
+		savedStates: savedStates,
+		state:       state,
+		tm:          transform.IdentityMatrix(),
+		tlm:         transform.IdentityMatrix(),
 	}
 }
 
@@ -679,11 +714,27 @@ func (to *textObject) reset() {
 	to.marks = nil
 }
 
+// getFillColor returns the fill color of the text object.
+func (to *textObject) getFillColor() color.Color {
+	return pdfColorToGoColor(to.gs.ColorspaceNonStroking, to.gs.ColorNonStroking)
+}
+
+// getStrokeColor returns the stroke color of the text object.
+func (to *textObject) getStrokeColor() color.Color {
+	return pdfColorToGoColor(to.gs.ColorspaceStroking, to.gs.ColorStroking)
+}
+
 // renderText processes and renders byte array `data` for extraction purposes.
+// It extracts textMarks based the charcodes in `data` and the currect text and graphics states
+// are tracked in `to`.
 func (to *textObject) renderText(data []byte) error {
+	if to.invalidFont {
+		common.Log.Debug("renderText: Invalid font. Not processing.")
+		return nil
+	}
 	font := to.getCurrentFont()
 	charcodes := font.BytesToCharcodes(data)
-	runes, numChars, numMisses := font.CharcodesToUnicodeWithStats(charcodes)
+	texts, numChars, numMisses := font.CharcodesToStrings(charcodes)
 	if numMisses > 0 {
 		common.Log.Debug("renderText: numChars=%d numMisses=%d", numChars, numMisses)
 	}
@@ -702,18 +753,24 @@ func (to *textObject) renderText(data []byte) error {
 		spaceMetrics, _ = model.DefaultFont().GetRuneMetrics(' ')
 	}
 	spaceWidth := spaceMetrics.Wx * glyphTextRatio
-	common.Log.Trace("spaceWidth=%.2f text=%q font=%s fontSize=%.1f", spaceWidth, runes, font, tfs)
+	common.Log.Trace("spaceWidth=%.2f text=%q font=%s fontSize=%.2f", spaceWidth, texts, font, tfs)
 
 	stateMatrix := transform.NewMatrix(
 		tfs*th, 0,
 		0, tfs,
 		0, state.trise)
+	if verboseGeom {
+		common.Log.Info("renderText: %d codes=%+v texts=%q", len(charcodes), charcodes, texts)
+	}
 
-	common.Log.Trace("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, runes)
+	common.Log.Trace("renderText: %d codes=%+v runes=%q", len(charcodes), charcodes, len(texts))
 
-	for i, r := range runes {
-		// TODO(peterwilliams97): Need to find and fix cases where this happens.
-		if r == '\x00' {
+	fillColor := to.getFillColor()
+	strokeColor := to.getStrokeColor()
+
+	for i, text := range texts {
+		r := []rune(text)
+		if len(r) == 1 && r[0] == '\x00' {
 			continue
 		}
 
@@ -727,14 +784,14 @@ func (to *textObject) renderText(data []byte) error {
 
 		// w is the unscaled movement at the end of a word.
 		w := 0.0
-		if r == ' ' {
+		if len(r) == 1 && r[0] == 32 {
 			w = state.tw
 		}
 
 		m, ok := font.GetCharMetrics(code)
 		if !ok {
 			common.Log.Debug("ERROR: No metric for code=%d r=0x%04x=%+q %s", code, r, r, font)
-			return errors.New("no char metrics")
+			return fmt.Errorf("no char metrics: font=%s code=%d", font.String(), code)
 		}
 
 		// c is the character size in unscaled text units.
@@ -744,39 +801,56 @@ func (to *textObject) renderText(data []byte) error {
 		// t is the displacement of the text cursor when the character is rendered.
 		t0 := transform.Point{X: (c.X*tfs + w) * th}
 		t := transform.Point{X: (c.X*tfs + state.tc + w) * th}
+		if verboseGeom {
+			common.Log.Info("tfs=%.2f tc=%.2f tw=%.2f th=%.2f", tfs, state.tc, state.tw, th)
+			common.Log.Info("dx,dy=%.3f t0=%.2f t=%.2f", c, t0, t)
+		}
 
 		// td, td0 are t, t0 in matrix form.
 		// td0 is where this character ends. td is where the next character starts.
 		td0 := translationMatrix(t0)
 		td := translationMatrix(t)
+		end := to.gs.CTM.Mult(to.tm).Mult(td0)
 
-		common.Log.Trace("\"%c\" stateMatrix=%s CTM=%s Tm=%s", r, stateMatrix, to.gs.CTM, to.tm)
-		common.Log.Trace("tfs=%.3f th=%.3f Tc=%.3f w=%.3f (Tw=%.3f)", tfs, th, state.tc, w, state.tw)
-		common.Log.Trace("m=%s c=%+v t0=%+v td0=%s trm0=%s", m, c, t0, td0, td0.Mult(to.tm).Mult(to.gs.CTM))
+		if verboseGeom {
+			common.Log.Info("end:\n\tCTM=%s\n\t tm=%s\n"+
+				"\t td=%s xlat=%s\n"+
+				"\ttd0=%s\n\t → %s xlat=%s",
+				to.gs.CTM, to.tm,
+				td, translation(to.gs.CTM.Mult(to.tm).Mult(td)),
+				td0, end, translation(end))
+		}
 
-		mark := to.newTextMark(
-			string(r),
+		mark, onPage := to.newTextMark(
+			textencoding.ExpandLigatures(r),
 			trm,
-			translation(to.gs.CTM.Mult(to.tm).Mult(td0)),
+			translation(end),
 			math.Abs(spaceWidth*trm.ScalingFactorX()),
 			font,
-			to.state.tc)
+			to.state.tc,
+			fillColor,
+			strokeColor)
+
+		if !onPage {
+			common.Log.Debug("Text mark outside page. Skipping")
+			continue
+		}
 		if font == nil {
 			common.Log.Debug("ERROR: No font.")
 		} else if font.Encoder() == nil {
 			common.Log.Debug("ERROR: No encoding. font=%s", font)
 		} else {
-			original, ok := font.Encoder().CharcodeToRune(code)
-			if ok {
+			// TODO: This lookup seems confusing. Went from bytes <-> charcodes already.
+			// NOTE: This is needed to register runes by the font encoder - for subsetting (optimization).
+			if original, ok := font.Encoder().CharcodeToRune(code); ok {
 				mark.original = string(original)
 			}
 		}
 		common.Log.Trace("i=%d code=%d mark=%s trm=%s", i, code, mark, trm)
-		to.marks = append(to.marks, mark)
+		to.marks = append(to.marks, &mark)
 
 		// update the text matrix by the displacement of the text location.
 		to.tm.Concat(td)
-		common.Log.Trace("to.tm=%s", to.tm)
 	}
 
 	return nil
@@ -805,120 +879,13 @@ func (to *textObject) moveTo(tx, ty float64) {
 	to.tm = to.tlm
 }
 
-// textMark represents text drawn on a page and its position in device coordinates.
-// All dimensions are in device coordinates.
-type textMark struct {
-	text          string             // The text (decoded via ToUnicode).
-	original      string             // Original text (decoded).
-	bbox          model.PdfRectangle // Text bounding box.
-	orient        int                // The text orientation in degrees. This is the current TRM rounded to 10°.
-	orientedStart transform.Point    // Left of text in orientation where text is horizontal.
-	orientedEnd   transform.Point    // Right of text in orientation where text is horizontal.
-	height        float64            // Text height.
-	spaceWidth    float64            // Best guess at the width of a space in the font the text was rendered with.
-	font          *model.PdfFont     // The font the mark was drawn with.
-	fontsize      float64            // The font size the mark was drawn with.
-	charspacing   float64            // TODO (peterwilliams97: Should this be exposed in TextMark?
-	trm           transform.Matrix   // The current text rendering matrix (TRM above).
-	end           transform.Point    // The end of character device coordinates.
-	count         int64              // To help with reading debug logs.
-}
-
-// newTextMark returns a textMark for text `text` rendered with text rendering matrix (TRM) `trm`
-// and end of character device coordinates `end`. `spaceWidth` is our best guess at the width of a
-// space in the font the text is rendered in device coordinates.
-func (to *textObject) newTextMark(text string, trm transform.Matrix, end transform.Point,
-	spaceWidth float64, font *model.PdfFont, charspacing float64) textMark {
-	to.e.textCount++
-	theta := trm.Angle()
-	orient := nearestMultiple(theta, 10)
-	var height float64
-	if orient%180 != 90 {
-		height = trm.ScalingFactorY()
-	} else {
-		height = trm.ScalingFactorX()
-	}
-
-	start := translation(trm)
-	bbox := model.PdfRectangle{Llx: start.X, Lly: start.Y, Urx: end.X, Ury: end.Y}
-	switch orient % 360 {
-	case 90:
-		bbox.Urx -= height
-	case 180:
-		bbox.Ury -= height
-	case 270:
-		bbox.Urx += height
-	default:
-		bbox.Ury += height
-	}
-	tm := textMark{
-		text:          text,
-		orient:        orient,
-		bbox:          bbox,
-		orientedStart: start.Rotate(theta),
-		orientedEnd:   end.Rotate(theta),
-		height:        math.Abs(height),
-		spaceWidth:    spaceWidth,
-		font:          font,
-		fontsize:      to.state.tfs,
-		charspacing:   charspacing,
-		trm:           trm,
-		end:           end,
-		count:         to.e.textCount,
-	}
-	if !isTextSpace(tm.text) && tm.Width() == 0.0 {
-		common.Log.Debug("ERROR: Zero width text. tm=%s\n\tm=%#v", tm, tm)
-	}
-	return tm
-}
-
-// isTextSpace returns true if `text` contains nothing but space code points.
-func isTextSpace(text string) bool {
-	for _, r := range text {
-		if !unicode.IsSpace(r) {
-			return false
-		}
-	}
-	return true
-}
-
-// nearestMultiple return the integer multiple of `m` that is closest to `x`.
-func nearestMultiple(x float64, m int) int {
-	if m == 0 {
-		m = 1
-	}
-	fac := float64(m)
-	return int(math.Round(x/fac) * fac)
-}
-
-// String returns a string describing `tm`.
-func (tm textMark) String() string {
-	return fmt.Sprintf("textMark{@%03d [%.3f,%.3f] w=%.1f %d° %q}",
-		tm.count, tm.orientedStart.X, tm.orientedStart.Y, tm.Width(), tm.orient,
-		truncate(tm.text, 100))
-}
-
-// Width returns the width of `tm`.text in the text direction.
-func (tm textMark) Width() float64 {
-	return math.Abs(tm.orientedStart.X - tm.orientedEnd.X)
-}
-
-// ToTextMark returns the public view of `tm`.
-func (tm textMark) ToTextMark() TextMark {
-	return TextMark{
-		Text:     tm.text,
-		Original: tm.original,
-		BBox:     tm.bbox,
-		Font:     tm.font,
-		FontSize: tm.fontsize,
-	}
-}
-
 // PageText represents the layout of text on a device page.
 type PageText struct {
-	marks     []textMark // Texts and their positions on a PDF page.
-	viewText  string     // Extracted page text.
-	viewMarks []TextMark // Public view of `marks`.
+	marks      []*textMark        // Texts and their positions on a PDF page.
+	viewText   string             // Extracted page text.
+	viewMarks  []TextMark         // Public view of text marks.
+	viewTables []TextTable        // Public view of text tables.
+	pageSize   model.PdfRectangle // Page size. Used to calculate depth.
 }
 
 // String returns a string describing `pt`.
@@ -930,11 +897,6 @@ func (pt PageText) String() string {
 	}
 	parts = append(parts, "+"+summary)
 	return strings.Join(parts, "\n")
-}
-
-// length returns the number of elements in `pt.marks`.
-func (pt PageText) length() int {
-	return len(pt.marks)
 }
 
 // Text returns the extracted page text.
@@ -952,6 +914,42 @@ func (pt PageText) ToText() string {
 // Marks returns the TextMark collection for a page. It represents all the text on the page.
 func (pt PageText) Marks() *TextMarkArray {
 	return &TextMarkArray{marks: pt.viewMarks}
+}
+
+// Tables returns the tables extracted from the page.
+func (pt PageText) Tables() []TextTable {
+	return pt.viewTables
+}
+
+// computeViews processes the page TextMarks sorting by position and populates `pt.viewText` and
+// `pt.viewMarks` which represent the text and marks in the order which it is read on the page.
+// The comments above the TextMark definition describe how to use the []TextMark to
+// maps substrings of the page text to locations on the PDF page.
+func (pt *PageText) computeViews() {
+	// Extract text paragraphs one orientation at a time.
+	// If there are texts with several orientations on a page then the all the text of the same
+	// orientation gets extracted togther.
+	var paras paraList
+	n := len(pt.marks)
+	for orient := 0; orient < 360 && n > 0; orient += 90 {
+		marks := make([]*textMark, 0, len(pt.marks)-n)
+		for _, tm := range pt.marks {
+			if tm.orient == orient {
+				marks = append(marks, tm)
+			}
+		}
+		if len(marks) > 0 {
+			parasOrient := makeTextPage(marks, pt.pageSize)
+			paras = append(paras, parasOrient...)
+			n -= len(marks)
+		}
+	}
+	// Build the public viewable fields from the paraLis
+	b := new(bytes.Buffer)
+	paras.writeText(b)
+	pt.viewText = b.String()
+	pt.viewMarks = paras.toTextMarks()
+	pt.viewTables = paras.tables()
 }
 
 // TextMarkArray is a collection of TextMarks.
@@ -988,7 +986,11 @@ func (ma *TextMarkArray) Len() int {
 	return len(ma.marks)
 }
 
-// RangeOffset returns the TextMarks in `ma` that have `start` <= TextMark.Offset < `end`.
+// RangeOffset returns the TextMarks in `ma` that overlap text[start:end] in the extracted text.
+// These are tm: `start` <= tm.Offset + len(tm.Text) && tm.Offset < `end` where
+// `start` and `end` are offsets in the extracted text.
+// NOTE: TextMarks can contain multiple characters. e.g. "ffi" for the ﬃ ligature so the first and
+// last elements of the returned TextMarkArray may only partially overlap text[start:end].
 func (ma *TextMarkArray) RangeOffset(start, end int) (*TextMarkArray, error) {
 	if ma == nil {
 		return nil, errors.New("ma==nil")
@@ -1007,7 +1009,7 @@ func (ma *TextMarkArray) RangeOffset(start, end int) (*TextMarkArray, error) {
 		end = ma.marks[n-1].Offset + 1
 	}
 
-	iStart := sort.Search(n, func(i int) bool { return ma.marks[i].Offset >= start })
+	iStart := sort.Search(n, func(i int) bool { return ma.marks[i].Offset+len(ma.marks[i].Text)-1 >= start })
 	if !(0 <= iStart && iStart < n) {
 		err := fmt.Errorf("Out of range. start=%d iStart=%d len=%d\n\tfirst=%v\n\t last=%v",
 			start, iStart, n, ma.marks[0], ma.marks[n-1])
@@ -1021,34 +1023,28 @@ func (ma *TextMarkArray) RangeOffset(start, end int) (*TextMarkArray, error) {
 	}
 	if iEnd <= iStart {
 		// This should never happen.
-		return nil, fmt.Errorf("start=%d end=%d iStart=%d iEnd=%d", start, end, iStart, iEnd)
+		return nil, fmt.Errorf("iEnd <= iStart: start=%d end=%d iStart=%d iEnd=%d",
+			start, end, iStart, iEnd)
 	}
 	return &TextMarkArray{marks: ma.marks[iStart:iEnd]}, nil
 }
 
 // BBox returns the smallest axis-aligned rectangle that encloses all the TextMarks in `ma`.
 func (ma *TextMarkArray) BBox() (model.PdfRectangle, bool) {
-	if len(ma.marks) == 0 {
-		return model.PdfRectangle{}, false
-	}
-	bbox := ma.marks[0].BBox
-	for _, tm := range ma.marks[1:] {
-		if isTextSpace(tm.Text) {
+	var bbox model.PdfRectangle
+	found := false
+	for _, tm := range ma.marks {
+		if tm.Meta || isTextSpace(tm.Text) {
 			continue
 		}
-		bbox = rectUnion(bbox, tm.BBox)
+		if found {
+			bbox = rectUnion(bbox, tm.BBox)
+		} else {
+			bbox = tm.BBox
+			found = true
+		}
 	}
-	return bbox, true
-}
-
-// rectUnion returns the smallest axis-aligned rectangle that contains `b1` and `b2`.
-func rectUnion(b1, b2 model.PdfRectangle) model.PdfRectangle {
-	return model.PdfRectangle{
-		Llx: math.Min(b1.Llx, b2.Llx),
-		Lly: math.Min(b1.Lly, b2.Lly),
-		Urx: math.Max(b1.Urx, b2.Urx),
-		Ury: math.Max(b1.Ury, b2.Ury),
-	}
+	return bbox, found
 }
 
 // TextMark represents extracted text on a page with information regarding both textual content,
@@ -1073,7 +1069,7 @@ func rectUnion(b1, b2 model.PdfRectangle) model.PdfRectangle {
 //      bbox, ok := spanMarks.BBox()
 //      // handle errors
 type TextMark struct {
-	// Text is the extracted text. It has been decoded to Unicode via ToUnicode().
+	// Text is the extracted text.
 	Text string
 	// Original is the text in the PDF. It has not been decoded like `Text`.
 	Original string
@@ -1092,6 +1088,12 @@ type TextMark struct {
 	// spaces (line breaks) when we see characters that are over a threshold horizontal (vertical)
 	//  distance  apart. See wordJoiner (lineJoiner) in PageText.computeViews().
 	Meta bool
+	// FillColor is the fill color of the text.
+	// The color is nil for spaces and line breaks (i.e. the Meta field is true).
+	FillColor color.Color
+	// StrokeColor is the stroke color of the text.
+	// The color is nil for spaces and line breaks (i.e. the Meta field is true).
+	StrokeColor color.Color
 }
 
 // String returns a string describing `tm`.
@@ -1108,491 +1110,48 @@ func (tm TextMark) String() string {
 	if tm.Meta {
 		meta = " *M*"
 	}
-	return fmt.Sprintf("{TextMark: %d %q=%02x (%5.1f, %5.1f) (%5.1f, %5.1f) %s%s}",
+	return fmt.Sprintf("{TextMark: %d %q=%02x (%6.2f, %6.2f) (%6.2f, %6.2f) %s%s}",
 		tm.Offset, tm.Text, []rune(tm.Text), b.Llx, b.Lly, b.Urx, b.Ury, font, meta)
 }
 
-// computeViews processes the page TextMarks sorting by position and populates `pt.viewText` and
-// `pt.viewMarks` which represent the text and marks in the order which it is read on the page.
-// The comments above the TextMark definition describe how to use the []TextMark to
-// maps substrings of the page text to locations on the PDF page.
-func (pt *PageText) computeViews() {
-	fontHeight := pt.height()
-	// We sort with a y tolerance to allow for subscripts, diacritics etc.
-	tol := minFloat(fontHeight*0.2, 5.0)
-	common.Log.Trace("ToTextLocation: %d elements fontHeight=%.1f tol=%.1f", len(pt.marks), fontHeight, tol)
-	// Uncomment the 2 following Debug statements to see the effects of sorting.
-	// common.Log.Debug("computeViews: Before sorting %s", pt)
-	pt.sortPosition(tol)
-	// common.Log.Debug("computeViews: After sorting %s", pt)
-	lines := pt.toLines(tol)
-	texts := make([]string, len(lines))
-	for i, l := range lines {
-		texts[i] = strings.Join(l.words(), wordJoiner)
-	}
-	text := strings.Join(texts, lineJoiner)
-	var marks []TextMark
-	offset := 0
-	for i, l := range lines {
-		for j, tm := range l.marks {
-			tm.Offset = offset
-			marks = append(marks, tm)
-			offset += len(tm.Text)
-			if j == len(l.marks)-1 {
-				break
-			}
-			if wordJoinerLen > 0 {
-				tm := TextMark{
-					Offset: offset,
-					Text:   wordJoiner,
-					Meta:   true,
-				}
-				marks = append(marks, tm)
-				offset += wordJoinerLen
-			}
-		}
-		if i == len(lines)-1 {
-			break
-		}
-		if lineJoinerLen > 0 {
-			tm := TextMark{
-				Offset: offset,
-				Text:   lineJoiner,
-				Meta:   true,
-			}
-			marks = append(marks, tm)
-			offset += lineJoinerLen
-		}
-	}
-	pt.viewText = text
-	pt.viewMarks = marks
+// spaceMark is a special TextMark used for spaces.
+var spaceMark = TextMark{
+	Text:        "[X]",
+	Original:    " ",
+	Meta:        true,
+	FillColor:   color.White,
+	StrokeColor: color.White,
 }
 
-// height returns the max height of the elements in `pt.marks`.
-func (pt PageText) height() float64 {
-	fontHeight := 0.0
-	for _, tm := range pt.marks {
-		if tm.height > fontHeight {
-			fontHeight = tm.height
-		}
-	}
-	return fontHeight
+// TextTable represents a table.
+// Cells are ordered top-to-bottom, left-to-right.
+// Cells[y] is the (0-offset) y'th row in the table.
+// Cells[y][x] is the (0-offset) x'th column in the table.
+type TextTable struct {
+	W, H  int
+	Cells [][]TableCell
 }
 
-const (
-	// wordJoiner is added between text marks in extracted text.
-	wordJoiner = ""
-	// lineJoiner is added between lines in extracted text.
-	lineJoiner = "\n"
-)
-
-var (
-	wordJoinerLen = len(wordJoiner)
-	lineJoinerLen = len(lineJoiner)
-	// spaceMark is a special TextMark used for spaces.
-	spaceMark = TextMark{
-		Text:     " ",
-		Original: " ",
-		Meta:     true,
-	}
-)
-
-// sortPosition sorts a text list by its elements' positions on a page.
-// Sorting is by orientation then top to bottom, left to right when page is orientated so that text
-// is horizontal.
-// Text is considered to be on different lines if the lines' orientedStart.Y differs by more than `tol`.
-func (pt *PageText) sortPosition(tol float64) {
-	if len(pt.marks) == 0 {
-		return
-	}
-
-	// For grouping data vertically into lines, it is necessary to have the data presorted by
-	// descending y position.
-	sort.SliceStable(pt.marks, func(i, j int) bool {
-		ti, tj := pt.marks[i], pt.marks[j]
-		if ti.orient != tj.orient {
-			return ti.orient < tj.orient
-		}
-		return ti.orientedStart.Y >= tj.orientedStart.Y
-	})
-
-	// Cluster the marks into y-clusters by relative y proximity. Each cluster is our guess of what
-	// makes up a line of text.
-	clusters := make([]int, len(pt.marks))
-	cluster := 0
-	clusters[0] = cluster
-	for i := 1; i < len(pt.marks); i++ {
-		if pt.marks[i-1].orient != pt.marks[i].orient {
-			cluster++
-		} else {
-			if pt.marks[i-1].orientedStart.Y-pt.marks[i].orientedStart.Y > tol {
-				cluster++
-			}
-		}
-		clusters[i] = cluster
-	}
-
-	// Sort by y-cluster and x.
-	sort.SliceStable(pt.marks, func(i, j int) bool {
-		ti, tj := pt.marks[i], pt.marks[j]
-		if ti.orient != tj.orient {
-			return ti.orient < tj.orient
-		}
-		if clusters[i] != clusters[j] {
-			return clusters[i] < clusters[j]
-		}
-		return ti.orientedStart.X < tj.orientedStart.X
-	})
-}
-
-// textLine represents a line of text on a page.
-type textLine struct {
-	x      float64    // x position of line.
-	y      float64    // y position of line.
-	h      float64    // height of line text.
-	dxList []float64  // x distance between successive words in line.
-	marks  []TextMark // TextMarks in the line.
-}
-
-// words returns the texts in `tl`.
-func (tl textLine) words() []string {
-	var texts []string
-	for _, tm := range tl.marks {
-		texts = append(texts, tm.Text)
-	}
-	return texts
-}
-
-// toLines returns the text and positions in `pt.marks` as a slice of textLine.
-// NOTE: Caller must sort the text list top-to-bottom, left-to-right (for orientation adjusted so
-// that text is horizontal) before calling this function.
-func (pt PageText) toLines(tol float64) []textLine {
-	// We divide `pt.marks` into slices which contain texts with the same orientation, extract the
-	// lines for each orientation then return the concatenation of these lines sorted by orientation.
-	tlOrient := make(map[int][]textMark, len(pt.marks))
-	for _, tm := range pt.marks {
-		tlOrient[tm.orient] = append(tlOrient[tm.orient], tm)
-	}
-	var lines []textLine
-	for _, o := range orientKeys(tlOrient) {
-		lns := PageText{marks: tlOrient[o]}.toLinesOrient(tol)
-		lines = append(lines, lns...)
-	}
-	return lines
-}
-
-// toLinesOrient returns the text and positions in `pt.marks` as a slice of textLine.
-// NOTE: This function only works on text lists where all text is the same orientation so it should
-// only be called from toLines.
-// Caller must sort the text list top-to-bottom, left-to-right (for orientation adjusted so
-// that text is horizontal) before calling this function.
-func (pt PageText) toLinesOrient(tol float64) []textLine {
-	if len(pt.marks) == 0 {
-		return []textLine{}
-	}
-	var marks []TextMark
-	var lines []textLine
-	var xx []float64
-	y := pt.marks[0].orientedStart.Y
-
-	scanning := false
-
-	averageCharWidth := exponAve{}
-	wordSpacing := exponAve{}
-	lastEndX := 0.0 // lastEndX is pt.marks[i-1].orientedEnd.X
-
-	for _, tm := range pt.marks {
-		if tm.orientedStart.Y+tol < y {
-			if len(marks) > 0 {
-				tl := newLine(y, xx, marks)
-				if averageCharWidth.running {
-					// FIXME(peterwilliams97): Fix and reinstate combineDiacritics.
-					// tl = combineDiacritics(tl, averageCharWidth.ave)
-					tl = removeDuplicates(tl, averageCharWidth.ave)
-				}
-				lines = append(lines, tl)
-			}
-			marks = []TextMark{}
-			xx = []float64{}
-			y = tm.orientedStart.Y
-			scanning = false
-		}
-
-		// Detect text movements that represent spaces on the printed page.
-		// We use a heuristic from PdfBox: If the next character starts to the right of where a
-		// character after a space at "normal spacing" would start, then there is a space before it.
-		// The tricky thing to guess here is the width of a space at normal spacing.
-		// We follow PdfBox and use min(deltaSpace, deltaCharWidth).
-		deltaSpace := 0.0
-		if tm.spaceWidth == 0 {
-			deltaSpace = math.MaxFloat64
-		} else {
-			wordSpacing.update(tm.spaceWidth)
-			deltaSpace = wordSpacing.ave * 0.5
-		}
-		averageCharWidth.update(tm.Width())
-		deltaCharWidth := averageCharWidth.ave * 0.3
-
-		isSpace := false
-		nextWordX := lastEndX + minFloat(deltaSpace, deltaCharWidth)
-		if scanning && !isTextSpace(tm.text) {
-			isSpace = nextWordX < tm.orientedStart.X
-		}
-		common.Log.Trace("tm=%s", tm)
-		common.Log.Trace("width=%.2f delta=%.2f deltaSpace=%.2g deltaCharWidth=%.2g",
-			tm.Width(), minFloat(deltaSpace, deltaCharWidth), deltaSpace, deltaCharWidth)
-		common.Log.Trace("%+q [%.1f, %.1f] lastEndX=%.2f nextWordX=%.2f (%.2f) isSpace=%t",
-			tm.text, tm.orientedStart.X, tm.orientedStart.Y, lastEndX, nextWordX,
-			nextWordX-tm.orientedStart.X, isSpace)
-
-		if isSpace {
-			marks = append(marks, spaceMark)
-			xx = append(xx, (lastEndX+tm.orientedStart.X)*0.5)
-		}
-
-		// Add the text to the line.
-		lastEndX = tm.orientedEnd.X
-		marks = append(marks, tm.ToTextMark())
-		xx = append(xx, tm.orientedStart.X)
-		scanning = true
-		common.Log.Trace("lastEndX=%.2f", lastEndX)
-	}
-	if len(marks) > 0 {
-		tl := newLine(y, xx, marks)
-		if averageCharWidth.running {
-			tl = removeDuplicates(tl, averageCharWidth.ave)
-		}
-		lines = append(lines, tl)
-	}
-	return lines
-}
-
-// orientKeys returns the keys of `tlOrient` as a sorted slice.
-func orientKeys(tlOrient map[int][]textMark) []int {
-	keys := []int{}
-	for k := range tlOrient {
-		keys = append(keys, k)
-	}
-	sort.Ints(keys)
-	return keys
-}
-
-// exponAve implements an exponential average.
-type exponAve struct {
-	ave     float64 // Current average value.
-	running bool    // Has `ave` been set?
-}
-
-// update updates the exponential average `exp`.ave with latest value `x` and returns `exp`.ave.
-func (exp *exponAve) update(x float64) float64 {
-	if !exp.running {
-		exp.ave = x
-		exp.running = true
-	} else {
-		// NOTE(peterwilliams97): 0.5 is a guess. It may be possible to improve average character
-		// and space width estimation by tuning this value. It may be that different exponents
-		// would work better for character and space estimation.
-		exp.ave = (exp.ave + x) * 0.5
-	}
-	return exp.ave
-}
-
-// newLine returns the textLine representation of strings `words` with y coordinate `y` and x
-// coordinates `xx` and height `h`.
-func newLine(y float64, xx []float64, marks []TextMark) textLine {
-	dxList := make([]float64, len(xx)-1)
-	for i := 1; i < len(xx); i++ {
-		dxList[i-1] = xx[i] - xx[i-1]
-	}
-	return textLine{
-		x:      xx[0],
-		y:      y,
-		dxList: dxList,
-		marks:  marks,
-	}
-}
-
-// removeDuplicates returns `tl` with duplicate characters removed. `charWidth` is the average
-// character width for the line.
-func removeDuplicates(tl textLine, charWidth float64) textLine {
-	if len(tl.dxList) == 0 || len(tl.marks) == 0 {
-		return tl
-	}
-	// NOTE(peterwilliams97) 0.3 is a guess. It may be possible to tune this to a better value.
-	tol := charWidth * 0.3
-	marks := []TextMark{tl.marks[0]}
-	var dxList []float64
-
-	tm0 := tl.marks[0]
-	for i, dx := range tl.dxList {
-		tm := tl.marks[i+1]
-		if tm.Text != tm0.Text || dx > tol {
-			marks = append(marks, tm)
-			dxList = append(dxList, dx)
-		}
-		tm0 = tm
-	}
-	return textLine{
-		x:      tl.x,
-		y:      tl.y,
-		dxList: dxList,
-		marks:  marks,
-	}
-}
-
-// combineDiacritics returns `line` with diacritics close to characters combined with the characters.
-// `charWidth` is the average character width for the line.
-// We have to do this because PDF can render diacritics separately to the characters they attach to
-// in extracted text.
-func combineDiacritics(tl textLine, charWidth float64) textLine {
-	if len(tl.dxList) == 0 || len(tl.marks) == 0 {
-		return tl
-	}
-	// NOTE(peterwilliams97) 0.2 is a guess. It may be possible to tune this to a better value.
-	tol := charWidth * 0.2
-	common.Log.Trace("combineDiacritics: charWidth=%.2f tol=%.2f", charWidth, tol)
-
-	var marks []TextMark
-	var dxList []float64
-	tm := marks[0]
-	w, c := countDiacritic(tm.Text)
-	delta := 0.0
-	dx0 := 0.0
-	parts := []string{w}
-	numChars := c
-
-	for i, dx := range tl.dxList {
-		tm = marks[i+1]
-		w, c := countDiacritic(tm.Text)
-		if numChars+c <= 1 && delta+dx <= tol {
-			if len(parts) == 0 {
-				dx0 = dx
-			} else {
-				delta += dx
-			}
-			parts = append(parts, w)
-			numChars += c
-		} else {
-			if len(parts) > 0 {
-				if len(marks) > 0 {
-					dxList = append(dxList, dx0)
-				}
-				tm.Text = combine(parts)
-				marks = append(marks, tm)
-			}
-			parts = []string{w}
-			numChars = c
-			dx0 = dx
-			delta = 0.0
-		}
-	}
-	if len(parts) > 0 {
-		if len(marks) > 0 {
-			dxList = append(dxList, dx0)
-		}
-		tm.Text = combine(parts)
-		marks = append(marks, tm)
-	}
-	if len(marks) != len(dxList)+1 {
-		common.Log.Error("Inconsistent: \nwords=%d \ndxList=%d %.2f",
-			len(marks), len(dxList), dxList)
-		return tl
-	}
-	return textLine{
-		x:      tl.x,
-		y:      tl.y,
-		dxList: dxList,
-		marks:  marks,
-	}
-}
-
-// combine combines any diacritics in `parts` with the single non-diacritic character in `parts`.
-func combine(parts []string) string {
-	if len(parts) == 1 {
-		// Must be a non-diacritic.
-		return parts[0]
-	}
-
-	// We need to put the diacritics before the non-diacritic for NFKC normalization to work.
-	diacritic := map[string]bool{}
-	for _, w := range parts {
-		r := []rune(w)[0]
-		diacritic[w] = unicode.Is(unicode.Mn, r) || unicode.Is(unicode.Sk, r)
-	}
-	sort.SliceStable(parts, func(i, j int) bool { return !diacritic[parts[i]] && diacritic[parts[j]] })
-
-	// Construct the NFKC-normalized concatenation of the diacritics and the non-diacritic.
-	for i, w := range parts {
-		parts[i] = strings.TrimSpace(norm.NFKC.String(w))
-	}
-	return strings.Join(parts, "")
-}
-
-// countDiacritic returns the combining diacritic version of `w` (usually itself) and the number of
-// non-diacritics in `w` (0 or 1).
-func countDiacritic(w string) (string, int) {
-	runes := []rune(w)
-	if len(runes) != 1 {
-		return w, 1
-	}
-	r := runes[0]
-	c := 1
-	if (unicode.Is(unicode.Mn, r) || unicode.Is(unicode.Sk, r)) &&
-		r != '\'' && r != '"' && r != '`' {
-		c = 0
-	}
-	if w2, ok := diacritics[r]; ok {
-		c = 0
-		w = w2
-	}
-	return w, c
-}
-
-// diacritics is a map of diacritic characters that are not classified as unicode.Mn or unicode.Sk
-// and the corresponding unicode.Mn or unicode.Sk characters. This map was copied from PdfBox.
-// (https://svn.apache.org/repos/asf/pdfbox/trunk/pdfbox/src/main/java/org/apache/pdfbox/text/TextPosition.java)
-var diacritics = map[rune]string{
-	0x0060: "\u0300",
-	0x02CB: "\u0300",
-	0x0027: "\u0301",
-	0x02B9: "\u0301",
-	0x02CA: "\u0301",
-	0x005e: "\u0302",
-	0x02C6: "\u0302",
-	0x007E: "\u0303",
-	0x02C9: "\u0304",
-	0x00B0: "\u030A",
-	0x02BA: "\u030B",
-	0x02C7: "\u030C",
-	0x02C8: "\u030D",
-	0x0022: "\u030E",
-	0x02BB: "\u0312",
-	0x02BC: "\u0313",
-	0x0486: "\u0313",
-	0x055A: "\u0313",
-	0x02BD: "\u0314",
-	0x0485: "\u0314",
-	0x0559: "\u0314",
-	0x02D4: "\u031D",
-	0x02D5: "\u031E",
-	0x02D6: "\u031F",
-	0x02D7: "\u0320",
-	0x02B2: "\u0321",
-	0x02CC: "\u0329",
-	0x02B7: "\u032B",
-	0x02CD: "\u0331",
-	0x005F: "\u0332",
-	0x204E: "\u0359",
+// TableCell is a cell in a TextTable.
+type TableCell struct {
+	// Text is the extracted text.
+	Text string
+	// Marks returns the TextMarks corresponding to the text in Text.
+	Marks TextMarkArray
 }
 
 // getCurrentFont returns the font on top of the font stack, or DefaultFont if the font stack is
 // empty.
 func (to *textObject) getCurrentFont() *model.PdfFont {
-	if to.fontStack.empty() {
+	var font *model.PdfFont
+	if !to.savedStates.empty() {
+		font = to.savedStates.top().tfont
+	}
+	if font == nil {
 		common.Log.Debug("ERROR: No font defined. Using default.")
 		return model.DefaultFont()
 	}
-	return to.fontStack.peek()
+	return font
 }
 
 // getFont returns the font named `name` if it exists in the page's resources or an error if it

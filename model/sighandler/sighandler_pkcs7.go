@@ -12,7 +12,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/gunnsth/pkcs7"
+	"github.com/unidoc/pkcs7"
 
 	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/model"

@@ -13,6 +13,7 @@ import (
 	"strconv"
 
 	"github.com/unidoc/unipdf/v3/common"
+	"github.com/unidoc/unipdf/v3/core"
 	"github.com/unidoc/unipdf/v3/model"
 )
 
@@ -62,7 +63,14 @@ type Creator struct {
 	// Forms.
 	acroForm *model.PdfAcroForm
 
+	// Page labels.
+	pageLabels core.PdfObject
+
+	// Optimizer.
 	optimizer model.Optimizer
+
+	// Fonts that have been enabled for subsetting prior to write.
+	subsetFonts []*model.PdfFont
 
 	// Default fonts used by all components instantiated through the creator.
 	defaultFontRegular *model.PdfFont
@@ -80,6 +88,14 @@ func (c *Creator) SetForms(form *model.PdfAcroForm) error {
 // generation of outlines done by the creator for the relevant components.
 func (c *Creator) SetOutlineTree(outlineTree *model.PdfOutlineTreeNode) {
 	c.externalOutline = outlineTree
+}
+
+// SetPageLabels adds the specified page labels to the PDF file generated
+// by the creator. See section 12.4.2 "Page Labels" (p. 382 PDF32000_2008).
+// NOTE: for existing PDF files, the page label ranges object can be obtained
+// using the model.PDFReader's GetPageLabels method.
+func (c *Creator) SetPageLabels(pageLabels core.PdfObject) {
+	c.pageLabels = pageLabels
 }
 
 // FrontpageFunctionArgs holds the input arguments to a front page drawing function.
@@ -465,6 +481,13 @@ func (c *Creator) Finalize() error {
 		adjustOutlineDest = func(item *model.OutlineItem) {
 			item.Dest.Page += int64(genpages)
 
+			// Get page indirect object.
+			if page := int(item.Dest.Page); page >= 0 && page < len(c.pages) {
+				item.Dest.PageObj = c.pages[page].GetPageAsIndirectObject()
+			} else {
+				common.Log.Debug("WARN: could not get page container for page %d", page)
+			}
+
 			// Reverse the Y axis of the destination coordinates.
 			// The user passes in the annotation coordinates as if
 			// position 0, 0 is at the top left of the page.
@@ -485,15 +508,19 @@ func (c *Creator) Finalize() error {
 
 		// Add outline TOC item.
 		if c.AddTOC {
-			var tocPage int64
+			var tocPage int
 			if hasFrontPage {
 				tocPage = 1
 			}
 
-			c.outline.Insert(0, model.NewOutlineItem(
-				"Table of Contents",
-				model.NewOutlineDest(tocPage, 0, c.pageHeight),
-			))
+			// Create TOC outline item.
+			dest := model.NewOutlineDest(int64(tocPage), 0, c.pageHeight)
+			if tocPage >= 0 && tocPage < len(c.pages) {
+				dest.PageObj = c.pages[tocPage].GetPageAsIndirectObject()
+			} else {
+				common.Log.Debug("WARN: could not get page container for page %d", tocPage)
+			}
+			c.outline.Insert(0, model.NewOutlineItem("Table of Contents", dest))
 		}
 	}
 
@@ -647,6 +674,24 @@ func (c *Creator) Write(ws io.Writer) error {
 		pdfWriter.AddOutlineTree(&c.outline.ToPdfOutline().PdfOutlineTreeNode)
 	}
 
+	// Page labels.
+	if c.pageLabels != nil {
+		if err := pdfWriter.SetPageLabels(c.pageLabels); err != nil {
+			common.Log.Debug("ERROR: Could not set page labels: %v", err)
+			return err
+		}
+	}
+
+	if c.subsetFonts != nil {
+		for _, font := range c.subsetFonts {
+			err := font.SubsetRegistered()
+			if err != nil {
+				common.Log.Debug("ERROR: Could not subset font: %v", err)
+				return err
+			}
+		}
+	}
+
 	// Pdf Writer access hook. Can be used to encrypt, etc. via the PdfWriter instance.
 	if c.pdfWriterAccessFunc != nil {
 		err := c.pdfWriterAccessFunc(&pdfWriter)
@@ -687,6 +732,13 @@ func (c *Creator) Write(ws io.Writer) error {
 //
 func (c *Creator) SetPdfWriterAccessFunc(pdfWriterAccessFunc func(writer *model.PdfWriter) error) {
 	c.pdfWriterAccessFunc = pdfWriterAccessFunc
+}
+
+// EnableFontSubsetting enables font subsetting for `font` when the creator output is written to file.
+// Embeds only the subset of the runes/glyphs that are actually used to display the file.
+// Subsetting can reduce the size of fonts significantly.
+func (c *Creator) EnableFontSubsetting(font *model.PdfFont) {
+	c.subsetFonts = append(c.subsetFonts, font)
 }
 
 // WriteToFile writes the Creator output to file specified by path.

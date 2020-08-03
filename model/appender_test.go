@@ -7,6 +7,7 @@ package model_test
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/rsa"
 	"errors"
 	"fmt"
@@ -920,7 +921,8 @@ func validateFile(t *testing.T, fileName string) {
 
 	handler, _ := sighandler.NewAdobeX509RSASHA1(nil, nil)
 	handler2, _ := sighandler.NewAdobePKCS7Detached(nil, nil)
-	handlers := []model.SignatureHandler{handler, handler2}
+	handler3, _ := sighandler.NewDocTimeStamp("", 0)
+	handlers := []model.SignatureHandler{handler, handler2, handler3}
 
 	res, err := reader.ValidateSignatures(handlers)
 	if err != nil {
@@ -1576,4 +1578,244 @@ func TestAppenderAttemptMultiWrite(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Second invokation of appender.Write should yield an error")
 	}
+}
+
+func TestAppenderTimestampSign(t *testing.T) {
+	f1, err := os.Open(testPdfFile1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	defer f1.Close()
+	pdf1, err := model.NewPdfReader(f1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	appender, err := model.NewPdfAppender(pdf1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	handler, err := sighandler.NewDocTimeStamp("https://freetsa.org/tsr", crypto.SHA512)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	// Create signature field and appearance.
+	signature := model.NewPdfSignature(handler)
+	signature.SetName("Test Appender")
+	signature.SetReason("TestAppenderSignPage4")
+	signature.SetDate(time.Now(), "")
+
+	if err := signature.Initialize(); err != nil {
+		return
+	}
+
+	sigField := model.NewPdfFieldSignature(signature)
+	sigField.T = core.MakeString("Signature1")
+	sigField.Rect = core.MakeArray(
+		core.MakeInteger(0),
+		core.MakeInteger(0),
+		core.MakeInteger(0),
+		core.MakeInteger(0),
+	)
+
+	if err = appender.Sign(1, sigField); err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	err = appender.WriteToFile(tempFile("appender-sign-timestamp.pdf"))
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	validateFile(t, tempFile("appender-sign-timestamp.pdf"))
+}
+
+func TestSignatureAppearanceWithTimestamp(t *testing.T) {
+	f, err := os.Open(testPdf3pages)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	defer f.Close()
+
+	pdfReader, err := model.NewPdfReader(f)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	t.Logf("Fields: %d", len(pdfReader.AcroForm.AllFields()))
+
+	appender, err := model.NewPdfAppender(pdfReader)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	pfxData, _ := ioutil.ReadFile(testPKS12Key)
+	privateKey, cert, err := pkcs12.Decode(pfxData, testPKS12KeyPassword)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	handler, err := sighandler.NewAdobePKCS7Detached(privateKey.(*rsa.PrivateKey), cert)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	// Create signature.
+	signature := model.NewPdfSignature(handler)
+	signature.SetName("Test Signature Appearance Name")
+	signature.SetReason("TestSignatureAppearance Reason")
+	signature.SetDate(time.Now(), "")
+
+	if err := signature.Initialize(); err != nil {
+		return
+	}
+
+	numPages, err := pdfReader.GetNumPages()
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	for i := 0; i < numPages; i++ {
+		pageNum := i + 1
+
+		// Annot1
+		opts := annotator.NewSignatureFieldOpts()
+		opts.FontSize = 10
+		opts.Rect = []float64{10, 25, 75, 60}
+
+		sigField, err := annotator.NewSignatureField(
+			signature,
+			[]*annotator.SignatureLine{
+				annotator.NewSignatureLine("Name", "Jane Doe"),
+				annotator.NewSignatureLine("Date", "2019.01.03"),
+				annotator.NewSignatureLine("Reason", "Some reason"),
+				annotator.NewSignatureLine("Location", "New York"),
+				annotator.NewSignatureLine("DN", "authority1:name1"),
+			},
+			opts,
+		)
+		sigField.T = core.MakeString(fmt.Sprintf("Signature %d", pageNum))
+
+		if err = appender.Sign(pageNum, sigField); err != nil {
+			t.Errorf("Fail: %v\n", err)
+			return
+		}
+
+		// Annot2
+		opts = annotator.NewSignatureFieldOpts()
+		opts.FontSize = 8
+		opts.Rect = []float64{250, 25, 325, 70}
+		opts.TextColor = model.NewPdfColorDeviceRGB(255, 0, 0)
+
+		sigField, err = annotator.NewSignatureField(
+			signature,
+			[]*annotator.SignatureLine{
+				annotator.NewSignatureLine("Name", "John Doe"),
+				annotator.NewSignatureLine("Date", "2019.03.14"),
+				annotator.NewSignatureLine("Reason", "No reason"),
+				annotator.NewSignatureLine("Location", "London"),
+				annotator.NewSignatureLine("DN", "authority2:name2"),
+			},
+			opts,
+		)
+		sigField.T = core.MakeString(fmt.Sprintf("Signature2 %d", pageNum))
+
+		if err = appender.Sign(pageNum, sigField); err != nil {
+			log.Fatalf("Fail: %v\n", err)
+		}
+
+		// Annot3
+		opts = annotator.NewSignatureFieldOpts()
+		opts.BorderSize = 1
+		opts.FontSize = 10
+		opts.Rect = []float64{475, 25, 590, 80}
+		opts.FillColor = model.NewPdfColorDeviceRGB(255, 255, 0)
+		opts.TextColor = model.NewPdfColorDeviceRGB(0, 0, 200)
+
+		sigField, err = annotator.NewSignatureField(
+			signature,
+			[]*annotator.SignatureLine{
+				annotator.NewSignatureLine("Name", "John Smith"),
+				annotator.NewSignatureLine("Date", "2019.02.19"),
+				annotator.NewSignatureLine("Reason", "Another reason"),
+				annotator.NewSignatureLine("Location", "Paris"),
+				annotator.NewSignatureLine("DN", "authority3:name3"),
+			},
+			opts,
+		)
+		sigField.T = core.MakeString(fmt.Sprintf("Signature3 %d", pageNum))
+
+		if err = appender.Sign(pageNum, sigField); err != nil {
+			log.Fatalf("Fail: %v\n", err)
+		}
+	}
+
+	outDoc := bytes.NewBuffer(nil)
+
+	if err = appender.Write(outDoc); err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	pdf1, err := model.NewPdfReader(bytes.NewReader(outDoc.Bytes()))
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	appender, err = model.NewPdfAppender(pdf1)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	handler, err = sighandler.NewDocTimeStamp("https://freetsa.org/tsr", crypto.SHA512)
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	// Create signature field and appearance.
+	signature = model.NewPdfSignature(handler)
+	signature.SetName("Test Appender")
+	signature.SetReason("TestAppenderSignPage4")
+	signature.SetDate(time.Now(), "")
+
+	if err := signature.Initialize(); err != nil {
+		return
+	}
+
+	sigField := model.NewPdfFieldSignature(signature)
+	sigField.T = core.MakeString("Signature1")
+	sigField.Rect = core.MakeArray(
+		core.MakeInteger(0),
+		core.MakeInteger(0),
+		core.MakeInteger(0),
+		core.MakeInteger(0),
+	)
+
+	if err = appender.Sign(1, sigField); err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+
+	err = appender.WriteToFile(tempFile("appender-signature-appearance-with-timestamp.pdf"))
+	if err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return
+	}
+	validateFile(t, tempFile("appender-signature-appearance-with-timestamp.pdf"))
 }

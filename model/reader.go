@@ -275,7 +275,7 @@ func (r *PdfReader) loadOutlines() (*PdfOutlineTreeNode, error) {
 	outlineRootObj := core.ResolveReference(outlinesObj)
 	common.Log.Trace("Outline root: %v", outlineRootObj)
 
-	if _, isNull := outlineRootObj.(*core.PdfObjectNull); isNull {
+	if isNull := core.IsNullObject(outlineRootObj); isNull {
 		common.Log.Trace("Outline root is null - no outlines")
 		return nil, nil
 	}
@@ -338,8 +338,9 @@ func (r *PdfReader) buildOutlineTree(obj core.PdfObject, parent *PdfOutlineTreeN
 		outlineItem.Parent = parent
 		outlineItem.Prev = prev
 
-		if firstObj := dict.Get("First"); firstObj != nil {
-			firstObj = core.ResolveReference(firstObj)
+		// Build outline tree for node children.
+		firstObj := core.ResolveReference(dict.Get("First"))
+		if _, processed := visited[firstObj]; firstObj != nil && firstObj != container && !processed {
 			if !core.IsNullObject(firstObj) {
 				first, last, err := r.buildOutlineTree(firstObj, &outlineItem.PdfOutlineTreeNode, nil, visited)
 				if err != nil {
@@ -351,10 +352,10 @@ func (r *PdfReader) buildOutlineTree(obj core.PdfObject, parent *PdfOutlineTreeN
 			}
 		}
 
-		// Resolve the reference to next
+		// Build outline tree for the next item.
 		nextObj := core.ResolveReference(dict.Get("Next"))
 		if _, processed := visited[nextObj]; nextObj != nil && nextObj != container && !processed {
-			if _, isNull := nextObj.(*core.PdfObjectNull); !isNull {
+			if !core.IsNullObject(nextObj) {
 				next, last, err := r.buildOutlineTree(nextObj, parent, &outlineItem.PdfOutlineTreeNode, visited)
 				if err != nil {
 					common.Log.Debug("DEBUG: could not build outline tree for Next node: %v. Skipping node.", err)
@@ -504,6 +505,108 @@ func (r *PdfReader) GetOutlines() (*Outline, error) {
 	outline := NewOutline()
 	traverseFunc(outlineTree, &outline.Entries)
 	return outline, nil
+}
+
+// AcroFormRepairOptions contains options for rebuilding the AcroForm.
+type AcroFormRepairOptions struct {
+}
+
+// RepairAcroForm attempts to rebuild the AcroForm fields using the widget
+// annotations present in the document pages. Pass nil for the opts parameter
+// in order to use the default options.
+// NOTE: Currently, the opts parameter is declared in order to enable adding
+// future options, but passing nil will always result in the default options
+// being used.
+func (r *PdfReader) RepairAcroForm(opts *AcroFormRepairOptions) error {
+	var fields []*PdfField
+	fieldCache := map[*core.PdfIndirectObject]struct{}{}
+	for _, page := range r.PageList {
+		annotations, err := page.GetAnnotations()
+		if err != nil {
+			return err
+		}
+
+		for _, annotation := range annotations {
+			var field *PdfField
+			switch t := annotation.GetContext().(type) {
+			case *PdfAnnotationWidget:
+				if t.parent != nil {
+					field = t.parent
+					break
+				}
+				if parentObj, ok := core.GetIndirect(t.Parent); ok {
+					field, err = r.newPdfFieldFromIndirectObject(parentObj, nil)
+					if err == nil {
+						break
+					}
+					common.Log.Debug("WARN: could not parse form field %+v: %v", parentObj, err)
+				}
+				if t.container != nil {
+					field, err = r.newPdfFieldFromIndirectObject(t.container, nil)
+					if err == nil {
+						break
+					}
+					common.Log.Debug("WARN: could not parse form field %+v: %v", t.container, err)
+				}
+			}
+			if field == nil {
+				continue
+			}
+			if _, ok := fieldCache[field.container]; ok {
+				continue
+			}
+			fieldCache[field.container] = struct{}{}
+			fields = append(fields, field)
+		}
+	}
+
+	if len(fields) == 0 {
+		return nil
+	}
+	if r.AcroForm == nil {
+		r.AcroForm = NewPdfAcroForm()
+	}
+	r.AcroForm.Fields = &fields
+	return nil
+}
+
+// AcroFormNeedsRepair returns true if the document contains widget annotations
+// linked to fields which are not referenced in the AcroForm. The AcroForm can
+// be repaired using the RepairAcroForm method of the reader.
+func (r *PdfReader) AcroFormNeedsRepair() (bool, error) {
+	var fields []*PdfField
+	if r.AcroForm != nil {
+		fields = r.AcroForm.AllFields()
+	}
+
+	fieldMap := make(map[*PdfField]struct{}, len(fields))
+	for _, field := range fields {
+		fieldMap[field] = struct{}{}
+	}
+
+	for _, page := range r.PageList {
+		annotations, err := page.GetAnnotations()
+		if err != nil {
+			return false, err
+		}
+
+		for _, annotation := range annotations {
+			widget, ok := annotation.GetContext().(*PdfAnnotationWidget)
+			if !ok {
+				continue
+			}
+
+			field := widget.Field()
+			if field == nil {
+				return true, nil
+			}
+			if _, ok := fieldMap[field]; !ok {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
 }
 
 // loadForms loads the AcroForm.
@@ -749,6 +852,25 @@ func (r *PdfReader) GetOCProperties() (core.PdfObject, error) {
 // See section 12.3.2.3 "Named Destinations" (p. 367 PDF32000_2008).
 func (r *PdfReader) GetNamedDestinations() (core.PdfObject, error) {
 	obj := core.ResolveReference(r.catalog.Get("Names"))
+	if obj == nil {
+		return nil, nil
+	}
+
+	// Resolve references.
+	if !r.isLazy {
+		err := r.traverseObjectData(obj)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return obj, nil
+}
+
+// GetPageLabels returns the PageLabels entry in the PDF catalog.
+// See section 12.4.2 "Page Labels" (p. 382 PDF32000_2008).
+func (r *PdfReader) GetPageLabels() (core.PdfObject, error) {
+	obj := core.ResolveReference(r.catalog.Get("PageLabels"))
 	if obj == nil {
 		return nil, nil
 	}

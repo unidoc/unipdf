@@ -230,6 +230,10 @@ func (proc *ContentStreamProcessor) Process(resources *model.PdfPageResources) e
 		case "q":
 			proc.graphicsStack.Push(proc.graphicsState)
 		case "Q":
+			if len(proc.graphicsStack) == 0 {
+				common.Log.Debug("WARN: invalid `Q` operator. Graphics state stack is empty. Skipping.")
+				continue
+			}
 			proc.graphicsState = proc.graphicsStack.Pop()
 
 		// Color operations (Table 74 p. 179)

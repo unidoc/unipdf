@@ -104,14 +104,14 @@ func TestCMapParser1(t *testing.T) {
 	}
 
 	for k, expected := range expectedMappings {
-		if v, ok := cmap.CharcodeToUnicode(k); !ok || v != expected {
+		if v, ok := cmap.CharcodeToUnicode(k); !ok || v != string(expected) {
 			t.Errorf("incorrect mapping, expecting 0x%X ➞ 0x%X (%#v)", k, expected, v)
 			return
 		}
 	}
 
 	v, _ := cmap.CharcodeToUnicode(0x99)
-	if v != MissingCodeRune { //!= "notdef" {
+	if v != MissingCodeString { //!= "notdef" {
 		t.Errorf("Unmapped code, expected to map to undefined")
 		return
 	}
@@ -188,7 +188,7 @@ func TestCMapParser2(t *testing.T) {
 	}
 
 	for k, expected := range expectedMappings {
-		if v, ok := cmap.CharcodeToUnicode(k); !ok || v != expected {
+		if v, ok := cmap.CharcodeToUnicode(k); !ok || v != string(expected) {
 			t.Errorf("incorrect mapping, expecting 0x%X ➞ 0x%X (got 0x%X)", k, expected, v)
 			return
 		}
@@ -297,7 +297,7 @@ func TestCMapParser3(t *testing.T) {
 		0xd140: 0xa000,
 	}
 	for k, expected := range expectedMappings {
-		if v, ok := cmap.CharcodeToUnicode(k); !ok || v != expected {
+		if v, ok := cmap.CharcodeToUnicode(k); !ok || v != string(expected) {
 			t.Errorf("incorrect mapping: expecting 0x%02X ➞ 0x%02X (got 0x%02X)", k, expected, v)
 			return
 		}
@@ -407,7 +407,7 @@ func TestCMapParser4(t *testing.T) {
 	}
 
 	for k, expected := range expectedMappings {
-		if v, ok := cmap.CharcodeToUnicode(k); !ok || v != expected {
+		if v, ok := cmap.CharcodeToUnicode(k); !ok || v != string(expected) {
 			t.Errorf("incorrect mapping, expecting 0x%04X ➞ %+q (got %+q)", k, expected, v)
 			return
 		}
@@ -520,6 +520,7 @@ var (
 		0x017b: 'Ż',
 		0x017d: 'Ž',
 	}
+
 	codeToUnicode3 = map[CharCode]rune{ // 93 entries
 		0x0124: 'Ĥ',
 		0x0125: 'ĥ',
@@ -695,7 +696,7 @@ func checkCmapWriteRead(t *testing.T, codeToUnicode map[CharCode]rune) {
 		}
 		u0 := codeToUnicode[code]
 		u := cmap.codeToUnicode[code]
-		if u != u0 {
+		if u != string(u0) {
 			t.Errorf("Unicode mismatch: i=%d code0=0x%04x expected=%q test=%q", i, code, u0, u)
 			return
 		}

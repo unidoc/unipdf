@@ -6,7 +6,7 @@
 // Package jbig2 provides the jbig2 standard image Encoder and Decoder.
 // All the comments reference to the 'ISO/IEC 14992 INFORMATION TECHNOLOGY - CODED
 // REPRESENTATION OF PICTURE AND AUDIO INFORMATION - LOSSY/LOSSLESS CODING OF
-// BI-LEVEL IMAGES JBIG commitee 1999 July 16' document.
+// BI-LEVEL IMAGES JBIG committee 1999 July 16' document.
 // The document is available and can be downloaded at:
 // 'https://github.com/agl/jbig2enc/blob/master/fcd14492.pdf'
 //

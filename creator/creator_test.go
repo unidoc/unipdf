@@ -13,15 +13,12 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
-	"errors"
+	"encoding/json"
 	"fmt"
 	goimage "image"
-	"image/png"
-	"io"
 	"io/ioutil"
 	"math"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -33,8 +30,11 @@ import (
 	"github.com/unidoc/unipdf/v3/common"
 	"github.com/unidoc/unipdf/v3/contentstream/draw"
 	"github.com/unidoc/unipdf/v3/core"
+	"github.com/unidoc/unipdf/v3/extractor"
 	"github.com/unidoc/unipdf/v3/model"
 	"github.com/unidoc/unipdf/v3/model/optimize"
+
+	"github.com/unidoc/unipdf/v3/internal/testutils"
 )
 
 func init() {
@@ -682,31 +682,45 @@ func TestParagraphChinese(t *testing.T) {
 	}
 
 	font, err := model.NewCompositePdfFontFromTTFFile(testWts11TTFFile)
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	require.NoError(t, err)
+
+	// Enable font subsetting for the composite font - embed only needed glyphs
+	// (much smaller file size for large fonts).
+	creator.EnableFontSubsetting(font)
 
 	for _, line := range lines {
 		p := creator.NewParagraph(line)
-
 		p.SetFont(font)
 
 		err = creator.Draw(p)
-		if err != nil {
-			t.Errorf("Fail: %v\n", err)
-			return
-		}
+		require.NoError(t, err)
 	}
 
-	testWriteAndRender(t, creator, "2_p_nihao.pdf")
-	fname := tempFile("2_p_nihao.pdf")
+	fname := testWrite(t, creator, "2_p_nihao.pdf")
 	st, err := os.Stat(fname)
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
+	require.NoError(t, err)
+	t.Logf("output size: %d (%.2f MB)", st.Size(), float64(st.Size())/1024/1024)
+
+	// Check if text is extracted correctly (tests the ToUnicode map).
+	f, err := os.Open(fname)
+	require.NoError(t, err)
+	defer f.Close()
+	r, err := model.NewPdfReaderLazy(f)
+	require.NoError(t, err)
+	p, err := r.GetPage(1)
+	require.NoError(t, err)
+	e, err := extractor.New(p)
+	require.NoError(t, err)
+	text, err := e.ExtractText()
+	require.NoError(t, err)
+	expected := strings.Join(lines, "\n")
+	if len(text) > len(expected) {
+		// Trim off extra license data.
+		text = text[:len(expected)]
 	}
-	t.Logf("output size: %d (%d MB)", st.Size(), st.Size()/1024/1024)
+	require.Equal(t, expected, text)
+
+	testRender(t, fname)
 }
 
 // Test paragraph with composite font and various unicode characters.
@@ -714,10 +728,10 @@ func TestParagraphUnicode(t *testing.T) {
 	creator := New()
 
 	font, err := model.NewCompositePdfFontFromTTFFile(testFreeSansTTFFile)
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	require.NoError(t, err)
+
+	// Enable font subsetting for the composite font - embed only needed glyphs.
+	creator.EnableFontSubsetting(font)
 
 	texts := []string{
 		"Testing of letters \u010c,\u0106,\u0160,\u017d,\u0110",
@@ -755,10 +769,7 @@ func TestParagraphUnicode(t *testing.T) {
 		p.SetFont(font)
 
 		err = creator.Draw(p)
-		if err != nil {
-			t.Errorf("Fail: %v\n", err)
-			return
-		}
+		require.NoError(t, err)
 	}
 
 	testWriteAndRender(t, creator, "2_p_multi.pdf")
@@ -1028,11 +1039,31 @@ func TestSubchapters(t *testing.T) {
 
 	addHeadersAndFooters(c)
 
-	err := c.WriteToFile(tempFile("3_subchapters.pdf"))
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+	// Finalize creator in order to get final version of the outlines.
+	require.NoError(t, c.Finalize())
+
+	// Get outline data as JSON.
+	srcJSON, err := json.Marshal(c.outline)
+	require.NoError(t, err)
+
+	// Write output file.
+	outputPath := tempFile("3_subchapters.pdf")
+	require.NoError(t, c.WriteToFile(outputPath))
+
+	// Read output file.
+	outputFile, err := os.Open(outputPath)
+	require.NoError(t, err)
+	defer outputFile.Close()
+
+	reader, err := model.NewPdfReader(outputFile)
+	require.NoError(t, err)
+
+	// Compare outlines JSON data.
+	dstOutline, err := reader.GetOutlines()
+	require.NoError(t, err)
+	dstJSON, err := json.Marshal(dstOutline)
+	require.NoError(t, err)
+	require.Equal(t, srcJSON, dstJSON)
 }
 
 // Test creating and drawing a table.
@@ -2980,107 +3011,223 @@ func TestCreatorStable(t *testing.T) {
 	}
 }
 
-var errRenderNotSupported = errors.New("rendering pdf is not supported on this system")
-
-// renderPDFToPNGs uses ghostscript (gs) to render specified PDF file into a set of PNG images (one per page).
-// PNG images will be named xxx-N.png where N is the number of page, starting from 1.
-func renderPDFToPNGs(pdfPath string, dpi int, outpathTpl string) error {
-	if dpi == 0 {
-		dpi = 100
-	}
-	if _, err := exec.LookPath("gs"); err != nil {
-		return errRenderNotSupported
-	}
-	return exec.Command("gs", "-sDEVICE=pngalpha", "-o", outpathTpl, fmt.Sprintf("-r%d", dpi), pdfPath).Run()
-}
-
-func readPNG(file string) (goimage.Image, error) {
-	f, err := os.Open(file)
-	if err != nil {
-		return nil, err
-	}
+func TestPageLabels(t *testing.T) {
+	// Read input file.
+	f, err := os.Open(testPdfTemplatesFile1)
+	require.NoError(t, err)
 	defer f.Close()
-	return png.Decode(f)
+
+	reader, err := model.NewPdfReader(f)
+	require.NoError(t, err)
+	numPages, err := reader.GetNumPages()
+	require.NoError(t, err)
+
+	// Add input file pages to a new creator instance.
+	c := New()
+	nums := core.MakeArray()
+	for i := 0; i < numPages; i++ {
+		page, err := reader.GetPage(i + 1)
+		require.NoError(t, err)
+
+		err = c.AddPage(page)
+		require.NoError(t, err)
+
+		// Generate a page range for each page.
+		// If page index is even, show page label using Roman uppercase numerals.
+		// Otherwise, show page label using decimal Arabic numerals.
+		labelStyle := "R"
+		if i%2 != 0 {
+			labelStyle = "D"
+		}
+		pageRange := core.MakeDict()
+		pageRange.Set(*core.MakeName("S"), core.MakeName(labelStyle))
+		nums.Append(core.MakeInteger(int64(i)))
+		nums.Append(pageRange)
+	}
+
+	// Create page labels dictionary and add it to the creator.
+	genPageLabels := core.MakeDict()
+	genPageLabels.Set(*core.MakeName("Nums"), nums)
+	c.SetPageLabels(genPageLabels)
+
+	// Write output file to buffer.
+	outBuf := bytes.NewBuffer(nil)
+	err = c.Write(outBuf)
+	require.NoError(t, err)
+
+	// Read output file.
+	reader, err = model.NewPdfReader(bytes.NewReader(outBuf.Bytes()))
+	require.NoError(t, err)
+
+	// Retrieve page labels and compare them to the generated page labels.
+	pageLabels, err := reader.GetPageLabels()
+	require.NoError(t, err)
+	require.Equal(t, core.EqualObjects(genPageLabels, pageLabels), true)
 }
 
-func comparePNGFiles(file1, file2 string) (bool, error) {
-	// fast path - compare hashes
-	h1, err := hashFile(file1)
-	if err != nil {
-		return false, err
-	}
-	h2, err := hashFile(file2)
-	if err != nil {
-		return false, err
-	}
-	if h1 == h2 {
-		return true, nil
-	}
-	// slow path - compare pixel by pixel
-	img1, err := readPNG(file1)
-	if err != nil {
-		return false, err
-	}
-	img2, err := readPNG(file2)
-	if err != nil {
-		return false, err
-	}
-	if img1.Bounds() != img2.Bounds() {
-		return false, nil
-	}
-	return compareImages(img1, img2)
-}
+func TestReferencedPageDestinations(t *testing.T) {
+	testPages := func(buf *bytes.Buffer, expectedPages, expectedNullDestPages int) {
+		reader, err := model.NewPdfReader(bytes.NewReader(buf.Bytes()))
+		require.NoError(t, err)
 
-func compareImages(img1, img2 goimage.Image) (bool, error) {
-	rect := img1.Bounds()
-	diff := 0
-	for x := 0; x < rect.Size().X; x++ {
-		for y := 0; y < rect.Size().Y; y++ {
-			r1, g1, b1, _ := img1.At(x, y).RGBA()
-			r2, g2, b2, _ := img2.At(x, y).RGBA()
-			if r1 != r2 || g1 != g2 || b1 != b2 {
-				diff++
+		// Check number of pages in catalog.
+		numPages, err := reader.GetNumPages()
+		require.NoError(t, err)
+		require.Equal(t, expectedPages, numPages)
+
+		// Check outline destionation pages.
+		outlines, err := reader.GetOutlines()
+		require.NoError(t, err)
+
+		var nullDestPages int
+		var validDestPages int
+		for _, entry := range outlines.Entries {
+			pageObj := entry.Dest.PageObj
+			require.NotNil(t, pageObj)
+
+			if core.IsNullObject(entry.Dest.PageObj) {
+				nullDestPages++
+				continue
 			}
+
+			_, _, err := reader.PageFromIndirectObject(pageObj)
+			require.NoError(t, err)
+			validDestPages++
+		}
+
+		require.Equal(t, expectedPages, validDestPages)
+		require.Equal(t, expectedNullDestPages, nullDestPages)
+	}
+
+	// Generate and test input file.
+	c := New()
+	c.AddTOC = true
+
+	numPages := 10
+	for i := 0; i < numPages; i++ {
+		chapter := c.NewChapter(fmt.Sprintf("Chapter %d", i+1))
+		paragraph := c.NewParagraph(fmt.Sprintf("Content for chapter %d", i+1))
+		chapter.Add(paragraph)
+		require.NoError(t, c.Draw(chapter))
+
+		if i < numPages-1 {
+			c.NewPage()
 		}
 	}
 
-	diffFraction := float64(diff) / float64(rect.Dx()*rect.Dy())
-	if diffFraction > 0.0001 {
-		fmt.Printf("diff fraction: %v (%d)\n", diffFraction, diff)
-		return false, nil
-	}
+	buf := bytes.NewBuffer(nil)
+	require.NoError(t, c.Write(buf))
+	testPages(buf, 11, 0)
 
-	return true, nil
+	// Generate and test split input file.
+	reader, err := model.NewPdfReader(bytes.NewReader(buf.Bytes()))
+	require.NoError(t, err)
+
+	writer := model.NewPdfWriter()
+	for i, page := range reader.PageList {
+		if i%2 == 0 {
+			require.NoError(t, writer.AddPage(page))
+		}
+	}
+	writer.AddOutlineTree(reader.GetOutlineTree())
+
+	buf = bytes.NewBuffer(nil)
+	require.NoError(t, writer.Write(buf))
+	testPages(buf, 6, 5)
 }
 
-func hashFile(file string) (string, error) {
-	f, err := os.Open(file)
-	if err != nil {
-		return "", err
+func TestExtractTextColor(t *testing.T) {
+	red := ColorRGBFrom8bit(255, 0, 0)
+	green := ColorRGBFrom8bit(0, 255, 0)
+	blue := ColorRGBFrom8bit(0, 0, 255)
+
+	// Test data.
+	type textMark struct {
+		text  string
+		color Color
 	}
-	defer f.Close()
-	h := md5.New()
-	_, err = io.Copy(h, f)
-	if err != nil {
-		return "", err
+
+	lines := [][]textMark{
+		[]textMark{
+			textMark{text: "a", color: red},
+			textMark{text: "b", color: green},
+			textMark{text: "c", color: blue},
+		},
+		[]textMark{
+			textMark{text: "x", color: green},
+			textMark{text: "y", color: blue},
+			textMark{text: "z", color: red},
+		},
 	}
-	return hex.EncodeToString(h.Sum(nil)), nil
+
+	// Create output file.
+	c := New()
+
+	for _, line := range lines {
+		p := c.NewStyledParagraph()
+		for _, mark := range line {
+			p.Append(mark.text).Style.Color = mark.color
+		}
+		require.NoError(t, c.Draw(p))
+	}
+
+	buf := bytes.NewBuffer(nil)
+	require.NoError(t, c.Write(buf))
+
+	// Extract output file.
+	reader, err := model.NewPdfReader(bytes.NewReader(buf.Bytes()))
+	require.NoError(t, err)
+
+	for _, page := range reader.PageList {
+		ex, err := extractor.New(page)
+		require.NoError(t, err)
+
+		pageText, _, _, err := ex.ExtractPageText()
+		require.NoError(t, err)
+		marks := pageText.Marks().Elements()
+
+		for i, line := range lines {
+			lenLine := len(line)
+			for j, inMark := range line {
+				outMark := marks[i*lenLine+i+j]
+				outR, outG, outB, _ := outMark.FillColor.RGBA()
+
+				// Compare the fill color of the input mark with the one
+				// of the extracted mark.
+				inR, inG, inB := inMark.color.ToRGB()
+				require.Equal(t, inMark.text, outMark.Text)
+				require.Equal(t, uint32(inR*255), outR>>8)
+				require.Equal(t, uint32(inG*255), outG>>8)
+				require.Equal(t, uint32(inB*255), outB>>8)
+			}
+		}
+	}
 }
 
-func testWriteAndRender(t *testing.T, c *Creator, pname string) {
-	pname = tempFile(pname)
-	err := c.WriteToFile(pname)
-	if err != nil {
-		t.Errorf("Fail: %v\n", err)
-		return
-	}
+//
+// Rendering test helpers.
+//
+
+func testWriteAndRender(t *testing.T, c *Creator, pname string) string {
+	pname = testWrite(t, c, pname)
 	testRender(t, pname)
+	return pname
+}
+
+func testWrite(t *testing.T, c *Creator, pname string) string {
+	pname = tempFile(pname)
+	if err := c.WriteToFile(pname); err != nil {
+		t.Errorf("Fail: %v\n", err)
+		return pname
+	}
+	return pname
 }
 
 func testRender(t *testing.T, pdfPath string) {
 	if baselineRenderPath == "" {
 		t.Skip("skipping render tests; set UNIDOC_RENDERTEST_BASELINE_PATH to run")
 	}
+
 	// Set to true to create the baseline.
 	saveBaseline := false
 
@@ -3091,59 +3238,5 @@ func testRender(t *testing.T, pdfPath string) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	tplName := strings.TrimSuffix(filepath.Base(pdfPath), filepath.Ext(pdfPath))
-	t.Run("render", func(t *testing.T) {
-		imgPathPrefix := filepath.Join(tempDir, tplName)
-		imgPathTpl := imgPathPrefix + "-%d.png"
-		// will emit /tmp/dir/template-x.png for each page x.
-		err := renderPDFToPNGs(pdfPath, 0, imgPathTpl)
-		if err != nil {
-			t.Skip(err)
-		}
-		for i := 1; true; i++ {
-			imgPath := fmt.Sprintf("%s-%d.png", imgPathPrefix, i)
-			expImgPath := filepath.Join(baselineRenderPath, fmt.Sprintf("%s-%d_exp.png", tplName, i))
-
-			if _, err := os.Stat(imgPath); err != nil {
-				break
-			}
-			t.Logf("%s", expImgPath)
-			if _, err := os.Stat(expImgPath); os.IsNotExist(err) {
-				if saveBaseline {
-					t.Logf("Copying %s -> %s", imgPath, expImgPath)
-					copyFile(imgPath, expImgPath)
-					continue
-				}
-				break
-			}
-
-			t.Run(fmt.Sprintf("page%d", i), func(t *testing.T) {
-				t.Logf("Comparing %s vs %s", imgPath, expImgPath)
-				ok, err := comparePNGFiles(imgPath, expImgPath)
-				if os.IsNotExist(err) {
-					t.Fatal("image file missing")
-				} else if !ok {
-					t.Fatal("wrong page rendered")
-				}
-			})
-		}
-	})
-}
-
-// copyFile copies file from src to dst.
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, in)
-	return err
+	testutils.RunRenderTest(t, pdfPath, tempDir, baselineRenderPath, saveBaseline)
 }

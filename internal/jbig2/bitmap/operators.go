@@ -11,19 +11,14 @@ type CombinationOperator int
 const (
 	// CmbOpOr is the 'OR' CombinationOperator.
 	CmbOpOr CombinationOperator = iota
-
 	// CmbOpAnd is the 'AND' CombinationOperator.
 	CmbOpAnd
-
 	// CmbOpXor is the 'XOR' CombinationOperator.
 	CmbOpXor
-
 	// CmbOpXNor is the 'XNOR' CombinationOperator.
 	CmbOpXNor
-
 	// CmbOpReplace is the 'REPLACE' CombinationOperator.
 	CmbOpReplace
-
 	// CmbOpNot is the 'NOT' CombinationOperator.
 	CmbOpNot
 )
