@@ -633,7 +633,7 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 		return encoder, nil
 	}
 
-	// Looks in decode params for the EarlyChange param
+	// Looks in decode params for EarlyChange
 	obj = decodeParams.Get("EarlyChange")
 	if obj != nil {
 		earlyChange, ok := obj.(*PdfObjectInteger)
