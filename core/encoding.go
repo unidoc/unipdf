@@ -634,6 +634,21 @@ func newLZWEncoderFromStream(streamObj *PdfObjectStream, decodeParams *PdfObject
 		return encoder, nil
 	}
 
+	// Looks in decode params for the EarlyChange param
+	obj = decodeParams.Get("EarlyChange")
+	if obj != nil {
+		earlyChange, ok := obj.(*PdfObjectInteger)
+		if !ok {
+			common.Log.Debug("Error: EarlyChange specified but not numeric (%T)", obj)
+			return nil, fmt.Errorf("invalid EarlyChange")
+		}
+		if *earlyChange != 0 && *earlyChange != 1 {
+			return nil, fmt.Errorf("invalid EarlyChange value (not 0 or 1)")
+		}
+
+		encoder.EarlyChange = int(*earlyChange)
+	}
+
 	obj = decodeParams.Get("Predictor")
 	if obj != nil {
 		predictor, ok := obj.(*PdfObjectInteger)
@@ -701,7 +716,9 @@ func (enc *LZWEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	defer r.Close()
 
 	_, err := outBuf.ReadFrom(r)
-	if err != nil {
+	if err == io.ErrUnexpectedEOF {
+		return outBuf.Bytes(), nil
+	} else if err != nil {
 		return nil, err
 	}
 
