@@ -715,6 +715,9 @@ func (enc *LZWEncoder) DecodeBytes(encoded []byte) ([]byte, error) {
 	defer r.Close()
 
 	_, err := outBuf.ReadFrom(r)
+
+	//Go LZW Reader expects an explicit end-of-data tag in encoded data that
+	//PDF stream may not have and does not require
 	if err == io.ErrUnexpectedEOF {
 		return outBuf.Bytes(), nil
 	} else if err != nil {
