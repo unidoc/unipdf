@@ -111,6 +111,32 @@ func (blk *Block) SetAngle(angleDeg float64) {
 	blk.angle = angleDeg
 }
 
+func (blk *Block) setOpacity(fillOpacity float64, borderOpacity float64) (string, error) {
+	if fillOpacity == 1.0 && borderOpacity == 1.0 {
+		return "", nil
+	}
+
+	// Find an available GS name.
+	i := 0
+	gsName := fmt.Sprintf("GS%d", i)
+	for blk.resources.HasExtGState(core.PdfObjectName(gsName)) {
+		i++
+		gsName = fmt.Sprintf("GS%d", i)
+	}
+	gs0 := core.MakeDict()
+	if fillOpacity < 1.0 {
+		gs0.Set("ca", core.MakeFloat(fillOpacity))
+	}
+	if borderOpacity < 1.0 {
+		gs0.Set("CA", core.MakeFloat(borderOpacity))
+	}
+	err := blk.resources.AddExtGState(core.PdfObjectName(gsName), core.MakeIndirectObject(gs0))
+	if err != nil {
+		return "", err
+	}
+	return gsName, nil
+}
+
 // AddAnnotation adds an annotation to the current block.
 // The annotation will be added to the page the block will be rendered on.
 func (blk *Block) AddAnnotation(annotation *model.PdfAnnotation) {

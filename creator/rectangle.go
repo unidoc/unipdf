@@ -14,13 +14,17 @@ import (
 // can have a colored fill and/or border with a specified width.
 // Implements the Drawable interface and can be drawn on PDF using the Creator.
 type Rectangle struct {
-	x           float64 // Upper left corner
-	y           float64
-	width       float64
-	height      float64
-	fillColor   *model.PdfColorDeviceRGB
-	borderColor *model.PdfColorDeviceRGB
-	borderWidth float64
+	x                    float64 // Upper left corner
+	y                    float64
+	width                float64
+	height               float64
+	fillColor            *model.PdfColorDeviceRGB
+	fillOpacityEnabled   bool
+	fillOpacity          float64
+	borderColor          *model.PdfColorDeviceRGB
+	borderWidth          float64
+	borderOpacityEnabled bool
+	borderOpacity        float64
 }
 
 // newRectangle creates a new Rectangle with default parameters with left corner at (x,y) and width, height as specified.
@@ -53,9 +57,21 @@ func (rect *Rectangle) SetBorderColor(col Color) {
 	rect.borderColor = model.NewPdfColorDeviceRGB(col.ToRGB())
 }
 
+// SetBorderOpacity sets the border opacity.
+func (rect *Rectangle) SetBorderOpacity(opacity float64) {
+	rect.borderOpacityEnabled = true
+	rect.borderOpacity = opacity
+}
+
 // SetFillColor sets the fill color.
 func (rect *Rectangle) SetFillColor(col Color) {
 	rect.fillColor = model.NewPdfColorDeviceRGB(col.ToRGB())
+}
+
+// SetFillOpacity sets the fill opacity.
+func (rect *Rectangle) SetFillOpacity(opacity float64) {
+	rect.fillOpacityEnabled = true
+	rect.fillOpacity = opacity
 }
 
 // GeneratePageBlocks draws the rectangle on a new block representing the page. Implements the Drawable interface.
@@ -79,7 +95,18 @@ func (rect *Rectangle) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawContex
 		drawrect.BorderWidth = rect.borderWidth
 	}
 
-	contents, _, err := drawrect.Draw("")
+	if !rect.fillOpacityEnabled {
+		rect.fillOpacity = 1.0
+	}
+	if !rect.borderOpacityEnabled {
+		rect.borderOpacity = 1.0
+	}
+	gsName, err := block.setOpacity(rect.fillOpacity, rect.borderOpacity)
+	if err != nil {
+		return nil, ctx, err
+	}
+
+	contents, _, err := drawrect.Draw(gsName)
 	if err != nil {
 		return nil, ctx, err
 	}

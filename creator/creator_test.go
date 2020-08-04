@@ -25,6 +25,7 @@ import (
 
 	"github.com/boombuler/barcode"
 	"github.com/boombuler/barcode/qr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/unidoc/unipdf/v3/common"
@@ -1064,6 +1065,16 @@ func TestSubchapters(t *testing.T) {
 	dstJSON, err := json.Marshal(dstOutline)
 	require.NoError(t, err)
 	require.Equal(t, srcJSON, dstJSON)
+}
+
+// Test creating a polygon.
+func TestPolygon(t *testing.T) {
+	c := New()
+	points := []Point{
+		{X: 1.0, Y: 2.0},
+	}
+	polygon := c.NewPolygon(points)
+	assert.Equal(t, points, polygon.points)
 }
 
 // Test creating and drawing a table.
