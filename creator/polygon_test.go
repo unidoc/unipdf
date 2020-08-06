@@ -12,9 +12,7 @@ import (
 )
 
 func TestNewPolygon(t *testing.T) {
-	points := []Point{
-		{X: 1.0, Y: 2.0},
-	}
+	points := [][]Point{{{X: 1.0, Y: 2.0}}}
 	polygon := newPolygon(points)
 	assert.Equal(t, points, polygon.points)
 }
@@ -56,7 +54,10 @@ func TestPolygonSetFillOpacity(t *testing.T) {
 }
 
 func TestGeneratePageBlocksFromPolygonPoints(t *testing.T) {
-	polygon := newPolygon([]Point{{X: 1.0, Y: 2.0}})
+	polygon := newPolygon([][]Point{
+		{{X: 1.0, Y: 2.0}},
+		{{X: 3.0, Y: 4.0}},
+	})
 
 	drawContext := DrawContext{}
 
@@ -66,12 +67,12 @@ func TestGeneratePageBlocksFromPolygonPoints(t *testing.T) {
 		return
 	}
 
-	assert.Equal(t, "q\n1 2 m\nh\nQ\n", blocks[0].contents.String())
+	assert.Equal(t, "q\n1 2 m\nh\n3 4 m\nh\nQ\n", blocks[0].contents.String())
 	assert.Equal(t, drawContext, ctx)
 }
 
 func TestGeneratePageBlocksFromPolygonWithFillColor(t *testing.T) {
-	polygon := newPolygon([]Point{{X: 1.0, Y: 2.0}})
+	polygon := newPolygon([][]Point{{{X: 1.0, Y: 2.0}}})
 	polygon.SetFillColor(ColorRGBFromHex("#ffffff"))
 
 	blocks, _, err := polygon.GeneratePageBlocks(DrawContext{})
@@ -80,11 +81,11 @@ func TestGeneratePageBlocksFromPolygonWithFillColor(t *testing.T) {
 		return
 	}
 
-	assert.Equal(t, "q\n1 1 1 rg\n1 2 m\nh\nf\nQ\n", blocks[0].contents.String())
+	assert.Equal(t, "q\n1 2 m\nh\n1 1 1 rg\nf\nQ\n", blocks[0].contents.String())
 }
 
 func TestGeneratePageBlocksFromPolygonWithBorder(t *testing.T) {
-	polygon := newPolygon([]Point{{X: 1.0, Y: 2.0}})
+	polygon := newPolygon([][]Point{{{X: 1.0, Y: 2.0}}})
 	polygon.SetBorderColor(ColorRGBFromHex("#ffffff"))
 	polygon.SetBorderWidth(20.0)
 
@@ -94,11 +95,11 @@ func TestGeneratePageBlocksFromPolygonWithBorder(t *testing.T) {
 		return
 	}
 
-	assert.Equal(t, "q\n1 1 1 RG\n20 w\n1 2 m\nh\nS\nQ\n", blocks[0].contents.String())
+	assert.Equal(t, "q\n1 2 m\nh\n1 1 1 RG\n20 w\nS\nQ\n", blocks[0].contents.String())
 }
 
 func TestGeneratePageBlocksFromPolygonWithOpacity(t *testing.T) {
-	polygon := newPolygon([]Point{{X: 1.0, Y: 2.0}})
+	polygon := newPolygon([][]Point{{{X: 1.0, Y: 2.0}}})
 	polygon.SetFillOpacity(0.1)
 	polygon.SetBorderOpacity(0.2)
 
@@ -108,5 +109,5 @@ func TestGeneratePageBlocksFromPolygonWithOpacity(t *testing.T) {
 		return
 	}
 
-	assert.Equal(t, "q\n/GS0 gs\n1 2 m\nh\nQ\n", blocks[0].contents.String())
+	assert.Equal(t, "q\n1 2 m\nh\n/GS0 gs\nQ\n", blocks[0].contents.String())
 }

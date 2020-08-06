@@ -1070,9 +1070,7 @@ func TestSubchapters(t *testing.T) {
 // Test creating a polygon.
 func TestPolygon(t *testing.T) {
 	c := New()
-	points := []Point{
-		{X: 1.0, Y: 2.0},
-	}
+	points := [][]Point{{{X: 1.0, Y: 2.0}}}
 	polygon := c.NewPolygon(points)
 	assert.Equal(t, points, polygon.points)
 }

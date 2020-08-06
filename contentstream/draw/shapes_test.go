@@ -14,14 +14,14 @@ import (
 
 func TestPolygonBoundingBox(t *testing.T) {
 	polygon := Polygon{
-		Points: []Point{
+		Points: [][]Point{{
 			{X: 0.0, Y: 1.0},
 			{X: 2.0, Y: 1.0},
 			{X: 2.0, Y: 3.0},
 			{X: 0.0, Y: 3.0},
 			{X: 0.0, Y: 1.0},
 		},
-	}
+		}}
 	bytes, boundingBox, err := polygon.Draw("")
 	if err != nil {
 		t.Errorf("Fail: %v", err)
@@ -32,6 +32,40 @@ func TestPolygonBoundingBox(t *testing.T) {
 	assert.Equal(t, boundingBox.Lly, 1.0)
 	assert.Equal(t, boundingBox.Urx, 2.0)
 	assert.Equal(t, boundingBox.Ury, 3.0)
+
+	assert.Equal(t, "q\n0 1 m\n2 1 l\n2 3 l\n0 3 l\n0 1 l\nh\nQ\n", string(bytes))
+}
+
+func TestPolygonWithCutout(t *testing.T) {
+	polygon := Polygon{
+		Points: [][]Point{
+			{
+				{X: 1.0, Y: 1.0},
+				{X: 4.0, Y: 1.0},
+				{X: 4.0, Y: 4.0},
+				{X: 1.0, Y: 4.0},
+				{X: 1.0, Y: 1.0},
+			},
+			{
+				{X: 2.0, Y: 2.0},
+				{X: 3.0, Y: 2.0},
+				{X: 3.0, Y: 3.0},
+				{X: 2.0, Y: 3.0},
+				{X: 2.0, Y: 2.0},
+			},
+		}}
+	bytes, boundingBox, err := polygon.Draw("")
+	if err != nil {
+		t.Errorf("Fail: %v", err)
+		return
+	}
+	assert.NotNil(t, bytes)
+	assert.Equal(t, boundingBox.Llx, 1.0)
+	assert.Equal(t, boundingBox.Lly, 1.0)
+	assert.Equal(t, boundingBox.Urx, 4.0)
+	assert.Equal(t, boundingBox.Ury, 4.0)
+
+	assert.Equal(t, "q\n1 1 m\n4 1 l\n4 4 l\n1 4 l\n1 1 l\nh\n2 2 m\n3 2 l\n3 3 l\n2 3 l\n2 2 l\nh\nQ\n", string(bytes))
 }
 
 func TestPolygonWithFill(t *testing.T) {
@@ -44,7 +78,7 @@ func TestPolygonWithFill(t *testing.T) {
 		t.Errorf("Fail: %v", err)
 		return
 	}
-	assert.Equal(t, []byte{0x71, 0xa, 0x32, 0x35, 0x35, 0x20, 0x31, 0x32, 0x38, 0x20, 0x30, 0x20, 0x72, 0x67, 0xa, 0x68, 0xa, 0x66, 0xa, 0x51, 0xa}, bytes)
+	assert.Equal(t, "q\n255 128 0 rg\nf\nQ\n", string(bytes))
 }
 
 func TestPolygonWithBorder(t *testing.T) {
@@ -58,7 +92,7 @@ func TestPolygonWithBorder(t *testing.T) {
 		t.Errorf("Fail: %v", err)
 		return
 	}
-	assert.Equal(t, []byte{0x71, 0xa, 0x32, 0x35, 0x35, 0x20, 0x31, 0x32, 0x38, 0x20, 0x30, 0x20, 0x52, 0x47, 0xa, 0x31, 0x30, 0x20, 0x77, 0xa, 0x68, 0xa, 0x53, 0xa, 0x51, 0xa}, bytes)
+	assert.Equal(t, "q\n255 128 0 RG\n10 w\nS\nQ\n", string(bytes))
 }
 
 func TestPolygonWithGsName(t *testing.T) {
@@ -68,5 +102,5 @@ func TestPolygonWithGsName(t *testing.T) {
 		t.Errorf("Fail: %v", err)
 		return
 	}
-	assert.Equal(t, []byte{0x71, 0xa, 0x2f, 0x66, 0x6f, 0x6f, 0x20, 0x67, 0x73, 0xa, 0x68, 0xa, 0x51, 0xa}, bytes)
+	assert.Equal(t, "q\n/foo gs\nQ\n", string(bytes))
 }

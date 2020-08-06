@@ -11,7 +11,7 @@ import (
 )
 
 type Polygon struct {
-	points               []Point
+	points               [][]Point
 	fillColor            *model.PdfColorDeviceRGB
 	fillOpacity          float64
 	fillOpacityEnabled   bool
@@ -22,7 +22,7 @@ type Polygon struct {
 }
 
 // newPolygon creates a new Polygon with default parameters.
-func newPolygon(points []Point) *Polygon {
+func newPolygon(points [][]Point) *Polygon {
 	polygon := &Polygon{}
 	polygon.points = points
 	return polygon
@@ -60,10 +60,14 @@ func (polygon *Polygon) GeneratePageBlocks(ctx DrawContext) ([]*Block, DrawConte
 	block := NewBlock(ctx.PageWidth, ctx.PageHeight)
 
 	drawPolygon := draw.Polygon{
-		Points: []draw.Point{},
+		Points: [][]draw.Point{},
 	}
-	for _, p := range polygon.points {
-		drawPolygon.Points = append(drawPolygon.Points, draw.NewPoint(p.X, p.Y))
+	for _, e := range polygon.points {
+		elementPoints := []draw.Point{}
+		for _, p := range e {
+			elementPoints = append(elementPoints, draw.NewPoint(p.X, p.Y))
+		}
+		drawPolygon.Points = append(drawPolygon.Points, elementPoints)
 	}
 	if polygon.fillColor != nil {
 		drawPolygon.FillEnabled = true

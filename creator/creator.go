@@ -840,7 +840,7 @@ func (c *Creator) NewList() *List {
 }
 
 // NewPolygon creates a new Polygon with default parameters
-func (c *Creator) NewPolygon(points []Point) *Polygon {
+func (c *Creator) NewPolygon(points [][]Point) *Polygon {
 	return newPolygon(points)
 }
 
