@@ -479,3 +479,44 @@ func (line BasicLine) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 
 	return cc.Bytes(), bbox, nil
 }
+
+// Polyline defines a slice of points that are connected as straight lines.
+type Polyline struct {
+	Points      []Point
+	LineColor   *pdf.PdfColorDeviceRGB
+	LineWidth   float64
+	LineOpacity float64
+}
+
+// Draw draws the polyline. Can specify a graphics state (gsName) for setting opacity etc.
+// Otherwise leave empty (""). Returns the content stream as a byte array, bounding box and an error on failure.
+func (polyline Polyline) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
+	path := NewPath()
+	for _, p := range polyline.Points {
+		path = path.AppendPoint(p)
+	}
+
+	creator := pdfcontent.NewContentCreator()
+	creator.Add_q()
+	DrawPathWithCreator(path, creator)
+	creator.Add_RG(polyline.LineColor.R(), polyline.LineColor.G(), polyline.LineColor.B())
+	creator.Add_w(polyline.LineWidth)
+	if len(gsName) > 1 {
+		// If a graphics state is provided, use it. (Used for transparency settings here).
+		creator.Add_gs(pdfcore.PdfObjectName(gsName))
+	}
+	creator.Add_S() // Stroke.
+	creator.Add_Q()
+
+	// Get bounding box.
+	pathBbox := path.GetBoundingBox()
+
+	// Bounding box - global coordinate system.
+	bbox := &pdf.PdfRectangle{}
+	bbox.Llx = pathBbox.X
+	bbox.Lly = pathBbox.Y
+	bbox.Urx = pathBbox.X + pathBbox.Width
+	bbox.Ury = pathBbox.Y + pathBbox.Height
+
+	return creator.Bytes(), bbox, nil
+}

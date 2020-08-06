@@ -10,6 +10,8 @@ import (
 	"github.com/unidoc/unipdf/v3/model"
 )
 
+// Polygon defines a slice of slice of points to allow polygons to be drawn with cutout polygons
+// Implements the Drawable interface and can be drawn on PDF using the Creator.
 type Polygon struct {
 	points               [][]Point
 	fillColor            *model.PdfColorDeviceRGB

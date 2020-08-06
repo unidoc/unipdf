@@ -104,3 +104,37 @@ func TestPolygonWithGsName(t *testing.T) {
 	}
 	assert.Equal(t, "q\n/foo gs\nQ\n", string(bytes))
 }
+
+func TestPolylineBoundingBox(t *testing.T) {
+	polyline := Polyline{
+		Points: []Point{
+			{X: 0.0, Y: 1.0},
+			{X: 2.0, Y: 3.0},
+			{X: 4.0, Y: 5.0},
+		},
+		LineColor: model.NewPdfColorDeviceRGB(255, 128, 0),
+		LineWidth: 10.0,
+	}
+	bytes, boundingBox, err := polyline.Draw("")
+	if err != nil {
+		t.Errorf("Fail: %v", err)
+		return
+	}
+	assert.NotNil(t, bytes)
+	assert.Equal(t, boundingBox.Llx, 0.0)
+	assert.Equal(t, boundingBox.Lly, 1.0)
+	assert.Equal(t, boundingBox.Urx, 4.0)
+	assert.Equal(t, boundingBox.Ury, 5.0)
+
+	assert.Equal(t, "q\n0 1 m\n2 3 l\n4 5 l\n255 128 0 RG\n10 w\nS\nQ\n", string(bytes))
+}
+
+func TestPolylineWithGsName(t *testing.T) {
+	polyline := Polyline{LineColor: model.NewPdfColorDeviceRGB(0, 0, 0)}
+	bytes, _, err := polyline.Draw("foo")
+	if err != nil {
+		t.Errorf("Fail: %v", err)
+		return
+	}
+	assert.Equal(t, "q\n0 0 0 RG\n0 w\n/foo gs\nS\nQ\n", string(bytes))
+}

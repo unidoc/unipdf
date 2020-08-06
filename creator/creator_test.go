@@ -1075,6 +1075,14 @@ func TestPolygon(t *testing.T) {
 	assert.Equal(t, points, polygon.points)
 }
 
+// Test creating a polyline.
+func TestPolyline(t *testing.T) {
+	c := New()
+	points := []Point{{X: 1.0, Y: 2.0}}
+	polyline := c.NewPolyline(points)
+	assert.Equal(t, points, polyline.points)
+}
+
 // Test creating and drawing a table.
 func TestTable(t *testing.T) {
 	c := New()

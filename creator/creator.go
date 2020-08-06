@@ -860,6 +860,11 @@ func (c *Creator) NewLine(x1, y1, x2, y2 float64) *Line {
 	return newLine(x1, y1, x2, y2)
 }
 
+// NewPolyline creates a new Polyline
+func (c *Creator) NewPolyline(points []Point) *Polyline {
+	return newPolyline(points)
+}
+
 // NewFilledCurve returns a instance of filled curve.
 func (c *Creator) NewFilledCurve() *FilledCurve {
 	return newFilledCurve()
