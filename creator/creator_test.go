@@ -1083,6 +1083,27 @@ func TestPolyline(t *testing.T) {
 	assert.Equal(t, points, polyline.points)
 }
 
+// Test creating a polyCubicBezierCurve.
+func TestPolyCubicBezierCurve(t *testing.T) {
+	c := New()
+	curves := []CubicBezierCurve{
+		{
+			P0: Point{X: 0.0, Y: 0.0},
+			P1: Point{X: 1.0, Y: 2.0},
+			P2: Point{X: 2.0, Y: 2.0},
+			P3: Point{X: 3.0, Y: 0.0},
+		},
+		{
+			P0: Point{X: 3.0, Y: 0.0},
+			P1: Point{X: 4.0, Y: 2.0},
+			P2: Point{X: 5.0, Y: 2.0},
+			P3: Point{X: 6.0, Y: 0.0},
+		},
+	}
+	curve := c.NewPolyCubicBezierCurve(curves)
+	assert.Equal(t, curves, curve.curves)
+}
+
 // Test creating and drawing a table.
 func TestTable(t *testing.T) {
 	c := New()

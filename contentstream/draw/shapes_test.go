@@ -138,3 +138,64 @@ func TestPolylineWithGsName(t *testing.T) {
 	}
 	assert.Equal(t, "q\n0 0 0 RG\n0 w\n/foo gs\nS\nQ\n", string(bytes))
 }
+
+func TestPolyCubicBezierCurveBoundingBox(t *testing.T) {
+	curve := PolyCubicBezierCurve{
+		Curves: []CubicBezierCurve{
+			{
+				P0: Point{X: 0.0, Y: 0.0},
+				P1: Point{X: 1.0, Y: 2.0},
+				P2: Point{X: 2.0, Y: 2.0},
+				P3: Point{X: 3.0, Y: 0.0},
+			},
+			{
+				P0: Point{X: 3.0, Y: 0.0},
+				P1: Point{X: 4.0, Y: 2.0},
+				P2: Point{X: 5.0, Y: 2.0},
+				P3: Point{X: 6.0, Y: 0.0},
+			},
+		},
+		BorderColor: model.NewPdfColorDeviceRGB(255, 128, 0),
+		BorderWidth: 10.0,
+	}
+	bytes, boundingBox, err := curve.Draw("")
+	if err != nil {
+		t.Errorf("Fail: %v", err)
+		return
+	}
+	assert.NotNil(t, bytes)
+	assert.Equal(t, boundingBox.Llx, 0.0)
+	assert.Equal(t, boundingBox.Lly, 0.0)
+	assert.Equal(t, boundingBox.Urx, 5.9970000000000026)
+	assert.Equal(t, boundingBox.Ury, 1.5)
+
+	assert.Equal(t, "q\n255 128 0 RG\n10 w\n0 0 m\n1 2 2 2 3 0 c\n3 0 m\n4 2 5 2 6 0 c\nS\nQ\n", string(bytes))
+}
+
+func TestPolyCubicBezierCurveWithFill(t *testing.T) {
+	curve := PolyCubicBezierCurve{
+		BorderColor: model.NewPdfColorDeviceRGB(255, 128, 0),
+		BorderWidth: 10.0,
+		FillEnabled: true,
+		FillColor:   model.NewPdfColorDeviceRGB(255, 128, 0),
+	}
+	bytes, _, err := curve.Draw("")
+	if err != nil {
+		t.Errorf("Fail: %v", err)
+		return
+	}
+	assert.Equal(t, "q\n255 128 0 rg\n255 128 0 RG\n10 w\nh\nB\nQ\n", string(bytes))
+}
+
+func TestPolyCubicBezierCurveWithGsName(t *testing.T) {
+	polygon := PolyCubicBezierCurve{
+		BorderColor: model.NewPdfColorDeviceRGB(255, 128, 0),
+		BorderWidth: 10.0,
+	}
+	bytes, _, err := polygon.Draw("foo")
+	if err != nil {
+		t.Errorf("Fail: %v", err)
+		return
+	}
+	assert.Equal(t, "q\n255 128 0 RG\n10 w\n/foo gs\nS\nQ\n", string(bytes))
+}

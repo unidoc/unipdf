@@ -97,6 +97,65 @@ func (c Circle) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
 	return creator.Bytes(), bbox, nil
 }
 
+// PolyCubicBezierCurve represents a curve that is the result of joining several bezier curves
+type PolyCubicBezierCurve struct {
+	Curves      []CubicBezierCurve
+	BorderWidth float64
+	BorderColor *pdf.PdfColorDeviceRGB
+	FillEnabled bool
+	FillColor   *pdf.PdfColorDeviceRGB
+}
+
+// Draw draws the polyCubicBezierCurve. Can specify a graphics state (gsName) for setting opacity etc.
+// Otherwise leave empty (""). Returns the content stream as a byte array, bounding box and an error on failure.
+func (polyCubicBezierCurve PolyCubicBezierCurve) Draw(gsName string) ([]byte, *pdf.PdfRectangle, error) {
+	path := NewCubicBezierPath()
+	for _, c := range polyCubicBezierCurve.Curves {
+		path = path.AppendCurve(c)
+	}
+
+	creator := pdfcontent.NewContentCreator()
+
+	creator.Add_q()
+
+	if polyCubicBezierCurve.FillEnabled {
+		creator.Add_rg(polyCubicBezierCurve.FillColor.R(), polyCubicBezierCurve.FillColor.G(), polyCubicBezierCurve.FillColor.B())
+	}
+	creator.Add_RG(polyCubicBezierCurve.BorderColor.R(), polyCubicBezierCurve.BorderColor.G(), polyCubicBezierCurve.BorderColor.B())
+	creator.Add_w(polyCubicBezierCurve.BorderWidth)
+	if len(gsName) > 1 {
+		// If a graphics state is provided, use it. (Used for transparency settings here).
+		creator.Add_gs(pdfcore.PdfObjectName(gsName))
+	}
+
+	for _, c := range path.Curves {
+		creator.Add_m(c.P0.X, c.P0.Y)
+		creator.Add_c(c.P1.X, c.P1.Y, c.P2.X, c.P2.Y, c.P3.X, c.P3.Y)
+	}
+	if polyCubicBezierCurve.FillEnabled {
+		creator.Add_h() // Close the path.
+	}
+
+	if polyCubicBezierCurve.FillEnabled {
+		creator.Add_B() // fill and stroke.
+	} else {
+		creator.Add_S() // Stroke.
+	}
+	creator.Add_Q()
+
+	// Get bounding box.
+	pathBbox := path.GetBoundingBox()
+
+	// Bounding box - global coordinate system.
+	bbox := &pdf.PdfRectangle{}
+	bbox.Llx = pathBbox.X
+	bbox.Lly = pathBbox.Y
+	bbox.Urx = pathBbox.X + pathBbox.Width
+	bbox.Ury = pathBbox.Y + pathBbox.Height
+
+	return creator.Bytes(), bbox, nil
+}
+
 // Polygon is a multi point shape that can be drawn to a PDF content stream.
 // The Polygon can optionally have a border and a filling color.
 type Polygon struct {

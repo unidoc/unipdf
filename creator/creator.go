@@ -865,6 +865,11 @@ func (c *Creator) NewPolyline(points []Point) *Polyline {
 	return newPolyline(points)
 }
 
+// NewPolyCubicBezierCurve creates a new PolyCubicBezierCurve
+func (c *Creator) NewPolyCubicBezierCurve(curves []CubicBezierCurve) *PolyCubicBezierCurve {
+	return newPolyCubicBezierCurve(curves)
+}
+
 // NewFilledCurve returns a instance of filled curve.
 func (c *Creator) NewFilledCurve() *FilledCurve {
 	return newFilledCurve()
