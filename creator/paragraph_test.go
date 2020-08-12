@@ -10,8 +10,41 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestParagraphWithWrappedText(t *testing.T) {
+	c := New()
+	p := c.NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt. Dis parturient montes nascetur ridiculus mus. Pharetra diam sit amet nisl suscipit adipiscing. Proin fermentum leo vel orci porta. Id diam vel quam elementum pulvinar.")
+	p.SetPos(0, 0)
+	p.SetWidth(100)
+	p.wrapText()
+	assert.Equal(t, 29, len(p.textLines))
+	assert.Equal(t, "Lorem ipsum dolor sit", p.textLines[0])
+}
+
+func TestParagraphWithWrappedTextAndMaxWrapLines(t *testing.T) {
+	c := New()
+	p := c.NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt. Dis parturient montes nascetur ridiculus mus. Pharetra diam sit amet nisl suscipit adipiscing. Proin fermentum leo vel orci porta. Id diam vel quam elementum pulvinar.")
+	p.SetPos(0, 0)
+	p.SetWidth(100)
+	p.SetMaxWrapLines(10)
+	p.wrapText()
+	assert.Equal(t, 10, len(p.textLines))
+	assert.Equal(t, "Lorem ipsum dolor sit", p.textLines[0])
+}
+
+func TestParagraphWithWrappedTextAndLinesDoNotExceedMaxWrapLines(t *testing.T) {
+	c := New()
+	p := c.NewParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lacus viverra vitae congue eu consequat. Cras adipiscing enim eu turpis. Lectus magna fringilla urna porttitor. Condimentum id venenatis a condimentum. Quis ipsum suspendisse ultrices gravida dictum fusce. In fermentum posuere urna nec tincidunt. Dis parturient montes nascetur ridiculus mus. Pharetra diam sit amet nisl suscipit adipiscing. Proin fermentum leo vel orci porta. Id diam vel quam elementum pulvinar.")
+	p.SetPos(0, 0)
+	p.SetWidth(100)
+	p.SetMaxWrapLines(100)
+	p.wrapText()
+	assert.Equal(t, 29, len(p.textLines))
+	assert.Equal(t, "Lorem ipsum dolor sit", p.textLines[0])
+}
 
 func benchmarkParagraphAdding(b *testing.B, loops int) {
 	for n := 0; n < b.N; n++ {

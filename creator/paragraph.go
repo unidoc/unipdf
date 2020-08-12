@@ -37,8 +37,9 @@ type Paragraph struct {
 	alignment TextAlignment
 
 	// Wrapping properties.
-	enableWrap bool
-	wrapWidth  float64
+	enableWrap   bool
+	wrapWidth    float64
+	wrapMaxLines int
 
 	// defaultWrap defines whether wrapping has been defined explictly or whether default behavior should
 	// be observed. Default behavior depends on context: normally wrap is expected, except for example in
@@ -175,6 +176,12 @@ func (p *Paragraph) SetWidth(width float64) {
 	p.wrapText()
 }
 
+// SetMaxWrapLines sets the max number of lines before the paragraph text is truncated.
+func (p *Paragraph) SetMaxWrapLines(wrapMaxLines int) {
+	p.wrapMaxLines = wrapMaxLines
+	p.wrapText()
+}
+
 // Width returns the width of the Paragraph.
 func (p *Paragraph) Width() float64 {
 	if p.enableWrap && int(p.wrapWidth) > 0 {
@@ -265,6 +272,10 @@ func (p *Paragraph) wrapText() error {
 	lines, err := chunk.Wrap(p.wrapWidth)
 	if err != nil {
 		return err
+	}
+
+	if p.wrapMaxLines > 0 && len(lines) > p.wrapMaxLines {
+		lines = lines[:p.wrapMaxLines]
 	}
 
 	p.textLines = lines
