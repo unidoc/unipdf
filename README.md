@@ -1,12 +1,12 @@
 # UniPDF - PDF for Go
 
-[UniDoc](http://unidoc.io) UniPDF is a PDF library for Go (golang) with capabilities for
+[UniDoc](http://unidoc.io)'s UniPDF (formerly unidoc) is a PDF library for Go (golang) with capabilities for
 creating and reading, processing PDF files. The library is written and supported by 
 [FoxyUtils.com](https://foxyutils.com), where the library is used to power many of its services. 
 
 [![Build Status](https://app.wercker.com/status/22b50db125a6d376080f3f0c80d085fa/s/master "wercker status")](https://app.wercker.com/project/bykey/22b50db125a6d376080f3f0c80d085fa)
 [![GitHub (pre-)release](https://img.shields.io/github/release/unidoc/unipdf/all.svg)](https://github.com/unidoc/unipdf/releases)
-[![License: UniDoc EULA](https://img.shields.io/badge/license-UniDoc%20EULA-blue)](https://unidoc.io/eula/)
+[![License: AGPL v3](https://img.shields.io/badge/License-Dual%20AGPL%20v3/Commercial-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Go Report Card](https://goreportcard.com/badge/github.com/unidoc/unipdf)](https://goreportcard.com/report/github.com/unidoc/unipdf)
 [![GoDoc](https://godoc.org/github.com/unidoc/unipdf?status.svg)](https://godoc.org/github.com/unidoc/unipdf)
 
@@ -38,7 +38,7 @@ creating and reading, processing PDF files. The library is written and supported
 - CCITTFaxDecode decoding and encoding support
 - JBIG2 decoding support
 
-Multiple examples are provided in our example repository https://github.com/unidoc/unipdf-examples.
+Multiple examples are provided in our example repository https://github.com/unidoc/unidoc-examples.
 
 Contact us if you need any specific examples.
 
@@ -47,6 +47,12 @@ With modules:
 ~~~
 go get github.com/unidoc/unipdf/v3
 ~~~
+
+With GOPATH:
+~~~
+go get github.com/unidoc/unipdf/...
+~~~
+
 
 ## How can I convince myself and my boss to buy unipdf rather using a free alternative?
 
@@ -74,14 +80,47 @@ Please contact us with a brief summary of what you need and we will get back to 
 
 ## Licensing Information
 
-This software package (unipdf) is a commercial product and requires a license
-code to operate.
+This library (unipdf) has a dual license, a commercial one suitable for closed source projects and an
+AGPL license that can be used in open source software.
 
-The use of this software package is governed by the end-user license agreement 
-(EULA) available at: https://unidoc.io/eula/
+Depending on your needs, you must choose one of them and follow its policies. A detail of the policies
+and agreements for each license type are available in the [LICENSE.COMMERCIAL](LICENSE.COMMERCIAL)
+and [LICENSE.AGPL](LICENSE.AGPL) files.
 
-To obtain a Trial license code to evaluate the software, please visit
-https://unidoc.io/
+In brief, purchasing a license is mandatory as soon as you develop activities
+distributing the unipdf software inside your product or deploying it on a network
+without disclosing the source code of your own applications under the AGPL license.
+These activities include:
 
+ * offering services as an application service provider or over-network application programming interface (API)
+ * creating/manipulating documents for users in a web/server/cloud application
+ * shipping unipdf with a closed source product
+
+Please see [pricing](https://unidoc.io/unipdf/#unipdf-pricing) to purchase a commercial license or contact sales at sales@unidoc.io
+for more info.
+
+## Getting Rid of the Watermark - Get a License
+Out of the box - unipdf is unlicensed and outputs a watermark on all pages, perfect for prototyping.
+To use unipdf in your projects, you need to get a license.
+
+Get your license on [https://unidoc.io](https://unidoc.io).
+
+The easiest way to load your license is through environment variables, for example:
+```bash
+export UNIPDF_CUSTOMER_NAME=UniDoc
+export UNIPDF_LICENSE_PATH=/path/to/licenses/UniDoc.txt
+```
+
+Alternatively you can load the license in code, simply do:
+```go
+licenseKey := "... your license here ..."
+customerName := `name of license holder`
+
+err := license.SetLicenseKey(licenseKey, customerName)
+if err != nil {
+    fmt.Printf("Error loading license: %v\n", err)
+    os.Exit(1)
+}
+```
 
 [contributing]: CONTRIBUTING.md
