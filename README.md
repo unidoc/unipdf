@@ -83,5 +83,3 @@ The use of this software package is governed by the end-user license agreement
 To obtain a Trial license code to evaluate the software, please visit
 https://unidoc.io/
 
-
-[contributing]: CONTRIBUTING.md
