@@ -10,28 +10,28 @@
 // terms that can be accessed at https://unidoc.io/eula/
 
 // Package fjson provides support for loading PDF form field data from JSON data/files.
-package fjson ;import (_g "encoding/json";_e "github.com/unidoc/unipdf/v3/core";_ea "github.com/unidoc/unipdf/v3/model";_fd "io";_f "os";);type fieldValue struct{Name string `json:"name"`;Value string `json:"value"`;
+package fjson ;import (_bd "encoding/json";_db "github.com/unidoc/unipdf/v3/core";_e "github.com/unidoc/unipdf/v3/model";_d "io";_a "os";);
+
+// FieldValues implements model.FieldValueProvider interface.
+func (_cee *FieldData )FieldValues ()(map[string ]_db .PdfObject ,error ){_cba :=make (map[string ]_db .PdfObject );for _ ,_dcg :=range _cee ._ef {if len (_dcg .Value )> 0{_cba [_dcg .Name ]=_db .MakeString (_dcg .Value );};};return _cba ,nil ;};
+
+// LoadFromJSONFile loads form field data from a JSON file.
+func LoadFromJSONFile (filePath string )(*FieldData ,error ){_bc ,_f :=_a .Open (filePath );if _f !=nil {return nil ,_f ;};defer _bc .Close ();return LoadFromJSON (_bc );};
+
+// LoadFromJSON loads JSON form data from `r`.
+func LoadFromJSON (r _d .Reader )(*FieldData ,error ){var _g FieldData ;_dd :=_bd .NewDecoder (r ).Decode (&_g ._ef );if _dd !=nil {return nil ,_dd ;};return &_g ,nil ;};
+
+// LoadFromPDFFile loads form field data from a PDF file.
+func LoadFromPDFFile (filePath string )(*FieldData ,error ){_fgg ,_gde :=_a .Open (filePath );if _gde !=nil {return nil ,_gde ;};defer _fgg .Close ();return LoadFromPDF (_fgg );};
+
+// FieldData represents form field data loaded from JSON file.
+type FieldData struct{_ef []fieldValue };
+
+// LoadFromPDF loads form field data from a PDF.
+func LoadFromPDF (rs _d .ReadSeeker )(*FieldData ,error ){_ac ,_c :=_e .NewPdfReader (rs );if _c !=nil {return nil ,_c ;};if _ac .AcroForm ==nil {return nil ,nil ;};var _da []fieldValue ;_ge :=_ac .AcroForm .AllFields ();for _ ,_ad :=range _ge {var _dfd []string ;_gg :=make (map[string ]struct{});_dda ,_eff :=_ad .FullName ();if _eff !=nil {return nil ,_eff ;};if _bg ,_gb :=_ad .V .(*_db .PdfObjectString );_gb {_da =append (_da ,fieldValue {Name :_dda ,Value :_bg .Decoded ()});continue ;};var _ggd string ;for _ ,_de :=range _ad .Annotations {_cc ,_eg :=_db .GetName (_de .AS );if _eg {_ggd =_cc .String ();};_bgb ,_cb :=_db .GetDict (_de .AP );if !_cb {continue ;};_ddd ,_ :=_db .GetDict (_bgb .Get ("\u004e"));for _ ,_egd :=range _ddd .Keys (){_ff :=_egd .String ();if _ ,_ea :=_gg [_ff ];!_ea {_dfd =append (_dfd ,_ff );_gg [_ff ]=struct{}{};};};_gd ,_ :=_db .GetDict (_bgb .Get ("\u0044"));for _ ,_ce :=range _gd .Keys (){_fac :=_ce .String ();if _ ,_cab :=_gg [_fac ];!_cab {_dfd =append (_dfd ,_fac );_gg [_fac ]=struct{}{};};};};_acf :=fieldValue {Name :_dda ,Value :_ggd ,Options :_dfd };_da =append (_da ,_acf );};_ddg :=FieldData {_ef :_da };return &_ddg ,nil ;};type fieldValue struct{Name string `json:"name"`;Value string `json:"value"`;
 
 // Options lists allowed values if present.
 Options []string `json:"options,omitempty"`;};
 
-// LoadFromPDF loads form field data from a PDF.
-func LoadFromPDF (rs _fd .ReadSeeker )(*FieldData ,error ){_c ,_cc :=_ea .NewPdfReader (rs );if _cc !=nil {return nil ,_cc ;};if _c .AcroForm ==nil {return nil ,nil ;};var _fda []fieldValue ;_gb :=_c .AcroForm .AllFields ();for _ ,_bd :=range _gb {var _ab []string ;_gae :=make (map[string ]struct{});_db ,_cg :=_bd .FullName ();if _cg !=nil {return nil ,_cg ;};if _bg ,_fg :=_bd .V .(*_e .PdfObjectString );_fg {_fda =append (_fda ,fieldValue {Name :_db ,Value :_bg .Decoded ()});continue ;};var _bb string ;for _ ,_ead :=range _bd .Annotations {_ad ,_dc :=_e .GetName (_ead .AS );if _dc {_bb =_ad .String ();};_cd ,_ee :=_e .GetDict (_ead .AP );if !_ee {continue ;};_ca ,_ :=_e .GetDict (_cd .Get ("\u004e"));for _ ,_ef :=range _ca .Keys (){_efg :=_ef .String ();if _ ,_dbg :=_gae [_efg ];!_dbg {_ab =append (_ab ,_efg );_gae [_efg ]=struct{}{};};};_ae ,_ :=_e .GetDict (_cd .Get ("\u0044"));for _ ,_efb :=range _ae .Keys (){_ba :=_efb .String ();if _ ,_bf :=_gae [_ba ];!_bf {_ab =append (_ab ,_ba );_gae [_ba ]=struct{}{};};};};_ge :=fieldValue {Name :_db ,Value :_bb ,Options :_ab };_fda =append (_fda ,_ge );};_eaf :=FieldData {_fb :_fda };return &_eaf ,nil ;};
-
-// LoadFromJSONFile loads form field data from a JSON file.
-func LoadFromJSONFile (filePath string )(*FieldData ,error ){_a ,_ga :=_f .Open (filePath );if _ga !=nil {return nil ,_ga ;};defer _a .Close ();return LoadFromJSON (_a );};
-
-// FieldValues implements model.FieldValueProvider interface.
-func (_bfd *FieldData )FieldValues ()(map[string ]_e .PdfObject ,error ){_gc :=make (map[string ]_e .PdfObject );for _ ,_af :=range _bfd ._fb {if len (_af .Value )> 0{_gc [_af .Name ]=_e .MakeString (_af .Value );};};return _gc ,nil ;};
-
 // JSON returns the field data as a string in JSON format.
-func (_bddc FieldData )JSON ()(string ,error ){_geb ,_bfe :=_g .MarshalIndent (_bddc ._fb ,"","\u0020\u0020\u0020\u0020");return string (_geb ),_bfe ;};
-
-// LoadFromJSON loads JSON form data from `r`.
-func LoadFromJSON (r _fd .Reader )(*FieldData ,error ){var _d FieldData ;_eg :=_g .NewDecoder (r ).Decode (&_d ._fb );if _eg !=nil {return nil ,_eg ;};return &_d ,nil ;};
-
-// LoadFromPDFFile loads form field data from a PDF file.
-func LoadFromPDFFile (filePath string )(*FieldData ,error ){_fc ,_bfb :=_f .Open (filePath );if _bfb !=nil {return nil ,_bfb ;};defer _fc .Close ();return LoadFromPDF (_fc );};
-
-// FieldData represents form field data loaded from JSON file.
-type FieldData struct{_fb []fieldValue };
+func (_gdg FieldData )JSON ()(string ,error ){_adf ,_bcad :=_bd .MarshalIndent (_gdg ._ef ,"","\u0020\u0020\u0020\u0020");return string (_adf ),_bcad ;};
