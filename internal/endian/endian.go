@@ -9,4 +9,4 @@
 // Use of this source code is governed by the UniDoc End User License Agreement
 // terms that can be accessed at https://unidoc.io/eula/
 
-package endian ;import (_e "encoding/binary";_bb "unsafe";);func IsBig ()bool {return _g };func init (){const _d =int (_bb .Sizeof (0));_c :=1;_dg :=(*[_d ]byte )(_bb .Pointer (&_c ));if _dg [0]==0{_g =true ;ByteOrder =_e .BigEndian ;}else {ByteOrder =_e .LittleEndian ;};};func IsLittle ()bool {return !_g };var (ByteOrder _e .ByteOrder ;_g bool ;);
+package endian ;import (_a "encoding/binary";_ae "unsafe";);func IsLittle ()bool {return !_e };func init (){const _aa =int (_ae .Sizeof (0));_ee :=1;_be :=(*[_aa ]byte )(_ae .Pointer (&_ee ));if _be [0]==0{_e =true ;ByteOrder =_a .BigEndian ;}else {ByteOrder =_a .LittleEndian ;};};func IsBig ()bool {return _e };var (ByteOrder _a .ByteOrder ;_e bool ;);
