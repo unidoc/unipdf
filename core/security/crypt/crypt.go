@@ -9,19 +9,61 @@
 // Use of this source code is governed by the UniDoc End User License Agreement
 // terms that can be accessed at https://unidoc.io/eula/
 
-package crypt ;import (_e "crypto/aes";_a "crypto/cipher";_ee "crypto/md5";_d "crypto/rand";_fa "crypto/rc4";_c "fmt";_g "github.com/unidoc/unipdf/v3/common";_ae "github.com/unidoc/unipdf/v3/core/security";_cd "io";);func init (){_dc ("\u0041\u0045\u0053V\u0032",_dd )};
+package crypt ;import (_eb "crypto/aes";_f "crypto/cipher";_ag "crypto/md5";_ad "crypto/rand";_b "crypto/rc4";_a "fmt";_ed "github.com/unidoc/unipdf/v3/common";_gc "github.com/unidoc/unipdf/v3/core/security";_g "io";);func init (){_ebc ("\u0041\u0045\u0053V\u0032",_fc )};type filterAES struct{};type filterFunc func (_bb FilterDict )(Filter ,error );var _ Filter =filterV2 {};var (_edf =make (map[string ]filterFunc ););type filterIdentity struct{};var _ Filter =filterAESV2 {};
+
+// NewIdentity creates an identity filter that bypasses all data without changes.
+func NewIdentity ()Filter {return filterIdentity {}};
+
+// PDFVersion implements Filter interface.
+func (_cef filterV2 )PDFVersion ()[2]int {return [2]int {}};
+
+// NewFilterAESV2 creates an AES-based filter with a 128 bit key (AESV2).
+func NewFilterAESV2 ()Filter {_c ,_gce :=_fc (FilterDict {});if _gce !=nil {_ed .Log .Error ("E\u0052\u0052\u004f\u0052\u003a\u0020\u0063\u006f\u0075l\u0064\u0020\u006e\u006f\u0074\u0020\u0063re\u0061\u0074\u0065\u0020A\u0045\u0053\u0020\u0056\u0032\u0020\u0063\u0072\u0079pt\u0020\u0066i\u006c\u0074\u0065\u0072\u003a\u0020\u0025\u0076",_gce );return filterAESV2 {};};return _c ;};func init (){_ebc ("\u0041\u0045\u0053V\u0033",_cg )};var _ Filter =filterAESV3 {};
+
+// NewFilterV2 creates a RC4-based filter with a specified key length (in bytes).
+func NewFilterV2 (length int )Filter {_gda ,_be :=_ec (FilterDict {Length :length });if _be !=nil {_ed .Log .Error ("E\u0052\u0052\u004f\u0052\u003a\u0020\u0063\u006f\u0075l\u0064\u0020\u006e\u006f\u0074\u0020\u0063re\u0061\u0074\u0065\u0020R\u0043\u0034\u0020\u0056\u0032\u0020\u0063\u0072\u0079pt\u0020\u0066i\u006c\u0074\u0065\u0072\u003a\u0020\u0025\u0076",_be );return filterV2 {_bc :length };};return _gda ;};func _ec (_ff FilterDict )(Filter ,error ){if _ff .Length %8!=0{return nil ,_a .Errorf ("\u0063\u0072\u0079p\u0074\u0020\u0066\u0069\u006c\u0074\u0065\u0072\u0020\u006c\u0065\u006e\u0067\u0074\u0068\u0020\u006e\u006f\u0074\u0020\u006d\u0075\u006c\u0074\u0069\u0070\u006c\u0065\u0020o\u0066\u0020\u0038\u0020\u0028\u0025\u0064\u0029",_ff .Length );};if _ff .Length < 5||_ff .Length > 16{if _ff .Length ==40||_ff .Length ==64||_ff .Length ==128{_ed .Log .Debug ("\u0053\u0054\u0041\u004e\u0044AR\u0044\u0020V\u0049\u004f\u004c\u0041\u0054\u0049\u004f\u004e\u003a\u0020\u0043\u0072\u0079\u0070\u0074\u0020\u004c\u0065\u006e\u0067\u0074\u0068\u0020\u0061\u0070\u0070\u0065\u0061\u0072s\u0020\u0074\u006f \u0062\u0065\u0020\u0069\u006e\u0020\u0062\u0069\u0074\u0073\u0020\u0072\u0061t\u0068\u0065\u0072\u0020\u0074h\u0061\u006e\u0020\u0062\u0079\u0074\u0065\u0073\u0020-\u0020\u0061s\u0073u\u006d\u0069\u006e\u0067\u0020\u0062\u0069t\u0073\u0020\u0028\u0025\u0064\u0029",_ff .Length );_ff .Length /=8;}else {return nil ,_a .Errorf ("\u0063\u0072\u0079\u0070\u0074\u0020\u0066\u0069\u006c\u0074\u0065\u0072\u0020\u006c\u0065\u006e\u0067\u0074h\u0020\u006e\u006f\u0074\u0020\u0069\u006e \u0072\u0061\u006e\u0067\u0065\u0020\u0034\u0030\u0020\u002d\u00201\u0032\u0038\u0020\u0062\u0069\u0074\u0020\u0028\u0025\u0064\u0029",_ff .Length );};};return filterV2 {_bc :_ff .Length },nil ;};func _cg (_cae FilterDict )(Filter ,error ){if _cae .Length ==256{_ed .Log .Debug ("\u0041\u0045S\u0056\u0033\u0020c\u0072\u0079\u0070\u0074\u0020f\u0069\u006c\u0074\u0065\u0072 l\u0065\u006e\u0067\u0074\u0068\u0020\u0061\u0070\u0070\u0065\u0061\u0072\u0073\u0020\u0074\u006f\u0020\u0062e\u0020i\u006e\u0020\u0062\u0069\u0074\u0073 ra\u0074\u0068\u0065\u0072\u0020\u0074\u0068\u0061\u006e\u0020\u0062\u0079te\u0073 \u002d\u0020\u0061\u0073s\u0075m\u0069n\u0067\u0020b\u0069\u0074s \u0028\u0025\u0064\u0029",_cae .Length );_cae .Length /=8;};if _cae .Length !=0&&_cae .Length !=32{return nil ,_a .Errorf ("\u0069\u006e\u0076\u0061\u006c\u0069\u0064\u0020\u0041\u0045\u0053\u0056\u0033\u0020\u0063\u0072\u0079\u0070\u0074\u0020\u0066\u0069\u006c\u0074e\u0072\u0020\u006c\u0065\u006eg\u0074\u0068 \u0028\u0025\u0064\u0029",_cae .Length );};return filterAESV3 {},nil ;};
 
 // KeyLength implements Filter interface.
-func (filterAESV2 )KeyLength ()int {return 128/8};type filterAES struct{};
+func (filterAESV2 )KeyLength ()int {return 128/8};func (filterIdentity )MakeKey (objNum ,genNum uint32 ,fkey []byte )([]byte ,error ){return fkey ,nil };
 
-// NewFilter creates CryptFilter from a corresponding dictionary.
-func NewFilter (d FilterDict )(Filter ,error ){_efe ,_aag :=_bed (d .CFM );if _aag !=nil {return nil ,_aag ;};_cce ,_aag :=_efe (d );if _aag !=nil {return nil ,_aag ;};return _cce ,nil ;};
+// MakeKey implements Filter interface.
+func (filterAESV2 )MakeKey (objNum ,genNum uint32 ,ekey []byte )([]byte ,error ){return _geg (objNum ,genNum ,ekey ,true );};func (filterIdentity )KeyLength ()int {return 0};
 
-// NewFilterAESV3 creates an AES-based filter with a 256 bit key (AESV3).
-func NewFilterAESV3 ()Filter {_eg ,_ed :=_cg (FilterDict {});if _ed !=nil {_g .Log .Error ("E\u0052\u0052\u004f\u0052\u003a\u0020\u0063\u006f\u0075l\u0064\u0020\u006e\u006f\u0074\u0020\u0063re\u0061\u0074\u0065\u0020A\u0045\u0053\u0020\u0056\u0033\u0020\u0063\u0072\u0079pt\u0020\u0066i\u006c\u0074\u0065\u0072\u003a\u0020\u0025\u0076",_ed );return filterAESV3 {};};return _eg ;};func _cg (_aa FilterDict )(Filter ,error ){if _aa .Length ==256{_g .Log .Debug ("\u0041\u0045S\u0056\u0033\u0020c\u0072\u0079\u0070\u0074\u0020f\u0069\u006c\u0074\u0065\u0072 l\u0065\u006e\u0067\u0074\u0068\u0020\u0061\u0070\u0070\u0065\u0061\u0072\u0073\u0020\u0074\u006f\u0020\u0062e\u0020i\u006e\u0020\u0062\u0069\u0074\u0073 ra\u0074\u0068\u0065\u0072\u0020\u0074\u0068\u0061\u006e\u0020\u0062\u0079te\u0073 \u002d\u0020\u0061\u0073s\u0075m\u0069n\u0067\u0020b\u0069\u0074s \u0028\u0025\u0064\u0029",_aa .Length );_aa .Length /=8;};if _aa .Length !=0&&_aa .Length !=32{return nil ,_c .Errorf ("\u0069\u006e\u0076\u0061\u006c\u0069\u0064\u0020\u0041\u0045\u0053\u0056\u0033\u0020\u0063\u0072\u0079\u0070\u0074\u0020\u0066\u0069\u006c\u0074e\u0072\u0020\u006c\u0065\u006eg\u0074\u0068 \u0028\u0025\u0064\u0029",_aa .Length );};return filterAESV3 {},nil ;};
+// MakeKey implements Filter interface.
+func (filterAESV3 )MakeKey (_ ,_ uint32 ,ekey []byte )([]byte ,error ){return ekey ,nil };type filterV2 struct{_bc int };
+
+// HandlerVersion implements Filter interface.
+func (_age filterV2 )HandlerVersion ()(V ,R int ){V ,R =2,3;return ;};
+
+// Name implements Filter interface.
+func (filterV2 )Name ()string {return "\u0056\u0032"};func init (){_ebc ("\u0056\u0032",_ec )};func (filterAES )EncryptBytes (buf []byte ,okey []byte )([]byte ,error ){_fb ,_bdb :=_eb .NewCipher (okey );if _bdb !=nil {return nil ,_bdb ;};_ed .Log .Trace ("A\u0045\u0053\u0020\u0045nc\u0072y\u0070\u0074\u0020\u0028\u0025d\u0029\u003a\u0020\u0025\u0020\u0078",len (buf ),buf );const _gb =_eb .BlockSize ;_caeb :=_gb -len (buf )%_gb ;for _ce :=0;_ce < _caeb ;_ce ++{buf =append (buf ,byte (_caeb ));};_ed .Log .Trace ("\u0050a\u0064d\u0065\u0064\u0020\u0074\u006f \u0025\u0064 \u0062\u0079\u0074\u0065\u0073",len (buf ));_ee :=make ([]byte ,_gb +len (buf ));_agb :=_ee [:_gb ];if _ ,_gd :=_g .ReadFull (_ad .Reader ,_agb );_gd !=nil {return nil ,_gd ;};_d :=_f .NewCBCEncrypter (_fb ,_agb );_d .CryptBlocks (_ee [_gb :],buf );buf =_ee ;_ed .Log .Trace ("\u0074\u006f\u0020(\u0025\u0064\u0029\u003a\u0020\u0025\u0020\u0078",len (buf ),buf );return buf ,nil ;};
+
+// PDFVersion implements Filter interface.
+func (filterAESV2 )PDFVersion ()[2]int {return [2]int {1,5}};
+
+// DecryptBytes implements Filter interface.
+func (filterV2 )DecryptBytes (buf []byte ,okey []byte )([]byte ,error ){_bdd ,_eeff :=_b .NewCipher (okey );if _eeff !=nil {return nil ,_eeff ;};_ed .Log .Trace ("\u0052\u00434\u0020\u0044\u0065c\u0072\u0079\u0070\u0074\u003a\u0020\u0025\u0020\u0078",buf );_bdd .XORKeyStream (buf ,buf );_ed .Log .Trace ("\u0074o\u003a\u0020\u0025\u0020\u0078",buf );return buf ,nil ;};func _fc (_ca FilterDict )(Filter ,error ){if _ca .Length ==128{_ed .Log .Debug ("\u0041\u0045S\u0056\u0032\u0020c\u0072\u0079\u0070\u0074\u0020f\u0069\u006c\u0074\u0065\u0072 l\u0065\u006e\u0067\u0074\u0068\u0020\u0061\u0070\u0070\u0065\u0061\u0072\u0073\u0020\u0074\u006f\u0020\u0062e\u0020i\u006e\u0020\u0062\u0069\u0074\u0073 ra\u0074\u0068\u0065\u0072\u0020\u0074\u0068\u0061\u006e\u0020\u0062\u0079te\u0073 \u002d\u0020\u0061\u0073s\u0075m\u0069n\u0067\u0020b\u0069\u0074s \u0028\u0025\u0064\u0029",_ca .Length );_ca .Length /=8;};if _ca .Length !=0&&_ca .Length !=16{return nil ,_a .Errorf ("\u0069\u006e\u0076\u0061\u006c\u0069\u0064\u0020\u0041\u0045\u0053\u0056\u0032\u0020\u0063\u0072\u0079\u0070\u0074\u0020\u0066\u0069\u006c\u0074e\u0072\u0020\u006c\u0065\u006eg\u0074\u0068 \u0028\u0025\u0064\u0029",_ca .Length );};return filterAESV2 {},nil ;};type filterAESV2 struct{filterAES };func (filterAES )DecryptBytes (buf []byte ,okey []byte )([]byte ,error ){_gcc ,_fbg :=_eb .NewCipher (okey );if _fbg !=nil {return nil ,_fbg ;};if len (buf )< 16{_ed .Log .Debug ("\u0045R\u0052\u004f\u0052\u0020\u0041\u0045\u0053\u0020\u0069\u006e\u0076a\u006c\u0069\u0064\u0020\u0062\u0075\u0066\u0020\u0025\u0073",buf );return buf ,_a .Errorf ("\u0041\u0045\u0053\u003a B\u0075\u0066\u0020\u006c\u0065\u006e\u0020\u003c\u0020\u0031\u0036\u0020\u0028\u0025d\u0029",len (buf ));};_fag :=buf [:16];buf =buf [16:];if len (buf )%16!=0{_ed .Log .Debug ("\u0020\u0069\u0076\u0020\u0028\u0025\u0064\u0029\u003a\u0020\u0025\u0020\u0078",len (_fag ),_fag );_ed .Log .Debug ("\u0062\u0075\u0066\u0020\u0028\u0025\u0064\u0029\u003a\u0020\u0025\u0020\u0078",len (buf ),buf );return buf ,_a .Errorf ("\u0041\u0045\u0053\u0020\u0062\u0075\u0066\u0020\u006c\u0065\u006e\u0067\u0074\u0068\u0020\u006e\u006f\u0074\u0020\u006d\u0075\u006c\u0074\u0069p\u006c\u0065\u0020\u006f\u0066 \u0031\u0036 \u0028\u0025\u0064\u0029",len (buf ));};_ae :=_f .NewCBCDecrypter (_gcc ,_fag );_ed .Log .Trace ("A\u0045\u0053\u0020\u0044ec\u0072y\u0070\u0074\u0020\u0028\u0025d\u0029\u003a\u0020\u0025\u0020\u0078",len (buf ),buf );_ed .Log .Trace ("\u0063\u0068\u006f\u0070\u0020\u0041\u0045\u0053\u0020\u0044\u0065c\u0072\u0079\u0070\u0074\u0020\u0028\u0025\u0064\u0029\u003a \u0025\u0020\u0078",len (buf ),buf );_ae .CryptBlocks (buf ,buf );_ed .Log .Trace ("\u0074\u006f\u0020(\u0025\u0064\u0029\u003a\u0020\u0025\u0020\u0078",len (buf ),buf );if len (buf )==0{_ed .Log .Trace ("\u0045\u006d\u0070\u0074\u0079\u0020b\u0075\u0066\u002c\u0020\u0072\u0065\u0074\u0075\u0072\u006e\u0069\u006e\u0067 \u0065\u006d\u0070\u0074\u0079\u0020\u0073t\u0072\u0069\u006e\u0067");return buf ,nil ;};_gdf :=int (buf [len (buf )-1]);if _gdf > len (buf ){_ed .Log .Debug ("\u0049\u006c\u006c\u0065g\u0061\u006c\u0020\u0070\u0061\u0064\u0020\u006c\u0065\u006eg\u0074h\u0020\u0028\u0025\u0064\u0020\u003e\u0020%\u0064\u0029",_gdf ,len (buf ));return buf ,_a .Errorf ("\u0069n\u0076a\u006c\u0069\u0064\u0020\u0070a\u0064\u0020l\u0065\u006e\u0067\u0074\u0068");};buf =buf [:len (buf )-_gdf ];return buf ,nil ;};func _ebc (_gfe string ,_efg filterFunc ){if _ ,_agd :=_edf [_gfe ];_agd {panic ("\u0061l\u0072e\u0061\u0064\u0079\u0020\u0072e\u0067\u0069s\u0074\u0065\u0072\u0065\u0064");};_edf [_gfe ]=_efg ;};
 
 // PDFVersion implements Filter interface.
 func (filterAESV3 )PDFVersion ()[2]int {return [2]int {2,0}};
+
+// NewFilter creates CryptFilter from a corresponding dictionary.
+func NewFilter (d FilterDict )(Filter ,error ){_ddf ,_fbc :=_ddc (d .CFM );if _fbc !=nil {return nil ,_fbc ;};_dbe ,_fbc :=_ddf (d );if _fbc !=nil {return nil ,_fbc ;};return _dbe ,nil ;};
+
+// KeyLength implements Filter interface.
+func (_dc filterV2 )KeyLength ()int {return _dc ._bc };
+
+// KeyLength implements Filter interface.
+func (filterAESV3 )KeyLength ()int {return 256/8};
+
+// NewFilterAESV3 creates an AES-based filter with a 256 bit key (AESV3).
+func NewFilterAESV3 ()Filter {_edd ,_bd :=_cg (FilterDict {});if _bd !=nil {_ed .Log .Error ("E\u0052\u0052\u004f\u0052\u003a\u0020\u0063\u006f\u0075l\u0064\u0020\u006e\u006f\u0074\u0020\u0063re\u0061\u0074\u0065\u0020A\u0045\u0053\u0020\u0056\u0033\u0020\u0063\u0072\u0079pt\u0020\u0066i\u006c\u0074\u0065\u0072\u003a\u0020\u0025\u0076",_bd );return filterAESV3 {};};return _edd ;};func (filterIdentity )DecryptBytes (p []byte ,okey []byte )([]byte ,error ){return p ,nil };
+
+// MakeKey implements Filter interface.
+func (_gf filterV2 )MakeKey (objNum ,genNum uint32 ,ekey []byte )([]byte ,error ){return _geg (objNum ,genNum ,ekey ,false );};
+
+// HandlerVersion implements Filter interface.
+func (filterAESV2 )HandlerVersion ()(V ,R int ){V ,R =4,4;return ;};type filterAESV3 struct{filterAES };func (filterIdentity )Name ()string {return "\u0049\u0064\u0065\u006e\u0074\u0069\u0074\u0079"};func _geg (_gbb ,_de uint32 ,_eef []byte ,_ac bool )([]byte ,error ){_cb :=make ([]byte ,len (_eef )+5);for _gdg :=0;_gdg < len (_eef );_gdg ++{_cb [_gdg ]=_eef [_gdg ];};for _aeg :=0;_aeg < 3;_aeg ++{_db :=byte ((_gbb >>uint32 (8*_aeg ))&0xff);_cb [_aeg +len (_eef )]=_db ;};for _eca :=0;_eca < 2;_eca ++{_af :=byte ((_de >>uint32 (8*_eca ))&0xff);_cb [_eca +len (_eef )+3]=_af ;};if _ac {_cb =append (_cb ,0x73);_cb =append (_cb ,0x41);_cb =append (_cb ,0x6C);_cb =append (_cb ,0x54);};_bdf :=_ag .New ();_bdf .Write (_cb );_adf :=_bdf .Sum (nil );if len (_eef )+5< 16{return _adf [0:len (_eef )+5],nil ;};return _adf ,nil ;};
 
 // Filter is a common interface for crypt filter methods.
 type Filter interface{
@@ -40,69 +82,27 @@ HandlerVersion ()(V ,R int );
 
 // MakeKey generates a object encryption key based on file encryption key and object numbers.
 // Used only for legacy filters - AESV3 doesn't change the key for each object.
-MakeKey (_dge ,_gf uint32 ,_dff []byte )([]byte ,error );
+MakeKey (_gdd ,_gcg uint32 ,_faf []byte )([]byte ,error );
 
 // EncryptBytes encrypts a buffer using object encryption key, as returned by MakeKey.
 // Implementation may reuse a buffer and encrypt data in-place.
-EncryptBytes (_fdc []byte ,_aeb []byte )([]byte ,error );
+EncryptBytes (_bf []byte ,_fe []byte )([]byte ,error );
 
 // DecryptBytes decrypts a buffer using object encryption key, as returned by MakeKey.
 // Implementation may reuse a buffer and decrypt data in-place.
-DecryptBytes (_ggg []byte ,_aef []byte )([]byte ,error );};type filterFunc func (_ddd FilterDict )(Filter ,error );
+DecryptBytes (_afd []byte ,_ef []byte )([]byte ,error );};
 
-// HandlerVersion implements Filter interface.
-func (_aab filterV2 )HandlerVersion ()(V ,R int ){V ,R =2,3;return ;};func init (){_dc ("\u0041\u0045\u0053V\u0033",_cg )};
-
-// Name implements Filter interface.
-func (filterAESV2 )Name ()string {return "\u0041\u0045\u0053V\u0032"};
-
-// HandlerVersion implements Filter interface.
-func (filterAESV2 )HandlerVersion ()(V ,R int ){V ,R =4,4;return ;};
-
-// Name implements Filter interface.
-func (filterV2 )Name ()string {return "\u0056\u0032"};func (filterIdentity )DecryptBytes (p []byte ,okey []byte )([]byte ,error ){return p ,nil };func (filterAES )DecryptBytes (buf []byte ,okey []byte )([]byte ,error ){_gc ,_aac :=_e .NewCipher (okey );if _aac !=nil {return nil ,_aac ;};if len (buf )< 16{_g .Log .Debug ("\u0045R\u0052\u004f\u0052\u0020\u0041\u0045\u0053\u0020\u0069\u006e\u0076a\u006c\u0069\u0064\u0020\u0062\u0075\u0066\u0020\u0025\u0073",buf );return buf ,_c .Errorf ("\u0041\u0045\u0053\u003a B\u0075\u0066\u0020\u006c\u0065\u006e\u0020\u003c\u0020\u0031\u0036\u0020\u0028\u0025d\u0029",len (buf ));};_ad :=buf [:16];buf =buf [16:];if len (buf )%16!=0{_g .Log .Debug ("\u0020\u0069\u0076\u0020\u0028\u0025\u0064\u0029\u003a\u0020\u0025\u0020\u0078",len (_ad ),_ad );_g .Log .Debug ("\u0062\u0075\u0066\u0020\u0028\u0025\u0064\u0029\u003a\u0020\u0025\u0020\u0078",len (buf ),buf );return buf ,_c .Errorf ("\u0041\u0045\u0053\u0020\u0062\u0075\u0066\u0020\u006c\u0065\u006e\u0067\u0074\u0068\u0020\u006e\u006f\u0074\u0020\u006d\u0075\u006c\u0074\u0069p\u006c\u0065\u0020\u006f\u0066 \u0031\u0036 \u0028\u0025\u0064\u0029",len (buf ));};_acc :=_a .NewCBCDecrypter (_gc ,_ad );_g .Log .Trace ("A\u0045\u0053\u0020\u0044ec\u0072y\u0070\u0074\u0020\u0028\u0025d\u0029\u003a\u0020\u0025\u0020\u0078",len (buf ),buf );_g .Log .Trace ("\u0063\u0068\u006f\u0070\u0020\u0041\u0045\u0053\u0020\u0044\u0065c\u0072\u0079\u0070\u0074\u0020\u0028\u0025\u0064\u0029\u003a \u0025\u0020\u0078",len (buf ),buf );_acc .CryptBlocks (buf ,buf );_g .Log .Trace ("\u0074\u006f\u0020(\u0025\u0064\u0029\u003a\u0020\u0025\u0020\u0078",len (buf ),buf );if len (buf )==0{_g .Log .Trace ("\u0045\u006d\u0070\u0074\u0079\u0020b\u0075\u0066\u002c\u0020\u0072\u0065\u0074\u0075\u0072\u006e\u0069\u006e\u0067 \u0065\u006d\u0070\u0074\u0079\u0020\u0073t\u0072\u0069\u006e\u0067");return buf ,nil ;};_edb :=int (buf [len (buf )-1]);if _edb > len (buf ){_g .Log .Debug ("\u0049\u006c\u006c\u0065g\u0061\u006c\u0020\u0070\u0061\u0064\u0020\u006c\u0065\u006eg\u0074h\u0020\u0028\u0025\u0064\u0020\u003e\u0020%\u0064\u0029",_edb ,len (buf ));return buf ,_c .Errorf ("\u0069n\u0076a\u006c\u0069\u0064\u0020\u0070a\u0064\u0020l\u0065\u006e\u0067\u0074\u0068");};buf =buf [:len (buf )-_edb ];return buf ,nil ;};func _dd (_bc FilterDict )(Filter ,error ){if _bc .Length ==128{_g .Log .Debug ("\u0041\u0045S\u0056\u0032\u0020c\u0072\u0079\u0070\u0074\u0020f\u0069\u006c\u0074\u0065\u0072 l\u0065\u006e\u0067\u0074\u0068\u0020\u0061\u0070\u0070\u0065\u0061\u0072\u0073\u0020\u0074\u006f\u0020\u0062e\u0020i\u006e\u0020\u0062\u0069\u0074\u0073 ra\u0074\u0068\u0065\u0072\u0020\u0074\u0068\u0061\u006e\u0020\u0062\u0079te\u0073 \u002d\u0020\u0061\u0073s\u0075m\u0069n\u0067\u0020b\u0069\u0074s \u0028\u0025\u0064\u0029",_bc .Length );_bc .Length /=8;};if _bc .Length !=0&&_bc .Length !=16{return nil ,_c .Errorf ("\u0069\u006e\u0076\u0061\u006c\u0069\u0064\u0020\u0041\u0045\u0053\u0056\u0032\u0020\u0063\u0072\u0079\u0070\u0074\u0020\u0066\u0069\u006c\u0074e\u0072\u0020\u006c\u0065\u006eg\u0074\u0068 \u0028\u0025\u0064\u0029",_bc .Length );};return filterAESV2 {},nil ;};func (filterIdentity )MakeKey (objNum ,genNum uint32 ,fkey []byte )([]byte ,error ){return fkey ,nil };func (filterIdentity )EncryptBytes (p []byte ,okey []byte )([]byte ,error ){return p ,nil };
-
-// Name implements Filter interface.
-func (filterAESV3 )Name ()string {return "\u0041\u0045\u0053V\u0033"};func (filterIdentity )HandlerVersion ()(V ,R int ){return ;};
-
-// NewFilterV2 creates a RC4-based filter with a specified key length (in bytes).
-func NewFilterV2 (length int )Filter {_da ,_fe :=_aff (FilterDict {Length :length });if _fe !=nil {_g .Log .Error ("E\u0052\u0052\u004f\u0052\u003a\u0020\u0063\u006f\u0075l\u0064\u0020\u006e\u006f\u0074\u0020\u0063re\u0061\u0074\u0065\u0020R\u0043\u0034\u0020\u0056\u0032\u0020\u0063\u0072\u0079pt\u0020\u0066i\u006c\u0074\u0065\u0072\u003a\u0020\u0025\u0076",_fe );return filterV2 {_fac :length };};return _da ;};type filterV2 struct{_fac int };func init (){_dc ("\u0056\u0032",_aff )};type filterAESV2 struct{filterAES };func (filterIdentity )Name ()string {return "\u0049\u0064\u0065\u006e\u0074\u0069\u0074\u0079"};func (filterIdentity )KeyLength ()int {return 0};var (_ccb =make (map[string ]filterFunc ););var _ Filter =filterV2 {};
-
-// KeyLength implements Filter interface.
-func (_gcc filterV2 )KeyLength ()int {return _gcc ._fac };
-
-// FilterDict represents information from a CryptFilter dictionary.
-type FilterDict struct{CFM string ;AuthEvent _ae .AuthEvent ;Length int ;};
-
-// MakeKey implements Filter interface.
-func (_fbf filterV2 )MakeKey (objNum ,genNum uint32 ,ekey []byte )([]byte ,error ){return _bcb (objNum ,genNum ,ekey ,false );};
-
-// DecryptBytes implements Filter interface.
-func (filterV2 )DecryptBytes (buf []byte ,okey []byte )([]byte ,error ){_ddc ,_dab :=_fa .NewCipher (okey );if _dab !=nil {return nil ,_dab ;};_g .Log .Trace ("\u0052\u00434\u0020\u0044\u0065c\u0072\u0079\u0070\u0074\u003a\u0020\u0025\u0020\u0078",buf );_ddc .XORKeyStream (buf ,buf );_g .Log .Trace ("\u0074o\u003a\u0020\u0025\u0020\u0078",buf );return buf ,nil ;};func (filterIdentity )PDFVersion ()[2]int {return [2]int {}};func (filterAES )EncryptBytes (buf []byte ,okey []byte )([]byte ,error ){_cc ,_af :=_e .NewCipher (okey );if _af !=nil {return nil ,_af ;};_g .Log .Trace ("A\u0045\u0053\u0020\u0045nc\u0072y\u0070\u0074\u0020\u0028\u0025d\u0029\u003a\u0020\u0025\u0020\u0078",len (buf ),buf );const _ge =_e .BlockSize ;_ba :=_ge -len (buf )%_ge ;for _bf :=0;_bf < _ba ;_bf ++{buf =append (buf ,byte (_ba ));};_g .Log .Trace ("\u0050a\u0064d\u0065\u0064\u0020\u0074\u006f \u0025\u0064 \u0062\u0079\u0074\u0065\u0073",len (buf ));_ea :=make ([]byte ,_ge +len (buf ));_fb :=_ea [:_ge ];if _ ,_ac :=_cd .ReadFull (_d .Reader ,_fb );_ac !=nil {return nil ,_ac ;};_ab :=_a .NewCBCEncrypter (_cc ,_fb );_ab .CryptBlocks (_ea [_ge :],buf );buf =_ea ;_g .Log .Trace ("\u0074\u006f\u0020(\u0025\u0064\u0029\u003a\u0020\u0025\u0020\u0078",len (buf ),buf );return buf ,nil ;};func _aff (_ef FilterDict )(Filter ,error ){if _ef .Length %8!=0{return nil ,_c .Errorf ("\u0063\u0072\u0079p\u0074\u0020\u0066\u0069\u006c\u0074\u0065\u0072\u0020\u006c\u0065\u006e\u0067\u0074\u0068\u0020\u006e\u006f\u0074\u0020\u006d\u0075\u006c\u0074\u0069\u0070\u006c\u0065\u0020o\u0066\u0020\u0038\u0020\u0028\u0025\u0064\u0029",_ef .Length );};if _ef .Length < 5||_ef .Length > 16{if _ef .Length ==40||_ef .Length ==64||_ef .Length ==128{_g .Log .Debug ("\u0053\u0054\u0041\u004e\u0044AR\u0044\u0020V\u0049\u004f\u004c\u0041\u0054\u0049\u004f\u004e\u003a\u0020\u0043\u0072\u0079\u0070\u0074\u0020\u004c\u0065\u006e\u0067\u0074\u0068\u0020\u0061\u0070\u0070\u0065\u0061\u0072s\u0020\u0074\u006f \u0062\u0065\u0020\u0069\u006e\u0020\u0062\u0069\u0074\u0073\u0020\u0072\u0061t\u0068\u0065\u0072\u0020\u0074h\u0061\u006e\u0020\u0062\u0079\u0074\u0065\u0073\u0020-\u0020\u0061s\u0073u\u006d\u0069\u006e\u0067\u0020\u0062\u0069t\u0073\u0020\u0028\u0025\u0064\u0029",_ef .Length );_ef .Length /=8;}else {return nil ,_c .Errorf ("\u0063\u0072\u0079\u0070\u0074\u0020\u0066\u0069\u006c\u0074\u0065\u0072\u0020\u006c\u0065\u006e\u0067\u0074h\u0020\u006e\u006f\u0074\u0020\u0069\u006e \u0072\u0061\u006e\u0067\u0065\u0020\u0034\u0030\u0020\u002d\u00201\u0032\u0038\u0020\u0062\u0069\u0074\u0020\u0028\u0025\u0064\u0029",_ef .Length );};};return filterV2 {_fac :_ef .Length },nil ;};
-
-// NewIdentity creates an identity filter that bypasses all data without changes.
-func NewIdentity ()Filter {return filterIdentity {}};func _bed (_bca string )(filterFunc ,error ){_eba :=_ccb [_bca ];if _eba ==nil {return nil ,_c .Errorf ("\u0075\u006e\u0073\u0075p\u0070\u006f\u0072\u0074\u0065\u0064\u0020\u0063\u0072\u0079p\u0074 \u0066\u0069\u006c\u0074\u0065\u0072\u003a \u0025\u0071",_bca );};return _eba ,nil ;};type filterIdentity struct{};
+// EncryptBytes implements Filter interface.
+func (filterV2 )EncryptBytes (buf []byte ,okey []byte )([]byte ,error ){_bdc ,_cac :=_b .NewCipher (okey );if _cac !=nil {return nil ,_cac ;};_ed .Log .Trace ("\u0052\u00434\u0020\u0045\u006ec\u0072\u0079\u0070\u0074\u003a\u0020\u0025\u0020\u0078",buf );_bdc .XORKeyStream (buf ,buf );_ed .Log .Trace ("\u0074o\u003a\u0020\u0025\u0020\u0078",buf );return buf ,nil ;};func (filterIdentity )EncryptBytes (p []byte ,okey []byte )([]byte ,error ){return p ,nil };func (filterIdentity )PDFVersion ()[2]int {return [2]int {}};
 
 // HandlerVersion implements Filter interface.
 func (filterAESV3 )HandlerVersion ()(V ,R int ){V ,R =5,6;return ;};
 
-// PDFVersion implements Filter interface.
-func (_efa filterV2 )PDFVersion ()[2]int {return [2]int {}};
+// Name implements Filter interface.
+func (filterAESV2 )Name ()string {return "\u0041\u0045\u0053V\u0032"};func _ddc (_ffc string )(filterFunc ,error ){_acg :=_edf [_ffc ];if _acg ==nil {return nil ,_a .Errorf ("\u0075\u006e\u0073\u0075p\u0070\u006f\u0072\u0074\u0065\u0064\u0020\u0063\u0072\u0079p\u0074 \u0066\u0069\u006c\u0074\u0065\u0072\u003a \u0025\u0071",_ffc );};return _acg ,nil ;};
 
-// PDFVersion implements Filter interface.
-func (filterAESV2 )PDFVersion ()[2]int {return [2]int {1,5}};var _ Filter =filterAESV3 {};
+// Name implements Filter interface.
+func (filterAESV3 )Name ()string {return "\u0041\u0045\u0053V\u0033"};
 
-// MakeKey implements Filter interface.
-func (filterAESV3 )MakeKey (_ ,_ uint32 ,ekey []byte )([]byte ,error ){return ekey ,nil };
-
-// KeyLength implements Filter interface.
-func (filterAESV3 )KeyLength ()int {return 256/8};func _bcb (_be ,_gg uint32 ,_adc []byte ,_cfa bool )([]byte ,error ){_ecg :=make ([]byte ,len (_adc )+5);for _bd :=0;_bd < len (_adc );_bd ++{_ecg [_bd ]=_adc [_bd ];};for _bb :=0;_bb < 3;_bb ++{_eb :=byte ((_be >>uint32 (8*_bb ))&0xff);_ecg [_bb +len (_adc )]=_eb ;};for _afe :=0;_afe < 2;_afe ++{_afgc :=byte ((_gg >>uint32 (8*_afe ))&0xff);_ecg [_afe +len (_adc )+3]=_afgc ;};if _cfa {_ecg =append (_ecg ,0x73);_ecg =append (_ecg ,0x41);_ecg =append (_ecg ,0x6C);_ecg =append (_ecg ,0x54);};_fd :=_ee .New ();_fd .Write (_ecg );_egg :=_fd .Sum (nil );if len (_adc )+5< 16{return _egg [0:len (_adc )+5],nil ;};return _egg ,nil ;};type filterAESV3 struct{filterAES };
-
-// MakeKey implements Filter interface.
-func (filterAESV2 )MakeKey (objNum ,genNum uint32 ,ekey []byte )([]byte ,error ){return _bcb (objNum ,genNum ,ekey ,true );};
-
-// EncryptBytes implements Filter interface.
-func (filterV2 )EncryptBytes (buf []byte ,okey []byte )([]byte ,error ){_db ,_df :=_fa .NewCipher (okey );if _df !=nil {return nil ,_df ;};_g .Log .Trace ("\u0052\u00434\u0020\u0045\u006ec\u0072\u0079\u0070\u0074\u003a\u0020\u0025\u0020\u0078",buf );_db .XORKeyStream (buf ,buf );_g .Log .Trace ("\u0074o\u003a\u0020\u0025\u0020\u0078",buf );return buf ,nil ;};
-
-// NewFilterAESV2 creates an AES-based filter with a 128 bit key (AESV2).
-func NewFilterAESV2 ()Filter {_cf ,_b :=_dd (FilterDict {});if _b !=nil {_g .Log .Error ("E\u0052\u0052\u004f\u0052\u003a\u0020\u0063\u006f\u0075l\u0064\u0020\u006e\u006f\u0074\u0020\u0063re\u0061\u0074\u0065\u0020A\u0045\u0053\u0020\u0056\u0032\u0020\u0063\u0072\u0079pt\u0020\u0066i\u006c\u0074\u0065\u0072\u003a\u0020\u0025\u0076",_b );return filterAESV2 {};};return _cf ;};func _dc (_efd string ,_gec filterFunc ){if _ ,_bfc :=_ccb [_efd ];_bfc {panic ("\u0061l\u0072e\u0061\u0064\u0079\u0020\u0072e\u0067\u0069s\u0074\u0065\u0072\u0065\u0064");};_ccb [_efd ]=_gec ;};var _ Filter =filterAESV2 {};
+// FilterDict represents information from a CryptFilter dictionary.
+type FilterDict struct{CFM string ;AuthEvent _gc .AuthEvent ;Length int ;};func (filterIdentity )HandlerVersion ()(V ,R int ){return ;};
