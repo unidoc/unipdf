@@ -9,63 +9,15 @@
 // Use of this source code is governed by the UniDoc End User License Agreement
 // terms that can be accessed at https://unidoc.io/eula/
 
-package sigutil ;import (_eg "bytes";_fc "crypto";_gd "crypto/x509";_d "encoding/asn1";_gf "encoding/pem";_g "errors";_gg "fmt";_ad "github.com/unidoc/timestamp";_gb "github.com/unidoc/unipdf/v3/common";_bg "golang.org/x/crypto/ocsp";_fg "io";_b "io/ioutil";_a "net/http";_f "time";);
-
-// NewTimestampRequest returns a new timestamp request based
-// on the specified options.
-func NewTimestampRequest (body _fg .Reader ,opts *_ad .RequestOptions )(*_ad .Request ,error ){if opts ==nil {opts =&_ad .RequestOptions {};};if opts .Hash ==0{opts .Hash =_fc .SHA256 ;};if !opts .Hash .Available (){return nil ,_gd .ErrUnsupportedAlgorithm ;};_eb :=opts .Hash .New ();if _ ,_dec :=_fg .Copy (_eb ,body );_dec !=nil {return nil ,_dec ;};return &_ad .Request {HashAlgorithm :opts .Hash ,HashedMessage :_eb .Sum (nil ),Certificates :opts .Certificates ,TSAPolicyOID :opts .TSAPolicyOID ,Nonce :opts .Nonce },nil ;};
-
-// Get retrieves the certificate at the specified URL.
-func (_ed *CertClient )Get (url string )(*_gd .Certificate ,error ){if _ed .HTTPClient ==nil {_ed .HTTPClient =_eef ();};_aa ,_be :=_ed .HTTPClient .Get (url );if _be !=nil {return nil ,_be ;};defer _aa .Body .Close ();_ge ,_be :=_b .ReadAll (_aa .Body );if _be !=nil {return nil ,_be ;};if _dc ,_ :=_gf .Decode (_ge );_dc !=nil {_ge =_dc .Bytes ;};_fcb ,_be :=_gd .ParseCertificate (_ge );if _be !=nil {return nil ,_be ;};return _fcb ,nil ;};
+package sigutil ;import (_c "bytes";_e "crypto";_ag "crypto/x509";_g "encoding/asn1";_ee "encoding/pem";_eg "errors";_b "fmt";_aee "github.com/unidoc/timestamp";_aa "github.com/unidoc/unipdf/v3/common";_cg "golang.org/x/crypto/ocsp";_ae "io";_egc "io/ioutil";_cd "net/http";_f "time";);
 
 // MakeRequest makes a CRL request to the specified server and returns the
 // response. If a server URL is not provided, it is extracted from the certificate.
-func (_c *CRLClient )MakeRequest (serverURL string ,cert *_gd .Certificate )([]byte ,error ){if _c .HTTPClient ==nil {_c .HTTPClient =_eef ();};if serverURL ==""{if len (cert .CRLDistributionPoints )==0{return nil ,_g .New ("\u0063e\u0072\u0074i\u0066\u0069\u0063\u0061t\u0065\u0020\u0064o\u0065\u0073\u0020\u006e\u006f\u0074\u0020\u0073\u0070ec\u0069\u0066\u0079 \u0061\u006ey\u0020\u0043\u0052\u004c\u0020\u0073e\u0072\u0076e\u0072\u0073");};serverURL =cert .CRLDistributionPoints [0];};_fce ,_add :=_c .HTTPClient .Get (serverURL );if _add !=nil {return nil ,_add ;};defer _fce .Body .Close ();_de ,_add :=_b .ReadAll (_fce .Body );if _add !=nil {return nil ,_add ;};if _ce ,_ :=_gf .Decode (_de );_ce !=nil {_de =_ce .Bytes ;};return _de ,nil ;};
+func (_db *CRLClient )MakeRequest (serverURL string ,cert *_ag .Certificate )([]byte ,error ){if _db .HTTPClient ==nil {_db .HTTPClient =_cdc ();};if serverURL ==""{if len (cert .CRLDistributionPoints )==0{return nil ,_eg .New ("\u0063e\u0072\u0074i\u0066\u0069\u0063\u0061t\u0065\u0020\u0064o\u0065\u0073\u0020\u006e\u006f\u0074\u0020\u0073\u0070ec\u0069\u0066\u0079 \u0061\u006ey\u0020\u0043\u0052\u004c\u0020\u0073e\u0072\u0076e\u0072\u0073");};serverURL =cert .CRLDistributionPoints [0];};_fb ,_dg :=_db .HTTPClient .Get (serverURL );if _dg !=nil {return nil ,_dg ;};defer _fb .Body .Close ();_gga ,_dg :=_egc .ReadAll (_fb .Body );if _dg !=nil {return nil ,_dg ;};if _agc ,_ :=_ee .Decode (_gga );_agc !=nil {_gga =_agc .Bytes ;};return _gga ,nil ;};
 
-// GetIssuer retrieves the issuer of the provided certificate.
-func (_bf *CertClient )GetIssuer (cert *_gd .Certificate )(*_gd .Certificate ,error ){for _ ,_ea :=range cert .IssuingCertificateURL {_gga ,_beb :=_bf .Get (_ea );if _beb !=nil {_gb .Log .Debug ("\u0057\u0041\u0052\u004e\u003a\u0020\u0063\u006f\u0075\u006c\u0064\u0020\u006e\u006f\u0074 \u0064\u006f\u0077\u006e\u006c\u006f\u0061\u0064\u0020\u0069\u0073\u0073\u0075e\u0072\u0020\u0066\u006f\u0072\u0020\u0063\u0065\u0072\u0074\u0069\u0066ic\u0061\u0074\u0065\u0020\u0025\u0076\u003a\u0020\u0025\u0076",cert .Subject .CommonName ,_beb );continue ;};return _gga ,nil ;};return nil ,_gg .Errorf ("\u0069\u0073\u0073\u0075e\u0072\u0020\u0063\u0065\u0072\u0074\u0069\u0066\u0069\u0063a\u0074e\u0020\u006e\u006f\u0074\u0020\u0066\u006fu\u006e\u0064");};
-
-// NewOCSPClient returns a new OCSP client.
-func NewOCSPClient ()*OCSPClient {return &OCSPClient {HTTPClient :_eef (),Hash :_fc .SHA1 }};
-
-// OCSPClient represents a OCSP (Online Certificate Status Protocol) client.
-// It is used to request revocation data from OCSP servers.
-type OCSPClient struct{
-
-// HTTPClient is the HTTP client used to make OCSP requests.
-// By default, an HTTP client with a 5 second timeout per request is used.
-HTTPClient *_a .Client ;
-
-// Hash is the hash function  used when constructing the OCSP
-// requests. If zero, SHA-1 will be used.
-Hash _fc .Hash ;};
-
-// NewCRLClient returns a new CRL client.
-func NewCRLClient ()*CRLClient {return &CRLClient {HTTPClient :_eef ()}};func _eef ()*_a .Client {return &_a .Client {Timeout :5*_f .Second }};
-
-// MakeRequest makes a OCSP request to the specified server and returns
-// the parsed and raw responses. If a server URL is not provided, it is
-// extracted from the certificate.
-func (_gc *OCSPClient )MakeRequest (serverURL string ,cert ,issuer *_gd .Certificate )(*_bg .Response ,[]byte ,error ){if _gc .HTTPClient ==nil {_gc .HTTPClient =_eef ();};if serverURL ==""{if len (cert .OCSPServer )==0{return nil ,nil ,_g .New ("\u0063e\u0072\u0074i\u0066\u0069\u0063a\u0074\u0065\u0020\u0064\u006f\u0065\u0073 \u006e\u006f\u0074\u0020\u0073\u0070e\u0063\u0069\u0066\u0079\u0020\u0061\u006e\u0079\u0020\u004f\u0043S\u0050\u0020\u0073\u0065\u0072\u0076\u0065\u0072\u0073");};serverURL =cert .OCSPServer [0];};_cg ,_bb :=_bg .CreateRequest (cert ,issuer ,&_bg .RequestOptions {Hash :_gc .Hash });if _bb !=nil {return nil ,nil ,_bb ;};_fb ,_bb :=_gc .HTTPClient .Post (serverURL ,"\u0061p\u0070\u006c\u0069\u0063\u0061\u0074\u0069\u006f\u006e\u002f\u006fc\u0073\u0070\u002d\u0072\u0065\u0071\u0075\u0065\u0073\u0074",_eg .NewReader (_cg ));if _bb !=nil {return nil ,nil ,_bb ;};defer _fb .Body .Close ();_ged ,_bb :=_b .ReadAll (_fb .Body );if _bb !=nil {return nil ,nil ,_bb ;};if _af ,_ :=_gf .Decode (_ged );_af !=nil {_ged =_af .Bytes ;};_ab ,_bb :=_bg .ParseResponseForCert (_ged ,cert ,issuer );if _bb !=nil {return nil ,nil ,_bb ;};return _ab ,_ged ,nil ;};
-
-// CRLClient represents a CRL (Certificate revocation list) client.
-// It is used to request revocation data from CRL servers.
-type CRLClient struct{
-
-// HTTPClient is the HTTP client used to make CRL requests.
-// By default, an HTTP client with a 5 second timeout per request is used.
-HTTPClient *_a .Client ;};
-
-// TimestampClient represents a RFC 3161 timestamp client.
-// It is used to obtain signed tokens from timestamp authority servers.
-type TimestampClient struct{
-
-// HTTPClient is the HTTP client used to make timestamp requests.
-// By default, an HTTP client with a 5 second timeout per request is used.
-HTTPClient *_a .Client ;};
-
-// NewTimestampClient returns a new timestamp client.
-func NewTimestampClient ()*TimestampClient {return &TimestampClient {HTTPClient :_eef ()}};
+// NewTimestampRequest returns a new timestamp request based
+// on the specified options.
+func NewTimestampRequest (body _ae .Reader ,opts *_aee .RequestOptions )(*_aee .Request ,error ){if opts ==nil {opts =&_aee .RequestOptions {};};if opts .Hash ==0{opts .Hash =_e .SHA256 ;};if !opts .Hash .Available (){return nil ,_ag .ErrUnsupportedAlgorithm ;};_fc :=opts .Hash .New ();if _ ,_fcf :=_ae .Copy (_fc ,body );_fcf !=nil {return nil ,_fcf ;};return &_aee .Request {HashAlgorithm :opts .Hash ,HashedMessage :_fc .Sum (nil ),Certificates :opts .Certificates ,TSAPolicyOID :opts .TSAPolicyOID ,Nonce :opts .Nonce },nil ;};
 
 // CertClient represents a X.509 certificate client. Its primary purpose
 // is to download certificates.
@@ -73,14 +25,62 @@ type CertClient struct{
 
 // HTTPClient is the HTTP client used to make certificate requests.
 // By default, an HTTP client with a 5 second timeout per request is used.
-HTTPClient *_a .Client ;};
+HTTPClient *_cd .Client ;};
 
-// IsCA returns true if the provided certificate appears to be a CA certificate.
-func (_bgg *CertClient )IsCA (cert *_gd .Certificate )bool {return cert .IsCA &&_eg .Equal (cert .RawIssuer ,cert .RawSubject );};
+// Get retrieves the certificate at the specified URL.
+func (_gg *CertClient )Get (url string )(*_ag .Certificate ,error ){if _gg .HTTPClient ==nil {_gg .HTTPClient =_cdc ();};_ad ,_af :=_gg .HTTPClient .Get (url );if _af !=nil {return nil ,_af ;};defer _ad .Body .Close ();_ff ,_af :=_egc .ReadAll (_ad .Body );if _af !=nil {return nil ,_af ;};if _cf ,_ :=_ee .Decode (_ff );_cf !=nil {_ff =_cf .Bytes ;};_cga ,_af :=_ag .ParseCertificate (_ff );if _af !=nil {return nil ,_af ;};return _cga ,nil ;};
 
 // GetEncodedToken executes the timestamp request and returns the DER encoded
 // timestamp token bytes.
-func (_bba *TimestampClient )GetEncodedToken (serverURL string ,req *_ad .Request )([]byte ,error ){if serverURL ==""{return nil ,_gg .Errorf ("\u006d\u0075\u0073\u0074\u0020\u0070r\u006f\u0076\u0069\u0064\u0065\u0020\u0074\u0069\u006d\u0065\u0073\u0074\u0061m\u0070\u0020\u0073\u0065\u0072\u0076\u0065r\u0020\u0055\u0052\u004c");};if req ==nil {return nil ,_gg .Errorf ("\u0074\u0069\u006de\u0073\u0074\u0061\u006dp\u0020\u0072\u0065\u0071\u0075\u0065\u0073t\u0020\u0063\u0061\u006e\u006e\u006f\u0074\u0020\u0062\u0065\u0020\u006e\u0069\u006c");};_gfa ,_fbe :=req .Marshal ();if _fbe !=nil {return nil ,_fbe ;};_dg :=_bba .HTTPClient ;if _dg ==nil {_dg =_eef ();};_gdc ,_fbe :=_dg .Post (serverURL ,"a\u0070\u0070\u006c\u0069\u0063\u0061t\u0069\u006f\u006e\u002f\u0074\u0069\u006d\u0065\u0073t\u0061\u006d\u0070-\u0071u\u0065\u0072\u0079",_eg .NewBuffer (_gfa ));if _fbe !=nil {return nil ,_fbe ;};defer _gdc .Body .Close ();_gcg ,_fbe :=_b .ReadAll (_gdc .Body );if _fbe !=nil {return nil ,_fbe ;};if _gdc .StatusCode !=_a .StatusOK {return nil ,_gg .Errorf ("\u0075\u006e\u0065x\u0070\u0065\u0063\u0074e\u0064\u0020\u0048\u0054\u0054\u0050\u0020s\u0074\u0061\u0074\u0075\u0073\u0020\u0063\u006f\u0064\u0065\u003a\u0020\u0025\u0064",_gdc .StatusCode );};var _fa struct{Version _d .RawValue ;Content _d .RawValue ;};if _ ,_fbe =_d .Unmarshal (_gcg ,&_fa );_fbe !=nil {return nil ,_fbe ;};return _fa .Content .FullBytes ,nil ;};
+func (_aaae *TimestampClient )GetEncodedToken (serverURL string ,req *_aee .Request )([]byte ,error ){if serverURL ==""{return nil ,_b .Errorf ("\u006d\u0075\u0073\u0074\u0020\u0070r\u006f\u0076\u0069\u0064\u0065\u0020\u0074\u0069\u006d\u0065\u0073\u0074\u0061m\u0070\u0020\u0073\u0065\u0072\u0076\u0065r\u0020\u0055\u0052\u004c");};if req ==nil {return nil ,_b .Errorf ("\u0074\u0069\u006de\u0073\u0074\u0061\u006dp\u0020\u0072\u0065\u0071\u0075\u0065\u0073t\u0020\u0063\u0061\u006e\u006e\u006f\u0074\u0020\u0062\u0065\u0020\u006e\u0069\u006c");};_cc ,_bg :=req .Marshal ();if _bg !=nil {return nil ,_bg ;};_fed :=_aaae .HTTPClient ;if _fed ==nil {_fed =_cdc ();};_dc ,_bg :=_fed .Post (serverURL ,"a\u0070\u0070\u006c\u0069\u0063\u0061t\u0069\u006f\u006e\u002f\u0074\u0069\u006d\u0065\u0073t\u0061\u006d\u0070-\u0071u\u0065\u0072\u0079",_c .NewBuffer (_cc ));if _bg !=nil {return nil ,_bg ;};defer _dc .Body .Close ();_ef ,_bg :=_egc .ReadAll (_dc .Body );if _bg !=nil {return nil ,_bg ;};if _dc .StatusCode !=_cd .StatusOK {return nil ,_b .Errorf ("\u0075\u006e\u0065x\u0070\u0065\u0063\u0074e\u0064\u0020\u0048\u0054\u0054\u0050\u0020s\u0074\u0061\u0074\u0075\u0073\u0020\u0063\u006f\u0064\u0065\u003a\u0020\u0025\u0064",_dc .StatusCode );};var _abf struct{Version _g .RawValue ;Content _g .RawValue ;};if _ ,_bg =_g .Unmarshal (_ef ,&_abf );_bg !=nil {return nil ,_bg ;};return _abf .Content .FullBytes ,nil ;};
+
+// NewOCSPClient returns a new OCSP client.
+func NewOCSPClient ()*OCSPClient {return &OCSPClient {HTTPClient :_cdc (),Hash :_e .SHA1 }};
 
 // NewCertClient returns a new certificate client.
-func NewCertClient ()*CertClient {return &CertClient {HTTPClient :_eef ()}};
+func NewCertClient ()*CertClient {return &CertClient {HTTPClient :_cdc ()}};
+
+// NewCRLClient returns a new CRL client.
+func NewCRLClient ()*CRLClient {return &CRLClient {HTTPClient :_cdc ()}};
+
+// TimestampClient represents a RFC 3161 timestamp client.
+// It is used to obtain signed tokens from timestamp authority servers.
+type TimestampClient struct{
+
+// HTTPClient is the HTTP client used to make timestamp requests.
+// By default, an HTTP client with a 5 second timeout per request is used.
+HTTPClient *_cd .Client ;};
+
+// MakeRequest makes a OCSP request to the specified server and returns
+// the parsed and raw responses. If a server URL is not provided, it is
+// extracted from the certificate.
+func (_dba *OCSPClient )MakeRequest (serverURL string ,cert ,issuer *_ag .Certificate )(*_cg .Response ,[]byte ,error ){if _dba .HTTPClient ==nil {_dba .HTTPClient =_cdc ();};if serverURL ==""{if len (cert .OCSPServer )==0{return nil ,nil ,_eg .New ("\u0063e\u0072\u0074i\u0066\u0069\u0063a\u0074\u0065\u0020\u0064\u006f\u0065\u0073 \u006e\u006f\u0074\u0020\u0073\u0070e\u0063\u0069\u0066\u0079\u0020\u0061\u006e\u0079\u0020\u004f\u0043S\u0050\u0020\u0073\u0065\u0072\u0076\u0065\u0072\u0073");};serverURL =cert .OCSPServer [0];};_bcb ,_fge :=_cg .CreateRequest (cert ,issuer ,&_cg .RequestOptions {Hash :_dba .Hash });if _fge !=nil {return nil ,nil ,_fge ;};_ab ,_fge :=_dba .HTTPClient .Post (serverURL ,"\u0061p\u0070\u006c\u0069\u0063\u0061\u0074\u0069\u006f\u006e\u002f\u006fc\u0073\u0070\u002d\u0072\u0065\u0071\u0075\u0065\u0073\u0074",_c .NewReader (_bcb ));if _fge !=nil {return nil ,nil ,_fge ;};defer _ab .Body .Close ();_aaa ,_fge :=_egc .ReadAll (_ab .Body );if _fge !=nil {return nil ,nil ,_fge ;};if _da ,_ :=_ee .Decode (_aaa );_da !=nil {_aaa =_da .Bytes ;};_ca ,_fge :=_cg .ParseResponseForCert (_aaa ,cert ,issuer );if _fge !=nil {return nil ,nil ,_fge ;};return _ca ,_aaa ,nil ;};
+
+// NewTimestampClient returns a new timestamp client.
+func NewTimestampClient ()*TimestampClient {return &TimestampClient {HTTPClient :_cdc ()}};
+
+// IsCA returns true if the provided certificate appears to be a CA certificate.
+func (_ed *CertClient )IsCA (cert *_ag .Certificate )bool {return cert .IsCA &&_c .Equal (cert .RawIssuer ,cert .RawSubject );};func _cdc ()*_cd .Client {return &_cd .Client {Timeout :5*_f .Second }};
+
+// OCSPClient represents a OCSP (Online Certificate Status Protocol) client.
+// It is used to request revocation data from OCSP servers.
+type OCSPClient struct{
+
+// HTTPClient is the HTTP client used to make OCSP requests.
+// By default, an HTTP client with a 5 second timeout per request is used.
+HTTPClient *_cd .Client ;
+
+// Hash is the hash function  used when constructing the OCSP
+// requests. If zero, SHA-1 will be used.
+Hash _e .Hash ;};
+
+// CRLClient represents a CRL (Certificate revocation list) client.
+// It is used to request revocation data from CRL servers.
+type CRLClient struct{
+
+// HTTPClient is the HTTP client used to make CRL requests.
+// By default, an HTTP client with a 5 second timeout per request is used.
+HTTPClient *_cd .Client ;};
+
+// GetIssuer retrieves the issuer of the provided certificate.
+func (_bf *CertClient )GetIssuer (cert *_ag .Certificate )(*_ag .Certificate ,error ){for _ ,_bc :=range cert .IssuingCertificateURL {_d ,_fg :=_bf .Get (_bc );if _fg !=nil {_aa .Log .Debug ("\u0057\u0041\u0052\u004e\u003a\u0020\u0063\u006f\u0075\u006c\u0064\u0020\u006e\u006f\u0074 \u0064\u006f\u0077\u006e\u006c\u006f\u0061\u0064\u0020\u0069\u0073\u0073\u0075e\u0072\u0020\u0066\u006f\u0072\u0020\u0063\u0065\u0072\u0074\u0069\u0066ic\u0061\u0074\u0065\u0020\u0025\u0076\u003a\u0020\u0025\u0076",cert .Subject .CommonName ,_fg );continue ;};return _d ,nil ;};return nil ,_b .Errorf ("\u0069\u0073\u0073\u0075e\u0072\u0020\u0063\u0065\u0072\u0074\u0069\u0066\u0069\u0063a\u0074e\u0020\u006e\u006f\u0074\u0020\u0066\u006fu\u006e\u0064");};
