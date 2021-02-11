@@ -9,4 +9,4 @@
 // Use of this source code is governed by the UniDoc End User License Agreement
 // terms that can be accessed at https://unidoc.io/eula/
 
-package tests ;
+package bench ;

@@ -10,96 +10,96 @@
 // terms that can be accessed at https://unidoc.io/eula/
 
 // Package common contains common properties used by the subpackages.
-package common ;import (_c "fmt";_bc "io";_fe "os";_a "path/filepath";_f "runtime";_bg "time";);
+package common ;import (_f "fmt";_af "io";_ab "os";_a "path/filepath";_d "runtime";_fc "time";);
 
-// Notice logs notice message.
-func (_dd ConsoleLogger )Notice (format string ,args ...interface{}){if _dd .LogLevel >=LogLevelNotice {_gfg :="\u005bN\u004f\u0054\u0049\u0043\u0045\u005d ";_dd .output (_fe .Stdout ,_gfg ,format ,args ...);};};
-
-// Error logs error message.
-func (_ae ConsoleLogger )Error (format string ,args ...interface{}){if _ae .LogLevel >=LogLevelError {_gf :="\u005b\u0045\u0052\u0052\u004f\u0052\u005d\u0020";_ae .output (_fe .Stdout ,_gf ,format ,args ...);};};
-
-// NewConsoleLogger creates new console logger.
-func NewConsoleLogger (logLevel LogLevel )*ConsoleLogger {return &ConsoleLogger {LogLevel :logLevel }};
-
-// UtcTimeFormat returns a formatted string describing a UTC timestamp.
-func UtcTimeFormat (t _bg .Time )string {return t .Format (_bb )+"\u0020\u0055\u0054\u0043"};
-
-// Trace logs trace message.
-func (_fb WriterLogger )Trace (format string ,args ...interface{}){if _fb .LogLevel >=LogLevelTrace {_gdb :="\u005b\u0054\u0052\u0041\u0043\u0045\u005d\u0020";_fb .logToWriter (_fb .Output ,_gdb ,format ,args ...);};};
-
-// SetLogger sets 'logger' to be used by the unidoc unipdf library.
-func SetLogger (logger Logger ){Log =logger };const _beg =25;
+// Debug logs debug message.
+func (_da ConsoleLogger )Debug (format string ,args ...interface{}){if _da .LogLevel >=LogLevelDebug {_ea :="\u005b\u0044\u0045\u0042\u0055\u0047\u005d\u0020";_da .output (_ab .Stdout ,_ea ,format ,args ...);};};
 
 // Notice does nothing for dummy logger.
 func (DummyLogger )Notice (format string ,args ...interface{}){};
 
-// LogLevel is the verbosity level for logging.
-type LogLevel int ;
+// IsLogLevel returns true if log level is greater or equal than `level`.
+// Can be used to avoid resource intensive calls to loggers.
+func (_cbe ConsoleLogger )IsLogLevel (level LogLevel )bool {return _cbe .LogLevel >=level };
 
-// Error does nothing for dummy logger.
-func (DummyLogger )Error (format string ,args ...interface{}){};const _dbg =23;func (_gbf ConsoleLogger )output (_dba _bc .Writer ,_dde string ,_cb string ,_ff ...interface{}){_cga (_dba ,_dde ,_cb ,_ff ...);};
-
-// Debug logs debug message.
-func (_afa WriterLogger )Debug (format string ,args ...interface{}){if _afa .LogLevel >=LogLevelDebug {_bd :="\u005b\u0044\u0045\u0042\u0055\u0047\u005d\u0020";_afa .logToWriter (_afa .Output ,_bd ,format ,args ...);};};func _cga (_bcd _bc .Writer ,_cgc string ,_bf string ,_agfc ...interface{}){_ ,_gdbf ,_ab ,_gc :=_f .Caller (3);if !_gc {_gdbf ="\u003f\u003f\u003f";_ab =0;}else {_gdbf =_a .Base (_gdbf );};_acd :=_c .Sprintf ("\u0025s\u0020\u0025\u0073\u003a\u0025\u0064 ",_cgc ,_gdbf ,_ab )+_bf +"\u000a";_c .Fprintf (_bcd ,_acd ,_agfc ...);};
-
-// NewWriterLogger creates new 'writer' logger.
-func NewWriterLogger (logLevel LogLevel ,writer _bc .Writer )*WriterLogger {_agf :=WriterLogger {Output :writer ,LogLevel :logLevel };return &_agf ;};const _aac =2021;
-
-// Debug logs debug message.
-func (_bcb ConsoleLogger )Debug (format string ,args ...interface{}){if _bcb .LogLevel >=LogLevelDebug {_ag :="\u005b\u0044\u0045\u0042\u0055\u0047\u005d\u0020";_bcb .output (_fe .Stdout ,_ag ,format ,args ...);};};var ReleasedAt =_bg .Date (_aac ,_gbg ,_beg ,_dbg ,_gcf ,0,0,_bg .UTC );
+// Notice logs notice message.
+func (_dd ConsoleLogger )Notice (format string ,args ...interface{}){if _dd .LogLevel >=LogLevelNotice {_ae :="\u005bN\u004f\u0054\u0049\u0043\u0045\u005d ";_dd .output (_ab .Stdout ,_ae ,format ,args ...);};};
 
 // IsLogLevel returns true from dummy logger.
 func (DummyLogger )IsLogLevel (level LogLevel )bool {return true };
 
-// WriterLogger is the logger that writes data to the Output writer
-type WriterLogger struct{LogLevel LogLevel ;Output _bc .Writer ;};
-
-// Logger is the interface used for logging in the unipdf package.
-type Logger interface{Error (_feb string ,_g ...interface{});Warning (_bga string ,_d ...interface{});Notice (_e string ,_gd ...interface{});Info (_dc string ,_fc ...interface{});Debug (_ec string ,_gb ...interface{});Trace (_ca string ,_fec ...interface{});IsLogLevel (_db LogLevel )bool ;};const _gbg =1;
-
-// Info logs info message.
-func (_ac WriterLogger )Info (format string ,args ...interface{}){if _ac .LogLevel >=LogLevelInfo {_fd :="\u005bI\u004e\u0046\u004f\u005d\u0020";_ac .logToWriter (_ac .Output ,_fd ,format ,args ...);};};func (_cbe WriterLogger )logToWriter (_dcg _bc .Writer ,_aa string ,_gbe string ,_bcbc ...interface{}){_cga (_dcg ,_aa ,_gbe ,_bcbc );};const (LogLevelTrace LogLevel =5;LogLevelDebug LogLevel =4;LogLevelInfo LogLevel =3;LogLevelNotice LogLevel =2;LogLevelWarning LogLevel =1;LogLevelError LogLevel =0;);
-
-// Warning logs warning message.
-func (_ef ConsoleLogger )Warning (format string ,args ...interface{}){if _ef .LogLevel >=LogLevelWarning {_af :="\u005b\u0057\u0041\u0052\u004e\u0049\u004e\u0047\u005d\u0020";_ef .output (_fe .Stdout ,_af ,format ,args ...);};};
-
-// Warning does nothing for dummy logger.
-func (DummyLogger )Warning (format string ,args ...interface{}){};var Log Logger =DummyLogger {};
-
-// ConsoleLogger is a logger that writes logs to the 'os.Stdout'
-type ConsoleLogger struct{LogLevel LogLevel ;};
-
 // IsLogLevel returns true if log level is greater or equal than `level`.
 // Can be used to avoid resource intensive calls to loggers.
-func (_fg ConsoleLogger )IsLogLevel (level LogLevel )bool {return _fg .LogLevel >=level };
+func (_dgc WriterLogger )IsLogLevel (level LogLevel )bool {return _dgc .LogLevel >=level };
+
+// Warning logs warning message.
+func (_fd WriterLogger )Warning (format string ,args ...interface{}){if _fd .LogLevel >=LogLevelWarning {_de :="\u005b\u0057\u0041\u0052\u004e\u0049\u004e\u0047\u005d\u0020";_fd .logToWriter (_fd .Output ,_de ,format ,args ...);};};
+
+// Warning logs warning message.
+func (_gaf ConsoleLogger )Warning (format string ,args ...interface{}){if _gaf .LogLevel >=LogLevelWarning {_dfb :="\u005b\u0057\u0041\u0052\u004e\u0049\u004e\u0047\u005d\u0020";_gaf .output (_ab .Stdout ,_dfb ,format ,args ...);};};const _bde ="\u0032\u0020\u004aan\u0075\u0061\u0072\u0079\u0020\u0032\u0030\u0030\u0036\u0020\u0061\u0074\u0020\u0031\u0035\u003a\u0030\u0034";
+
+// Debug logs debug message.
+func (_fa WriterLogger )Debug (format string ,args ...interface{}){if _fa .LogLevel >=LogLevelDebug {_ba :="\u005b\u0044\u0045\u0042\u0055\u0047\u005d\u0020";_fa .logToWriter (_fa .Output ,_ba ,format ,args ...);};};
 
 // Trace logs trace message.
-func (_ee ConsoleLogger )Trace (format string ,args ...interface{}){if _ee .LogLevel >=LogLevelTrace {_ed :="\u005b\u0054\u0052\u0041\u0043\u0045\u005d\u0020";_ee .output (_fe .Stdout ,_ed ,format ,args ...);};};const Version ="\u0033\u002e\u0031\u0038\u002e\u0030";
+func (_ee ConsoleLogger )Trace (format string ,args ...interface{}){if _ee .LogLevel >=LogLevelTrace {_dcg :="\u005b\u0054\u0052\u0041\u0043\u0045\u005d\u0020";_ee .output (_ab .Stdout ,_dcg ,format ,args ...);};};const _gbc =2;const _ccb =30;
+
+// SetLogger sets 'logger' to be used by the unidoc unipdf library.
+func SetLogger (logger Logger ){Log =logger };
+
+// Error logs error message.
+func (_ece WriterLogger )Error (format string ,args ...interface{}){if _ece .LogLevel >=LogLevelError {_bfd :="\u005b\u0045\u0052\u0052\u004f\u0052\u005d\u0020";_ece .logToWriter (_ece .Output ,_bfd ,format ,args ...);};};
 
 // DummyLogger does nothing.
 type DummyLogger struct{};
 
-// Trace does nothing for dummy logger.
-func (DummyLogger )Trace (format string ,args ...interface{}){};
+// LogLevel is the verbosity level for logging.
+type LogLevel int ;const _ac =16;
 
-// IsLogLevel returns true if log level is greater or equal than `level`.
-// Can be used to avoid resource intensive calls to loggers.
-func (_cg WriterLogger )IsLogLevel (level LogLevel )bool {return _cg .LogLevel >=level };
+// Error does nothing for dummy logger.
+func (DummyLogger )Error (format string ,args ...interface{}){};
 
-// Error logs error message.
-func (_eca WriterLogger )Error (format string ,args ...interface{}){if _eca .LogLevel >=LogLevelError {_ddc :="\u005b\u0045\u0052\u0052\u004f\u0052\u005d\u0020";_eca .logToWriter (_eca .Output ,_ddc ,format ,args ...);};};
+// WriterLogger is the logger that writes data to the Output writer
+type WriterLogger struct{LogLevel LogLevel ;Output _af .Writer ;};
 
-// Warning logs warning message.
-func (_gfa WriterLogger )Warning (format string ,args ...interface{}){if _gfa .LogLevel >=LogLevelWarning {_fa :="\u005b\u0057\u0041\u0052\u004e\u0049\u004e\u0047\u005d\u0020";_gfa .logToWriter (_gfa .Output ,_fa ,format ,args ...);};};
+// Warning does nothing for dummy logger.
+func (DummyLogger )Warning (format string ,args ...interface{}){};
+
+// UtcTimeFormat returns a formatted string describing a UTC timestamp.
+func UtcTimeFormat (t _fc .Time )string {return t .Format (_bde )+"\u0020\u0055\u0054\u0043"};
 
 // Debug does nothing for dummy logger.
-func (DummyLogger )Debug (format string ,args ...interface{}){};const _bb ="\u0032\u0020\u004aan\u0075\u0061\u0072\u0079\u0020\u0032\u0030\u0030\u0036\u0020\u0061\u0074\u0020\u0031\u0035\u003a\u0030\u0034";const _gcf =30;
+func (DummyLogger )Debug (format string ,args ...interface{}){};const _ffa =2021;
 
-// Info logs info message.
-func (_dbd ConsoleLogger )Info (format string ,args ...interface{}){if _dbd .LogLevel >=LogLevelInfo {_feg :="\u005bI\u004e\u0046\u004f\u005d\u0020";_dbd .output (_fe .Stdout ,_feg ,format ,args ...);};};
+// NewWriterLogger creates new 'writer' logger.
+func NewWriterLogger (logLevel LogLevel ,writer _af .Writer )*WriterLogger {_dfc :=WriterLogger {Output :writer ,LogLevel :logLevel };return &_dfc ;};
 
-// Notice logs notice message.
-func (_be WriterLogger )Notice (format string ,args ...interface{}){if _be .LogLevel >=LogLevelNotice {_aed :="\u005bN\u004f\u0054\u0049\u0043\u0045\u005d ";_be .logToWriter (_be .Output ,_aed ,format ,args ...);};};
+// Error logs error message.
+func (_ec ConsoleLogger )Error (format string ,args ...interface{}){if _ec .LogLevel >=LogLevelError {_fg :="\u005b\u0045\u0052\u0052\u004f\u0052\u005d\u0020";_ec .output (_ab .Stdout ,_fg ,format ,args ...);};};
 
 // Info does nothing for dummy logger.
 func (DummyLogger )Info (format string ,args ...interface{}){};
+
+// Logger is the interface used for logging in the unipdf package.
+type Logger interface{Error (_e string ,_dc ...interface{});Warning (_c string ,_cc ...interface{});Notice (_ff string ,_g ...interface{});Info (_ca string ,_db ...interface{});Debug (_ga string ,_cb ...interface{});Trace (_df string ,_dff ...interface{});IsLogLevel (_bf LogLevel )bool ;};var ReleasedAt =_fc .Date (_ffa ,_gbc ,_aa ,_ac ,_ccb ,0,0,_fc .UTC );
+
+// Trace logs trace message.
+func (_fee WriterLogger )Trace (format string ,args ...interface{}){if _fee .LogLevel >=LogLevelTrace {_bb :="\u005b\u0054\u0052\u0041\u0043\u0045\u005d\u0020";_fee .logToWriter (_fee .Output ,_bb ,format ,args ...);};};const _aa =10;func _ffe (_gg _af .Writer ,_fff string ,_afc string ,_gf ...interface{}){_ ,_ggd ,_bdf ,_aec :=_d .Caller (3);if !_aec {_ggd ="\u003f\u003f\u003f";_bdf =0;}else {_ggd =_a .Base (_ggd );};_ag :=_f .Sprintf ("\u0025s\u0020\u0025\u0073\u003a\u0025\u0064 ",_fff ,_ggd ,_bdf )+_afc +"\u000a";_f .Fprintf (_gg ,_ag ,_gf ...);};const (LogLevelTrace LogLevel =5;LogLevelDebug LogLevel =4;LogLevelInfo LogLevel =3;LogLevelNotice LogLevel =2;LogLevelWarning LogLevel =1;LogLevelError LogLevel =0;);func (_gb WriterLogger )logToWriter (_ge _af .Writer ,_gag string ,_fde string ,_def ...interface{}){_ffe (_ge ,_gag ,_fde ,_def );};
+
+// ConsoleLogger is a logger that writes logs to the 'os.Stdout'
+type ConsoleLogger struct{LogLevel LogLevel ;};
+
+// Notice logs notice message.
+func (_dde WriterLogger )Notice (format string ,args ...interface{}){if _dde .LogLevel >=LogLevelNotice {_ecc :="\u005bN\u004f\u0054\u0049\u0043\u0045\u005d ";_dde .logToWriter (_dde .Output ,_ecc ,format ,args ...);};};const Version ="\u0033\u002e\u0031\u0039\u002e\u0030";
+
+// Info logs info message.
+func (_cf WriterLogger )Info (format string ,args ...interface{}){if _cf .LogLevel >=LogLevelInfo {_gac :="\u005bI\u004e\u0046\u004f\u005d\u0020";_cf .logToWriter (_cf .Output ,_gac ,format ,args ...);};};
+
+// NewConsoleLogger creates new console logger.
+func NewConsoleLogger (logLevel LogLevel )*ConsoleLogger {return &ConsoleLogger {LogLevel :logLevel }};
+
+// Trace does nothing for dummy logger.
+func (DummyLogger )Trace (format string ,args ...interface{}){};var Log Logger =DummyLogger {};
+
+// Info logs info message.
+func (_dg ConsoleLogger )Info (format string ,args ...interface{}){if _dg .LogLevel >=LogLevelInfo {_fe :="\u005bI\u004e\u0046\u004f\u005d\u0020";_dg .output (_ab .Stdout ,_fe ,format ,args ...);};};func (_eg ConsoleLogger )output (_ef _af .Writer ,_dfa string ,_bd string ,_gc ...interface{}){_ffe (_ef ,_dfa ,_bd ,_gc ...);};
