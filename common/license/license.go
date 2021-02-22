@@ -10,24 +10,25 @@
 // terms that can be accessed at https://unidoc.io/eula/
 
 // Package license helps manage commercial licenses and check if they are valid for the version of unipdf used.
-package license ;import _aa "github.com/unidoc/unipdf/v3/internal/license";
+package license ;import _e "github.com/unidoc/unipdf/v3/internal/license";
 
 // SetMeteredKey sets the metered API key required for SaaS operation.
 // Document usage is reported periodically for the product to function correctly.
-func SetMeteredKey (apiKey string )error {return _aa .SetMeteredKey (apiKey )};
+func SetMeteredKey (apiKey string )error {return _e .SetMeteredKey (apiKey )};
+
+// GetLicenseKey returns the currently loaded license key.
+func GetLicenseKey ()*LicenseKey {return _e .GetLicenseKey ()};
+
+// MakeUnlicensedKey returns a default key.
+func MakeUnlicensedKey ()*LicenseKey {return _e .MakeUnlicensedKey ()};
 
 // GetMeteredState checks the currently used metered document usage status,
 // documents used and credits available.
-func GetMeteredState ()(_aa .MeteredStatus ,error ){return _aa .GetMeteredState ()};
+func GetMeteredState ()(_e .MeteredStatus ,error ){return _e .GetMeteredState ()};const (LicenseTierUnlicensed =_e .LicenseTierUnlicensed ;LicenseTierCommunity =_e .LicenseTierCommunity ;LicenseTierIndividual =_e .LicenseTierIndividual ;LicenseTierBusiness =_e .LicenseTierBusiness ;
+);
 
 // LicenseKey represents a loaded license key.
-type LicenseKey =_aa .LicenseKey ;
-
-// GetLicenseKey returns the currently loaded license key.
-func GetLicenseKey ()*LicenseKey {return _aa .GetLicenseKey ()};
+type LicenseKey =_e .LicenseKey ;
 
 // SetLicenseKey sets and validates the license key.
-func SetLicenseKey (content string ,customerName string )error {return _aa .SetLicenseKey (content ,customerName );};const (LicenseTierUnlicensed =_aa .LicenseTierUnlicensed ;LicenseTierCommunity =_aa .LicenseTierCommunity ;LicenseTierIndividual =_aa .LicenseTierIndividual ;LicenseTierBusiness =_aa .LicenseTierBusiness ;);
-
-// MakeUnlicensedKey returns a default key.
-func MakeUnlicensedKey ()*LicenseKey {return _aa .MakeUnlicensedKey ()};
+func SetLicenseKey (content string ,customerName string )error {return _e .SetLicenseKey (content ,customerName );};
