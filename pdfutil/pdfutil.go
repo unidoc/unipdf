@@ -9,7 +9,7 @@
 // Use of this source code is governed by the UniDoc End User License Agreement
 // terms that can be accessed at https://unidoc.io/eula/
 
-package pdfutil ;import (_a "github.com/unidoc/unipdf/v3/common";_d "github.com/unidoc/unipdf/v3/contentstream";_ag "github.com/unidoc/unipdf/v3/contentstream/draw";_aca "github.com/unidoc/unipdf/v3/core";_ac "github.com/unidoc/unipdf/v3/model";);
+package pdfutil ;import (_ed "github.com/unidoc/unipdf/v3/common";_aa "github.com/unidoc/unipdf/v3/contentstream";_a "github.com/unidoc/unipdf/v3/contentstream/draw";_c "github.com/unidoc/unipdf/v3/core";_ef "github.com/unidoc/unipdf/v3/model";);
 
 // NormalizePage performs the following operations on the passed in page:
 // - Normalize the page rotation.
@@ -26,10 +26,10 @@ package pdfutil ;import (_a "github.com/unidoc/unipdf/v3/common";_d "github.com/
 // PDF viewer.
 // NOTE: This function does not normalize annotations, outlines other parts
 // that are not part of the basic geometry and page content streams.
-func NormalizePage (page *_ac .PdfPage )error {_c ,_g :=page .GetMediaBox ();if _g !=nil {return _g ;};_f :=page .Rotate ;_de :=_f !=nil &&*_f %360!=0&&*_f %90==0;_c .Normalize ();_ce ,_cc ,_gd ,_ad :=_c .Llx ,_c .Lly ,_c .Width (),_c .Height ();_gg :=_ce !=0||_cc !=0;
-if !_de &&!_gg {return nil ;};_db :=func (_ge ,_adc ,_acc float64 )_ag .BoundingBox {return _ag .Path {Points :[]_ag .Point {_ag .NewPoint (0,0).Rotate (_acc ),_ag .NewPoint (_ge ,0).Rotate (_acc ),_ag .NewPoint (0,_adc ).Rotate (_acc ),_ag .NewPoint (_ge ,_adc ).Rotate (_acc )}}.GetBoundingBox ();
-};_eb :=_d .NewContentCreator ();var _gc float64 ;if _de {_gc =-float64 (*page .Rotate );_gdg :=_db (_gd ,_ad ,_gc );_eb .Translate ((_gdg .Width -_gd )/2+_gd /2,(_gdg .Height -_ad )/2+_ad /2);_eb .RotateDeg (_gc );_eb .Translate (-_gd /2,-_ad /2);_gd ,_ad =_gdg .Width ,_gdg .Height ;
-};if _gg {_eb .Translate (-_ce ,-_cc );};_dg :=_eb .Operations ();_cb ,_g :=_aca .MakeStream (_dg .Bytes (),_aca .NewFlateEncoder ());if _g !=nil {return _g ;};_cd :=_aca .MakeArray (_cb );_cd .Append (page .GetContentStreamObjs ()...);*_c =_ac .PdfRectangle {Urx :_gd ,Ury :_ad };
-if _cba :=page .CropBox ;_cba !=nil {_cba .Normalize ();_cee ,_ef ,_fd ,_ggb :=_cba .Llx -_ce ,_cba .Lly -_cc ,_cba .Width (),_cba .Height ();if _de {_dc :=_db (_fd ,_ggb ,_gc );_fd ,_ggb =_dc .Width ,_dc .Height ;};*_cba =_ac .PdfRectangle {Llx :_cee ,Lly :_ef ,Urx :_cee +_fd ,Ury :_ef +_ggb };
-};_a .Log .Debug ("\u0052\u006f\u0074\u0061\u0074\u0065\u003d\u0025\u0066\u00b0\u0020\u004f\u0070\u0073\u003d%\u0071 \u004d\u0065\u0064\u0069\u0061\u0042\u006f\u0078\u003d\u0025\u002e\u0032\u0066",_gc ,_dg ,_c );page .Contents =_cd ;page .Rotate =nil ;
+func NormalizePage (page *_ef .PdfPage )error {_eff ,_ag :=page .GetMediaBox ();if _ag !=nil {return _ag ;};_g :=page .Rotate ;_b :=_g !=nil &&*_g %360!=0&&*_g %90==0;_eff .Normalize ();_cf ,_d ,_f ,_ba :=_eff .Llx ,_eff .Lly ,_eff .Width (),_eff .Height ();
+_df :=_cf !=0||_d !=0;if !_b &&!_df {return nil ;};_aag :=func (_cfe ,_cfc ,_ee float64 )_a .BoundingBox {return _a .Path {Points :[]_a .Point {_a .NewPoint (0,0).Rotate (_ee ),_a .NewPoint (_cfe ,0).Rotate (_ee ),_a .NewPoint (0,_cfc ).Rotate (_ee ),_a .NewPoint (_cfe ,_cfc ).Rotate (_ee )}}.GetBoundingBox ();
+};_cb :=_aa .NewContentCreator ();var _gg float64 ;if _b {_gg =-float64 (*page .Rotate );_fb :=_aag (_f ,_ba ,_gg );_cb .Translate ((_fb .Width -_f )/2+_f /2,(_fb .Height -_ba )/2+_ba /2);_cb .RotateDeg (_gg );_cb .Translate (-_f /2,-_ba /2);_f ,_ba =_fb .Width ,_fb .Height ;
+};if _df {_cb .Translate (-_cf ,-_d );};_ggg :=_cb .Operations ();_fe ,_ag :=_c .MakeStream (_ggg .Bytes (),_c .NewFlateEncoder ());if _ag !=nil {return _ag ;};_eed :=_c .MakeArray (_fe );_eed .Append (page .GetContentStreamObjs ()...);*_eff =_ef .PdfRectangle {Urx :_f ,Ury :_ba };
+if _aab :=page .CropBox ;_aab !=nil {_aab .Normalize ();_cg ,_af ,_fd ,_bf :=_aab .Llx -_cf ,_aab .Lly -_d ,_aab .Width (),_aab .Height ();if _b {_gd :=_aag (_fd ,_bf ,_gg );_fd ,_bf =_gd .Width ,_gd .Height ;};*_aab =_ef .PdfRectangle {Llx :_cg ,Lly :_af ,Urx :_cg +_fd ,Ury :_af +_bf };
+};_ed .Log .Debug ("\u0052\u006f\u0074\u0061\u0074\u0065\u003d\u0025\u0066\u00b0\u0020\u004f\u0070\u0073\u003d%\u0071 \u004d\u0065\u0064\u0069\u0061\u0042\u006f\u0078\u003d\u0025\u002e\u0032\u0066",_gg ,_ggg ,_eff );page .Contents =_eed ;page .Rotate =nil ;
 return nil ;};
