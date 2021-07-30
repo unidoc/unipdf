@@ -10,85 +10,48 @@
 // terms that can be accessed at https://unidoc.io/eula/
 
 // Package sighandler implements digital signature handlers for PDF signature validation and signing.
-package sighandler ;import (_e "bytes";_be "crypto";_a "crypto/rand";_c "crypto/rsa";_f "crypto/x509";_cc "crypto/x509/pkix";_de "encoding/asn1";_dd "errors";_eb "fmt";_ff "github.com/unidoc/pkcs7";_cf "github.com/unidoc/timestamp";_bg "github.com/unidoc/unipdf/v3/core";
-_eg "github.com/unidoc/unipdf/v3/model";_ea "github.com/unidoc/unipdf/v3/model/sigutil";_d "hash";_ec "time";);
-
-// IsApplicable returns true if the signature handler is applicable for the PdfSignature
-func (_egc *adobePKCS7Detached )IsApplicable (sig *_eg .PdfSignature )bool {if sig ==nil ||sig .Filter ==nil ||sig .SubFilter ==nil {return false ;};return (*sig .Filter =="A\u0064\u006f\u0062\u0065\u002e\u0050\u0050\u004b\u004d\u0053"||*sig .Filter =="\u0041\u0064\u006f\u0062\u0065\u002e\u0050\u0050\u004b\u004c\u0069\u0074\u0065")&&*sig .SubFilter =="\u0061\u0064\u0062\u0065.p\u006b\u0063\u0073\u0037\u002e\u0064\u0065\u0074\u0061\u0063\u0068\u0065\u0064";
-};
-
-// Sign sets the Contents fields for the PdfSignature.
-func (_bdg *adobeX509RSASHA1 )Sign (sig *_eg .PdfSignature ,digest _eg .Hasher )error {var _ae []byte ;var _cfc error ;if _bdg ._db !=nil {_ae ,_cfc =_bdg ._db (sig ,digest );if _cfc !=nil {return _cfc ;};}else {_ccb ,_ed :=digest .(_d .Hash );if !_ed {return _dd .New ("\u0068a\u0073h\u0020\u0074\u0079\u0070\u0065\u0020\u0065\u0072\u0072\u006f\u0072");
-};_bde ,_ :=_fdc (_bdg ._fc .SignatureAlgorithm );_ae ,_cfc =_c .SignPKCS1v15 (_a .Reader ,_bdg ._df ,_bde ,_ccb .Sum (nil ));if _cfc !=nil {return _cfc ;};};_ae ,_cfc =_de .Marshal (_ae );if _cfc !=nil {return _cfc ;};sig .Contents =_bg .MakeHexString (string (_ae ));
-return nil ;};type timestampInfo struct{Version int ;Policy _de .RawValue ;MessageImprint struct{HashAlgorithm _cc .AlgorithmIdentifier ;HashedMessage []byte ;};SerialNumber _de .RawValue ;GeneralizedTime _ec .Time ;};
-
-// InitSignature initialises the PdfSignature.
-func (_gd *adobePKCS7Detached )InitSignature (sig *_eg .PdfSignature )error {if !_gd ._fd {if _gd ._ccd ==nil {return _dd .New ("c\u0065\u0072\u0074\u0069\u0066\u0069c\u0061\u0074\u0065\u0020\u006d\u0075\u0073\u0074\u0020n\u006f\u0074\u0020b\u0065 \u006e\u0069\u006c");
-};if _gd ._g ==nil {return _dd .New ("\u0070\u0072\u0069\u0076\u0061\u0074\u0065\u004b\u0065\u0079\u0020m\u0075\u0073\u0074\u0020\u006e\u006f\u0074\u0020\u0062\u0065 \u006e\u0069\u006c");};};_fa :=*_gd ;sig .Handler =&_fa ;sig .Filter =_bg .MakeName ("\u0041\u0064\u006f\u0062\u0065\u002e\u0050\u0050\u004b\u004c\u0069\u0074\u0065");
-sig .SubFilter =_bg .MakeName ("\u0061\u0064\u0062\u0065.p\u006b\u0063\u0073\u0037\u002e\u0064\u0065\u0074\u0061\u0063\u0068\u0065\u0064");sig .Reference =nil ;_da ,_cg :=_fa .NewDigest (sig );if _cg !=nil {return _cg ;};_da .Write ([]byte ("\u0063\u0061\u006c\u0063\u0075\u006ca\u0074\u0065\u0020\u0074\u0068\u0065\u0020\u0043\u006f\u006e\u0074\u0065\u006et\u0073\u0020\u0066\u0069\u0065\u006c\u0064 \u0073\u0069\u007a\u0065"));
-return _fa .Sign (sig ,_da );};
-
-// SignFunc represents a custom signing function. The function should return
-// the computed signature.
-type SignFunc func (_ge *_eg .PdfSignature ,_bfe _eg .Hasher )([]byte ,error );
-
-// NewDigest creates a new digest.
-func (_bd *adobeX509RSASHA1 )NewDigest (sig *_eg .PdfSignature )(_eg .Hasher ,error ){_ad ,_ee :=_bd .getCertificate (sig );if _ee !=nil {return nil ,_ee ;};_agac ,_ :=_fdc (_ad .SignatureAlgorithm );return _agac .New (),nil ;};
+package sighandler ;import (_a "bytes";_d "crypto";_aa "crypto/rand";_bac "crypto/rsa";_c "crypto/x509";_ef "crypto/x509/pkix";_e "encoding/asn1";_fb "errors";_f "fmt";_cg "github.com/unidoc/pkcs7";_g "github.com/unidoc/timestamp";_db "github.com/unidoc/unipdf/v3/core";
+_ea "github.com/unidoc/unipdf/v3/model";_fc "github.com/unidoc/unipdf/v3/model/sigutil";_ba "hash";_bb "time";);
 
 // NewAdobeX509RSASHA1 creates a new Adobe.PPKMS/Adobe.PPKLite
 // adbe.x509.rsa_sha1 signature handler. Both the private key and the
 // certificate can be nil for the signature validation.
-func NewAdobeX509RSASHA1 (privateKey *_c .PrivateKey ,certificate *_f .Certificate )(_eg .SignatureHandler ,error ){return &adobeX509RSASHA1 {_fc :certificate ,_df :privateKey },nil ;};
+func NewAdobeX509RSASHA1 (privateKey *_bac .PrivateKey ,certificate *_c .Certificate )(_ea .SignatureHandler ,error ){return &adobeX509RSASHA1 {_fba :certificate ,_bf :privateKey },nil ;};
 
-// NewAdobePKCS7Detached creates a new Adobe.PPKMS/Adobe.PPKLite adbe.pkcs7.detached signature handler.
-// Both parameters may be nil for the signature validation.
-func NewAdobePKCS7Detached (privateKey *_c .PrivateKey ,certificate *_f .Certificate )(_eg .SignatureHandler ,error ){return &adobePKCS7Detached {_ccd :certificate ,_g :privateKey },nil ;};
+// NewDigest creates a new digest.
+func (_cf *adobePKCS7Detached )NewDigest (sig *_ea .PdfSignature )(_ea .Hasher ,error ){return _a .NewBuffer (nil ),nil ;};
 
 // NewAdobeX509RSASHA1CustomWithOpts creates a new Adobe.PPKMS/Adobe.PPKLite
 // adbe.x509.rsa_sha1 signature handler with a custom signing function. The
 // handler is configured based on the provided options. If no options are
 // provided, default options will be used. Both the certificate and the sign
 // function can be nil for the signature validation.
-func NewAdobeX509RSASHA1CustomWithOpts (certificate *_f .Certificate ,signFunc SignFunc ,opts *AdobeX509RSASHA1Opts )(_eg .SignatureHandler ,error ){if opts ==nil {opts =&AdobeX509RSASHA1Opts {};};return &adobeX509RSASHA1 {_fc :certificate ,_db :signFunc ,_bb :opts .EstimateSize },nil ;
+func NewAdobeX509RSASHA1CustomWithOpts (certificate *_c .Certificate ,signFunc SignFunc ,opts *AdobeX509RSASHA1Opts )(_ea .SignatureHandler ,error ){if opts ==nil {opts =&AdobeX509RSASHA1Opts {};};return &adobeX509RSASHA1 {_fba :certificate ,_efd :signFunc ,_bbf :opts .EstimateSize },nil ;
+};
+
+// NewAdobeX509RSASHA1Custom creates a new Adobe.PPKMS/Adobe.PPKLite
+// adbe.x509.rsa_sha1 signature handler with a custom signing function. Both the
+// certificate and the sign function can be nil for the signature validation.
+// NOTE: the handler will do a mock Sign when initializing the signature in
+// order to estimate the signature size. Use NewAdobeX509RSASHA1CustomWithOpts
+// for configuring the handler to estimate the signature size.
+func NewAdobeX509RSASHA1Custom (certificate *_c .Certificate ,signFunc SignFunc )(_ea .SignatureHandler ,error ){return &adobeX509RSASHA1 {_fba :certificate ,_efd :signFunc },nil ;};
+
+// IsApplicable returns true if the signature handler is applicable for the PdfSignature.
+func (_eec *adobeX509RSASHA1 )IsApplicable (sig *_ea .PdfSignature )bool {if sig ==nil ||sig .Filter ==nil ||sig .SubFilter ==nil {return false ;};return (*sig .Filter =="A\u0064\u006f\u0062\u0065\u002e\u0050\u0050\u004b\u004d\u0053"||*sig .Filter =="\u0041\u0064\u006f\u0062\u0065\u002e\u0050\u0050\u004b\u004c\u0069\u0074\u0065")&&*sig .SubFilter =="\u0061d\u0062e\u002e\u0078\u0035\u0030\u0039.\u0072\u0073a\u005f\u0073\u0068\u0061\u0031";
 };
 
 // InitSignature initialises the PdfSignature.
-func (_bae *docTimeStamp )InitSignature (sig *_eg .PdfSignature )error {_afb :=*_bae ;sig .Handler =&_afb ;sig .Filter =_bg .MakeName ("\u0041\u0064\u006f\u0062\u0065\u002e\u0050\u0050\u004b\u004c\u0069\u0074\u0065");sig .SubFilter =_bg .MakeName ("\u0045\u0054\u0053I\u002e\u0052\u0046\u0043\u0033\u0031\u0036\u0031");
-sig .Reference =nil ;if _bae ._ecc > 0{sig .Contents =_bg .MakeHexString (string (make ([]byte ,_bae ._ecc )));}else {_ddb ,_eeb :=_bae .NewDigest (sig );if _eeb !=nil {return _eeb ;};_ddb .Write ([]byte ("\u0063\u0061\u006c\u0063\u0075\u006ca\u0074\u0065\u0020\u0074\u0068\u0065\u0020\u0043\u006f\u006e\u0074\u0065\u006et\u0073\u0020\u0066\u0069\u0065\u006c\u0064 \u0073\u0069\u007a\u0065"));
-if _eeb =_afb .Sign (sig ,_ddb );_eeb !=nil {return _eeb ;};_bae ._ecc =_afb ._ecc ;};return nil ;};
+func (_dc *adobePKCS7Detached )InitSignature (sig *_ea .PdfSignature )error {if !_dc ._ed {if _dc ._cd ==nil {return _fb .New ("c\u0065\u0072\u0074\u0069\u0066\u0069c\u0061\u0074\u0065\u0020\u006d\u0075\u0073\u0074\u0020n\u006f\u0074\u0020b\u0065 \u006e\u0069\u006c");
+};if _dc ._ee ==nil {return _fb .New ("\u0070\u0072\u0069\u0076\u0061\u0074\u0065\u004b\u0065\u0079\u0020m\u0075\u0073\u0074\u0020\u006e\u006f\u0074\u0020\u0062\u0065 \u006e\u0069\u006c");};};_ge :=*_dc ;sig .Handler =&_ge ;sig .Filter =_db .MakeName ("\u0041\u0064\u006f\u0062\u0065\u002e\u0050\u0050\u004b\u004c\u0069\u0074\u0065");
+sig .SubFilter =_db .MakeName ("\u0061\u0064\u0062\u0065.p\u006b\u0063\u0073\u0037\u002e\u0064\u0065\u0074\u0061\u0063\u0068\u0065\u0064");sig .Reference =nil ;_cc ,_fcd :=_ge .NewDigest (sig );if _fcd !=nil {return _fcd ;};_cc .Write ([]byte ("\u0063\u0061\u006c\u0063\u0075\u006ca\u0074\u0065\u0020\u0074\u0068\u0065\u0020\u0043\u006f\u006e\u0074\u0065\u006et\u0073\u0020\u0066\u0069\u0065\u006c\u0064 \u0073\u0069\u007a\u0065"));
+return _ge .Sign (sig ,_cc );};type adobePKCS7Detached struct{_ee *_bac .PrivateKey ;_cd *_c .Certificate ;_ed bool ;_bbe int ;};func (_agf *adobeX509RSASHA1 )getCertificate (_ad *_ea .PdfSignature )(*_c .Certificate ,error ){if _agf ._fba !=nil {return _agf ._fba ,nil ;
+};_dd ,_eb :=_ad .GetCerts ();if _eb !=nil {return nil ,_eb ;};return _dd [0],nil ;};
 
-// Sign sets the Contents fields for the PdfSignature.
-func (_eea *docTimeStamp )Sign (sig *_eg .PdfSignature ,digest _eg .Hasher )error {_aecb ,_afg :=_ea .NewTimestampRequest (digest .(*_e .Buffer ),&_cf .RequestOptions {Hash :_eea ._bgb ,Certificates :true });if _afg !=nil {return _afg ;};_fef :=_ea .NewTimestampClient ();
-_fefe ,_afg :=_fef .GetEncodedToken (_eea ._ffg ,_aecb );if _afg !=nil {return _afg ;};_ddd :=len (_fefe );if _eea ._ecc > 0&&_ddd > _eea ._ecc {return _eg .ErrSignNotEnoughSpace ;};if _ddd > 0{_eea ._ecc =_ddd +128;};sig .Contents =_bg .MakeHexString (string (_fefe ));
-return nil ;};
-
-// Validate validates PdfSignature.
-func (_af *adobePKCS7Detached )Validate (sig *_eg .PdfSignature ,digest _eg .Hasher )(_eg .SignatureValidationResult ,error ){_ga :=sig .Contents .Bytes ();_fe ,_bc :=_ff .Parse (_ga );if _bc !=nil {return _eg .SignatureValidationResult {},_bc ;};_faf :=digest .(*_e .Buffer );
-_fe .Content =_faf .Bytes ();if _bc =_fe .Verify ();_bc !=nil {return _eg .SignatureValidationResult {},_bc ;};return _eg .SignatureValidationResult {IsSigned :true ,IsVerified :true },nil ;};func (_fg *adobeX509RSASHA1 )getCertificate (_aa *_eg .PdfSignature )(*_f .Certificate ,error ){if _fg ._fc !=nil {return _fg ._fc ,nil ;
-};_ab ,_afd :=_aa .GetCerts ();if _afd !=nil {return nil ,_afd ;};return _ab [0],nil ;};
-
-// InitSignature initialises the PdfSignature.
-func (_dba *adobeX509RSASHA1 )InitSignature (sig *_eg .PdfSignature )error {if _dba ._fc ==nil {return _dd .New ("c\u0065\u0072\u0074\u0069\u0066\u0069c\u0061\u0074\u0065\u0020\u006d\u0075\u0073\u0074\u0020n\u006f\u0074\u0020b\u0065 \u006e\u0069\u006c");
-};if _dba ._df ==nil &&_dba ._db ==nil {return _dd .New ("\u006d\u0075\u0073\u0074\u0020\u0070\u0072o\u0076\u0069\u0064e\u0020\u0065\u0069t\u0068\u0065r\u0020\u0061\u0020\u0070\u0072\u0069v\u0061te\u0020\u006b\u0065\u0079\u0020\u006f\u0072\u0020\u0061\u0020\u0073\u0069\u0067\u006e\u0069\u006e\u0067\u0020\u0066\u0075\u006e\u0063\u0074\u0069\u006f\u006e");
-};_gb :=*_dba ;sig .Handler =&_gb ;sig .Filter =_bg .MakeName ("\u0041\u0064\u006f\u0062\u0065\u002e\u0050\u0050\u004b\u004c\u0069\u0074\u0065");sig .SubFilter =_bg .MakeName ("\u0061d\u0062e\u002e\u0078\u0035\u0030\u0039.\u0072\u0073a\u005f\u0073\u0068\u0061\u0031");
-sig .Cert =_bg .MakeString (string (_gb ._fc .Raw ));sig .Reference =nil ;_fdbd ,_aga :=_gb .NewDigest (sig );if _aga !=nil {return _aga ;};_fdbd .Write ([]byte ("\u0063\u0061\u006c\u0063\u0075\u006ca\u0074\u0065\u0020\u0074\u0068\u0065\u0020\u0043\u006f\u006e\u0074\u0065\u006et\u0073\u0020\u0066\u0069\u0065\u006c\u0064 \u0073\u0069\u007a\u0065"));
-return _gb .sign (sig ,_fdbd ,_dba ._bb );};func (_fdb *adobePKCS7Detached )getCertificate (_eca *_eg .PdfSignature )(*_f .Certificate ,error ){if _fdb ._ccd !=nil {return _fdb ._ccd ,nil ;};_ag ,_bgg :=_eca .GetCerts ();if _bgg !=nil {return nil ,_bgg ;
-};return _ag [0],nil ;};
-
-// NewEmptyAdobePKCS7Detached creates a new Adobe.PPKMS/Adobe.PPKLite adbe.pkcs7.detached
-// signature handler. The generated signature is empty and of size signatureLen.
-// The signatureLen parameter can be 0 for the signature validation.
-func NewEmptyAdobePKCS7Detached (signatureLen int )(_eg .SignatureHandler ,error ){return &adobePKCS7Detached {_fd :true ,_ca :signatureLen },nil ;};
-
-// NewDocTimeStamp creates a new DocTimeStamp signature handler.
-// Both the timestamp server URL and the hash algorithm can be empty for the
-// signature validation.
-// The following hash algorithms are supported:
-// crypto.SHA1, crypto.SHA256, crypto.SHA384, crypto.SHA512.
-// NOTE: the handler will do a mock Sign when initializing the signature
-// in order to estimate the signature size. Use NewDocTimeStampWithOpts
-// for providing the signature size.
-func NewDocTimeStamp (timestampServerURL string ,hashAlgorithm _be .Hash )(_eg .SignatureHandler ,error ){return &docTimeStamp {_ffg :timestampServerURL ,_bgb :hashAlgorithm },nil ;};
+// NewDigest creates a new digest.
+func (_fac *adobeX509RSASHA1 )NewDigest (sig *_ea .PdfSignature )(_ea .Hasher ,error ){_fd ,_ace :=_fac .getCertificate (sig );if _ace !=nil {return nil ,_ace ;};_cbg ,_ :=_fca (_fd .SignatureAlgorithm );return _cbg .New (),nil ;};type docTimeStamp struct{_gec string ;
+_agg _d .Hash ;_cbd int ;};func (_gdd *adobeX509RSASHA1 )sign (_af *_ea .PdfSignature ,_ege _ea .Hasher ,_ggb bool )error {if !_ggb {return _gdd .Sign (_af ,_ege );};_add ,_afd :=_gdd ._fba .PublicKey .(*_bac .PublicKey );if !_afd {return _f .Errorf ("i\u006e\u0076\u0061\u006c\u0069\u0064 \u0070\u0075\u0062\u006c\u0069\u0063\u0020\u006b\u0065y\u0020\u0074\u0079p\u0065:\u0020\u0025\u0054",_add );
+};_ecgf ,_cgag :=_e .Marshal (make ([]byte ,_add .Size ()));if _cgag !=nil {return _cgag ;};_af .Contents =_db .MakeHexString (string (_ecgf ));return nil ;};
 
 // NewDocTimeStampWithOpts returns a new DocTimeStamp configured using the
 // specified options. If no options are provided, default options will be used.
@@ -96,19 +59,56 @@ func NewDocTimeStamp (timestampServerURL string ,hashAlgorithm _be .Hash )(_eg .
 // signature validation.
 // The following hash algorithms are supported:
 // crypto.SHA1, crypto.SHA256, crypto.SHA384, crypto.SHA512.
-func NewDocTimeStampWithOpts (timestampServerURL string ,hashAlgorithm _be .Hash ,opts *DocTimeStampOpts )(_eg .SignatureHandler ,error ){if opts ==nil {opts =&DocTimeStampOpts {};};if opts .SignatureSize <=0{opts .SignatureSize =4192;};return &docTimeStamp {_ffg :timestampServerURL ,_bgb :hashAlgorithm ,_ecc :opts .SignatureSize },nil ;
+func NewDocTimeStampWithOpts (timestampServerURL string ,hashAlgorithm _d .Hash ,opts *DocTimeStampOpts )(_ea .SignatureHandler ,error ){if opts ==nil {opts =&DocTimeStampOpts {};};if opts .SignatureSize <=0{opts .SignatureSize =4192;};return &docTimeStamp {_gec :timestampServerURL ,_agg :hashAlgorithm ,_cbd :opts .SignatureSize },nil ;
+};
+
+// SignFunc represents a custom signing function. The function should return
+// the computed signature.
+type SignFunc func (_cce *_ea .PdfSignature ,_gee _ea .Hasher )([]byte ,error );
+
+// NewDigest creates a new digest.
+func (_ce *docTimeStamp )NewDigest (sig *_ea .PdfSignature )(_ea .Hasher ,error ){return _a .NewBuffer (nil ),nil ;};type timestampInfo struct{Version int ;Policy _e .RawValue ;MessageImprint struct{HashAlgorithm _ef .AlgorithmIdentifier ;HashedMessage []byte ;
+};SerialNumber _e .RawValue ;GeneralizedTime _bb .Time ;};func (_gf *adobePKCS7Detached )getCertificate (_eab *_ea .PdfSignature )(*_c .Certificate ,error ){if _gf ._cd !=nil {return _gf ._cd ,nil ;};_ac ,_fa :=_eab .GetCerts ();if _fa !=nil {return nil ,_fa ;
+};return _ac [0],nil ;};
+
+// Sign sets the Contents fields.
+func (_efe *adobePKCS7Detached )Sign (sig *_ea .PdfSignature ,digest _ea .Hasher )error {if _efe ._ed {_eef :=_efe ._bbe ;if _eef <=0{_eef =8192;};sig .Contents =_db .MakeHexString (string (make ([]byte ,_eef )));return nil ;};_fab :=digest .(*_a .Buffer );
+_cb ,_fbb :=_cg .NewSignedData (_fab .Bytes ());if _fbb !=nil {return _fbb ;};if _ae :=_cb .AddSigner (_efe ._cd ,_efe ._ee ,_cg .SignerInfoConfig {});_ae !=nil {return _ae ;};_cb .Detach ();_gag ,_fbb :=_cb .Finish ();if _fbb !=nil {return _fbb ;};_eg :=make ([]byte ,8192);
+copy (_eg ,_gag );sig .Contents =_db .MakeHexString (string (_eg ));return nil ;};
+
+// IsApplicable returns true if the signature handler is applicable for the PdfSignature
+func (_dbg *adobePKCS7Detached )IsApplicable (sig *_ea .PdfSignature )bool {if sig ==nil ||sig .Filter ==nil ||sig .SubFilter ==nil {return false ;};return (*sig .Filter =="A\u0064\u006f\u0062\u0065\u002e\u0050\u0050\u004b\u004d\u0053"||*sig .Filter =="\u0041\u0064\u006f\u0062\u0065\u002e\u0050\u0050\u004b\u004c\u0069\u0074\u0065")&&*sig .SubFilter =="\u0061\u0064\u0062\u0065.p\u006b\u0063\u0073\u0037\u002e\u0064\u0065\u0074\u0061\u0063\u0068\u0065\u0064";
 };
 
 // Validate validates PdfSignature.
-func (_dg *adobeX509RSASHA1 )Validate (sig *_eg .PdfSignature ,digest _eg .Hasher )(_eg .SignatureValidationResult ,error ){_abf ,_gef :=_dg .getCertificate (sig );if _gef !=nil {return _eg .SignatureValidationResult {},_gef ;};_gc :=sig .Contents .Bytes ();
-var _ebe []byte ;if _ ,_ebeb :=_de .Unmarshal (_gc ,&_ebe );_ebeb !=nil {return _eg .SignatureValidationResult {},_ebeb ;};_bfea ,_bee :=digest .(_d .Hash );if !_bee {return _eg .SignatureValidationResult {},_dd .New ("\u0068a\u0073h\u0020\u0074\u0079\u0070\u0065\u0020\u0065\u0072\u0072\u006f\u0072");
-};_fdbdg ,_ :=_fdc (_abf .SignatureAlgorithm );if _efe :=_c .VerifyPKCS1v15 (_abf .PublicKey .(*_c .PublicKey ),_fdbdg ,_bfea .Sum (nil ),_ebe );_efe !=nil {return _eg .SignatureValidationResult {},_efe ;};return _eg .SignatureValidationResult {IsSigned :true ,IsVerified :true },nil ;
+func (_ec *adobeX509RSASHA1 )Validate (sig *_ea .PdfSignature ,digest _ea .Hasher )(_ea .SignatureValidationResult ,error ){_ccc ,_be :=_ec .getCertificate (sig );if _be !=nil {return _ea .SignatureValidationResult {},_be ;};_dg :=sig .Contents .Bytes ();
+var _ff []byte ;if _ ,_gd :=_e .Unmarshal (_dg ,&_ff );_gd !=nil {return _ea .SignatureValidationResult {},_gd ;};_ecg ,_bbd :=digest .(_ba .Hash );if !_bbd {return _ea .SignatureValidationResult {},_fb .New ("\u0068a\u0073h\u0020\u0074\u0079\u0070\u0065\u0020\u0065\u0072\u0072\u006f\u0072");
+};_aaf ,_ :=_fca (_ccc .SignatureAlgorithm );if _dgd :=_bac .VerifyPKCS1v15 (_ccc .PublicKey .(*_bac .PublicKey ),_aaf ,_ecg .Sum (nil ),_ff );_dgd !=nil {return _ea .SignatureValidationResult {},_dgd ;};return _ea .SignatureValidationResult {IsSigned :true ,IsVerified :true },nil ;
 };
 
-// IsApplicable returns true if the signature handler is applicable for the PdfSignature.
-func (_dfc *docTimeStamp )IsApplicable (sig *_eg .PdfSignature )bool {if sig ==nil ||sig .Filter ==nil ||sig .SubFilter ==nil {return false ;};return (*sig .Filter =="A\u0064\u006f\u0062\u0065\u002e\u0050\u0050\u004b\u004d\u0053"||*sig .Filter =="\u0041\u0064\u006f\u0062\u0065\u002e\u0050\u0050\u004b\u004c\u0069\u0074\u0065")&&*sig .SubFilter =="\u0045\u0054\u0053I\u002e\u0052\u0046\u0043\u0033\u0031\u0036\u0031";
-};func (_dac *adobeX509RSASHA1 )sign (_cbd *_eg .PdfSignature ,_dfb _eg .Hasher ,_geb bool )error {if !_geb {return _dac .Sign (_cbd ,_dfb );};_gf ,_bggg :=_dac ._fc .PublicKey .(*_c .PublicKey );if !_bggg {return _eb .Errorf ("i\u006e\u0076\u0061\u006c\u0069\u0064 \u0070\u0075\u0062\u006c\u0069\u0063\u0020\u006b\u0065y\u0020\u0074\u0079p\u0065:\u0020\u0025\u0054",_gf );
-};_ce ,_gfc :=_de .Marshal (make ([]byte ,_gf .Size ()));if _gfc !=nil {return _gfc ;};_cbd .Contents =_bg .MakeHexString (string (_ce ));return nil ;};type docTimeStamp struct{_ffg string ;_bgb _be .Hash ;_ecc int ;};
+// NewEmptyAdobePKCS7Detached creates a new Adobe.PPKMS/Adobe.PPKLite adbe.pkcs7.detached
+// signature handler. The generated signature is empty and of size signatureLen.
+// The signatureLen parameter can be 0 for the signature validation.
+func NewEmptyAdobePKCS7Detached (signatureLen int )(_ea .SignatureHandler ,error ){return &adobePKCS7Detached {_ed :true ,_bbe :signatureLen },nil ;};
+
+// InitSignature initialises the PdfSignature.
+func (_efa *adobeX509RSASHA1 )InitSignature (sig *_ea .PdfSignature )error {if _efa ._fba ==nil {return _fb .New ("c\u0065\u0072\u0074\u0069\u0066\u0069c\u0061\u0074\u0065\u0020\u006d\u0075\u0073\u0074\u0020n\u006f\u0074\u0020b\u0065 \u006e\u0069\u006c");
+};if _efa ._bf ==nil &&_efa ._efd ==nil {return _fb .New ("\u006d\u0075\u0073\u0074\u0020\u0070\u0072o\u0076\u0069\u0064e\u0020\u0065\u0069t\u0068\u0065r\u0020\u0061\u0020\u0070\u0072\u0069v\u0061te\u0020\u006b\u0065\u0079\u0020\u006f\u0072\u0020\u0061\u0020\u0073\u0069\u0067\u006e\u0069\u006e\u0067\u0020\u0066\u0075\u006e\u0063\u0074\u0069\u006f\u006e");
+};_cgf :=*_efa ;sig .Handler =&_cgf ;sig .Filter =_db .MakeName ("\u0041\u0064\u006f\u0062\u0065\u002e\u0050\u0050\u004b\u004c\u0069\u0074\u0065");sig .SubFilter =_db .MakeName ("\u0061d\u0062e\u002e\u0078\u0035\u0030\u0039.\u0072\u0073a\u005f\u0073\u0068\u0061\u0031");
+sig .Cert =_db .MakeString (string (_cgf ._fba .Raw ));sig .Reference =nil ;_gg ,_bg :=_cgf .NewDigest (sig );if _bg !=nil {return _bg ;};_gg .Write ([]byte ("\u0063\u0061\u006c\u0063\u0075\u006ca\u0074\u0065\u0020\u0074\u0068\u0065\u0020\u0043\u006f\u006e\u0074\u0065\u006et\u0073\u0020\u0066\u0069\u0065\u006c\u0064 \u0073\u0069\u007a\u0065"));
+return _cgf .sign (sig ,_gg ,_efa ._bbf );};func _dbgd (_cbe _e .ObjectIdentifier )(_d .Hash ,error ){switch {case _cbe .Equal (_cg .OIDDigestAlgorithmSHA1 ),_cbe .Equal (_cg .OIDDigestAlgorithmECDSASHA1 ),_cbe .Equal (_cg .OIDDigestAlgorithmDSA ),_cbe .Equal (_cg .OIDDigestAlgorithmDSASHA1 ),_cbe .Equal (_cg .OIDEncryptionAlgorithmRSA ):return _d .SHA1 ,nil ;
+case _cbe .Equal (_cg .OIDDigestAlgorithmSHA256 ),_cbe .Equal (_cg .OIDDigestAlgorithmECDSASHA256 ):return _d .SHA256 ,nil ;case _cbe .Equal (_cg .OIDDigestAlgorithmSHA384 ),_cbe .Equal (_cg .OIDDigestAlgorithmECDSASHA384 ):return _d .SHA384 ,nil ;case _cbe .Equal (_cg .OIDDigestAlgorithmSHA512 ),_cbe .Equal (_cg .OIDDigestAlgorithmECDSASHA512 ):return _d .SHA512 ,nil ;
+};return _d .Hash (0),_cg .ErrUnsupportedAlgorithm ;};
+
+// NewAdobePKCS7Detached creates a new Adobe.PPKMS/Adobe.PPKLite adbe.pkcs7.detached signature handler.
+// Both parameters may be nil for the signature validation.
+func NewAdobePKCS7Detached (privateKey *_bac .PrivateKey ,certificate *_c .Certificate )(_ea .SignatureHandler ,error ){return &adobePKCS7Detached {_cd :certificate ,_ee :privateKey },nil ;};
+
+// Validate validates PdfSignature.
+func (_gc *adobePKCS7Detached )Validate (sig *_ea .PdfSignature ,digest _ea .Hasher )(_ea .SignatureValidationResult ,error ){_ga :=sig .Contents .Bytes ();_fg ,_ag :=_cg .Parse (_ga );if _ag !=nil {return _ea .SignatureValidationResult {},_ag ;};_cga :=digest .(*_a .Buffer );
+_fg .Content =_cga .Bytes ();if _ag =_fg .Verify ();_ag !=nil {return _ea .SignatureValidationResult {},_ag ;};return _ea .SignatureValidationResult {IsSigned :true ,IsVerified :true },nil ;};type adobeX509RSASHA1 struct{_bf *_bac .PrivateKey ;_fba *_c .Certificate ;
+_efd SignFunc ;_bbf bool ;};func _fca (_ab _c .SignatureAlgorithm )(_d .Hash ,bool ){var _aae _d .Hash ;switch _ab {case _c .SHA1WithRSA :_aae =_d .SHA1 ;case _c .SHA256WithRSA :_aae =_d .SHA256 ;case _c .SHA384WithRSA :_aae =_d .SHA384 ;case _c .SHA512WithRSA :_aae =_d .SHA512 ;
+default:return _d .SHA1 ,false ;};return _aae ,true ;};
 
 // AdobeX509RSASHA1Opts defines options for configuring the adbe.x509.rsa_sha1
 // signature handler.
@@ -118,40 +118,43 @@ type AdobeX509RSASHA1Opts struct{
 // should be estimated based on the modulus size of the public key
 // extracted from the signing certificate. If set to false, a mock Sign
 // call is made in order to estimate the size of the signature contents.
-EstimateSize bool ;};func _cbg (_eaf _de .ObjectIdentifier )(_be .Hash ,error ){switch {case _eaf .Equal (_ff .OIDDigestAlgorithmSHA1 ),_eaf .Equal (_ff .OIDDigestAlgorithmECDSASHA1 ),_eaf .Equal (_ff .OIDDigestAlgorithmDSA ),_eaf .Equal (_ff .OIDDigestAlgorithmDSASHA1 ),_eaf .Equal (_ff .OIDEncryptionAlgorithmRSA ):return _be .SHA1 ,nil ;
-case _eaf .Equal (_ff .OIDDigestAlgorithmSHA256 ),_eaf .Equal (_ff .OIDDigestAlgorithmECDSASHA256 ):return _be .SHA256 ,nil ;case _eaf .Equal (_ff .OIDDigestAlgorithmSHA384 ),_eaf .Equal (_ff .OIDDigestAlgorithmECDSASHA384 ):return _be .SHA384 ,nil ;case _eaf .Equal (_ff .OIDDigestAlgorithmSHA512 ),_eaf .Equal (_ff .OIDDigestAlgorithmECDSASHA512 ):return _be .SHA512 ,nil ;
-};return _be .Hash (0),_ff .ErrUnsupportedAlgorithm ;};
-
-// NewDigest creates a new digest.
-func (_dc *adobePKCS7Detached )NewDigest (sig *_eg .PdfSignature )(_eg .Hasher ,error ){return _e .NewBuffer (nil ),nil ;};
-
-// Validate validates PdfSignature.
-func (_aec *docTimeStamp )Validate (sig *_eg .PdfSignature ,digest _eg .Hasher )(_eg .SignatureValidationResult ,error ){_dbb :=sig .Contents .Bytes ();_bbd ,_baf :=_ff .Parse (_dbb );if _baf !=nil {return _eg .SignatureValidationResult {},_baf ;};if _baf =_bbd .Verify ();
-_baf !=nil {return _eg .SignatureValidationResult {},_baf ;};var _aae timestampInfo ;_ ,_baf =_de .Unmarshal (_bbd .Content ,&_aae );if _baf !=nil {return _eg .SignatureValidationResult {},_baf ;};_acc ,_baf :=_cbg (_aae .MessageImprint .HashAlgorithm .Algorithm );
-if _baf !=nil {return _eg .SignatureValidationResult {},_baf ;};_ece :=_acc .New ();_dgf :=digest .(*_e .Buffer );_ece .Write (_dgf .Bytes ());_cfg :=_ece .Sum (nil );_bad :=_eg .SignatureValidationResult {IsSigned :true ,IsVerified :_e .Equal (_cfg ,_aae .MessageImprint .HashedMessage ),GeneralizedTime :_aae .GeneralizedTime };
-return _bad ,nil ;};type adobeX509RSASHA1 struct{_df *_c .PrivateKey ;_fc *_f .Certificate ;_db SignFunc ;_bb bool ;};func _fdc (_egd _f .SignatureAlgorithm )(_be .Hash ,bool ){var _bcf _be .Hash ;switch _egd {case _f .SHA1WithRSA :_bcf =_be .SHA1 ;case _f .SHA256WithRSA :_bcf =_be .SHA256 ;
-case _f .SHA384WithRSA :_bcf =_be .SHA384 ;case _f .SHA512WithRSA :_bcf =_be .SHA512 ;default:return _be .SHA1 ,false ;};return _bcf ,true ;};
-
-// NewAdobeX509RSASHA1Custom creates a new Adobe.PPKMS/Adobe.PPKLite
-// adbe.x509.rsa_sha1 signature handler with a custom signing function. Both the
-// certificate and the sign function can be nil for the signature validation.
-// NOTE: the handler will do a mock Sign when initializing the signature in
-// order to estimate the signature size. Use NewAdobeX509RSASHA1CustomWithOpts
-// for configuring the handler to estimate the signature size.
-func NewAdobeX509RSASHA1Custom (certificate *_f .Certificate ,signFunc SignFunc )(_eg .SignatureHandler ,error ){return &adobeX509RSASHA1 {_fc :certificate ,_db :signFunc },nil ;};
-
-// Sign sets the Contents fields.
-func (_cb *adobePKCS7Detached )Sign (sig *_eg .PdfSignature ,digest _eg .Hasher )error {if _cb ._fd {_fab :=_cb ._ca ;if _fab <=0{_fab =8192;};sig .Contents =_bg .MakeHexString (string (make ([]byte ,_fab )));return nil ;};_deb :=digest .(*_e .Buffer );
-_bf ,_ac :=_ff .NewSignedData (_deb .Bytes ());if _ac !=nil {return _ac ;};if _afe :=_bf .AddSigner (_cb ._ccd ,_cb ._g ,_ff .SignerInfoConfig {});_afe !=nil {return _afe ;};_bf .Detach ();_acg ,_ac :=_bf .Finish ();if _ac !=nil {return _ac ;};_fafa :=make ([]byte ,8192);
-copy (_fafa ,_acg );sig .Contents =_bg .MakeHexString (string (_fafa ));return nil ;};func (_efc *docTimeStamp )getCertificate (_gdd *_eg .PdfSignature )(*_f .Certificate ,error ){_cd ,_aba :=_gdd .GetCerts ();if _aba !=nil {return nil ,_aba ;};return _cd [0],nil ;
-};
-
-// NewDigest creates a new digest.
-func (_gebc *docTimeStamp )NewDigest (sig *_eg .PdfSignature )(_eg .Hasher ,error ){return _e .NewBuffer (nil ),nil ;};type adobePKCS7Detached struct{_g *_c .PrivateKey ;_ccd *_f .Certificate ;_fd bool ;_ca int ;};
+EstimateSize bool ;};
 
 // IsApplicable returns true if the signature handler is applicable for the PdfSignature.
-func (_gg *adobeX509RSASHA1 )IsApplicable (sig *_eg .PdfSignature )bool {if sig ==nil ||sig .Filter ==nil ||sig .SubFilter ==nil {return false ;};return (*sig .Filter =="A\u0064\u006f\u0062\u0065\u002e\u0050\u0050\u004b\u004d\u0053"||*sig .Filter =="\u0041\u0064\u006f\u0062\u0065\u002e\u0050\u0050\u004b\u004c\u0069\u0074\u0065")&&*sig .SubFilter =="\u0061d\u0062e\u002e\u0078\u0035\u0030\u0039.\u0072\u0073a\u005f\u0073\u0068\u0061\u0031";
+func (_gce *docTimeStamp )IsApplicable (sig *_ea .PdfSignature )bool {if sig ==nil ||sig .Filter ==nil ||sig .SubFilter ==nil {return false ;};return (*sig .Filter =="A\u0064\u006f\u0062\u0065\u002e\u0050\u0050\u004b\u004d\u0053"||*sig .Filter =="\u0041\u0064\u006f\u0062\u0065\u002e\u0050\u0050\u004b\u004c\u0069\u0074\u0065")&&*sig .SubFilter =="\u0045\u0054\u0053I\u002e\u0052\u0046\u0043\u0033\u0031\u0036\u0031";
 };
+
+// InitSignature initialises the PdfSignature.
+func (_gdb *docTimeStamp )InitSignature (sig *_ea .PdfSignature )error {_agc :=*_gdb ;sig .Handler =&_agc ;sig .Filter =_db .MakeName ("\u0041\u0064\u006f\u0062\u0065\u002e\u0050\u0050\u004b\u004c\u0069\u0074\u0065");sig .SubFilter =_db .MakeName ("\u0045\u0054\u0053I\u002e\u0052\u0046\u0043\u0033\u0031\u0036\u0031");
+sig .Reference =nil ;if _gdb ._cbd > 0{sig .Contents =_db .MakeHexString (string (make ([]byte ,_gdb ._cbd )));}else {_gdbe ,_bgb :=_gdb .NewDigest (sig );if _bgb !=nil {return _bgb ;};_gdbe .Write ([]byte ("\u0063\u0061\u006c\u0063\u0075\u006ca\u0074\u0065\u0020\u0074\u0068\u0065\u0020\u0043\u006f\u006e\u0074\u0065\u006et\u0073\u0020\u0066\u0069\u0065\u006c\u0064 \u0073\u0069\u007a\u0065"));
+if _bgb =_agc .Sign (sig ,_gdbe );_bgb !=nil {return _bgb ;};_gdb ._cbd =_agc ._cbd ;};return nil ;};
+
+// NewDocTimeStamp creates a new DocTimeStamp signature handler.
+// Both the timestamp server URL and the hash algorithm can be empty for the
+// signature validation.
+// The following hash algorithms are supported:
+// crypto.SHA1, crypto.SHA256, crypto.SHA384, crypto.SHA512.
+// NOTE: the handler will do a mock Sign when initializing the signature
+// in order to estimate the signature size. Use NewDocTimeStampWithOpts
+// for providing the signature size.
+func NewDocTimeStamp (timestampServerURL string ,hashAlgorithm _d .Hash )(_ea .SignatureHandler ,error ){return &docTimeStamp {_gec :timestampServerURL ,_agg :hashAlgorithm },nil ;};
+
+// Sign sets the Contents fields for the PdfSignature.
+func (_bad *adobeX509RSASHA1 )Sign (sig *_ea .PdfSignature ,digest _ea .Hasher )error {var _efg []byte ;var _bbde error ;if _bad ._efd !=nil {_efg ,_bbde =_bad ._efd (sig ,digest );if _bbde !=nil {return _bbde ;};}else {_fabc ,_da :=digest .(_ba .Hash );
+if !_da {return _fb .New ("\u0068a\u0073h\u0020\u0074\u0079\u0070\u0065\u0020\u0065\u0072\u0072\u006f\u0072");};_cgg ,_ :=_fca (_bad ._fba .SignatureAlgorithm );_efg ,_bbde =_bac .SignPKCS1v15 (_aa .Reader ,_bad ._bf ,_cgg ,_fabc .Sum (nil ));if _bbde !=nil {return _bbde ;
+};};_efg ,_bbde =_e .Marshal (_efg );if _bbde !=nil {return _bbde ;};sig .Contents =_db .MakeHexString (string (_efg ));return nil ;};func (_bade *docTimeStamp )getCertificate (_ebf *_ea .PdfSignature )(*_c .Certificate ,error ){_fde ,_dga :=_ebf .GetCerts ();
+if _dga !=nil {return nil ,_dga ;};return _fde [0],nil ;};
+
+// Sign sets the Contents fields for the PdfSignature.
+func (_ada *docTimeStamp )Sign (sig *_ea .PdfSignature ,digest _ea .Hasher )error {_ebe ,_bada :=_fc .NewTimestampRequest (digest .(*_a .Buffer ),&_g .RequestOptions {Hash :_ada ._agg ,Certificates :true });if _bada !=nil {return _bada ;};_ccf :=_fc .NewTimestampClient ();
+_fce ,_bada :=_ccf .GetEncodedToken (_ada ._gec ,_ebe );if _bada !=nil {return _bada ;};_edb :=len (_fce );if _ada ._cbd > 0&&_edb > _ada ._cbd {return _ea .ErrSignNotEnoughSpace ;};if _edb > 0{_ada ._cbd =_edb +128;};sig .Contents =_db .MakeHexString (string (_fce ));
+return nil ;};
+
+// Validate validates PdfSignature.
+func (_gfd *docTimeStamp )Validate (sig *_ea .PdfSignature ,digest _ea .Hasher )(_ea .SignatureValidationResult ,error ){_dde :=sig .Contents .Bytes ();_eba ,_age :=_cg .Parse (_dde );if _age !=nil {return _ea .SignatureValidationResult {},_age ;};if _age =_eba .Verify ();
+_age !=nil {return _ea .SignatureValidationResult {},_age ;};var _efc timestampInfo ;_ ,_age =_e .Unmarshal (_eba .Content ,&_efc );if _age !=nil {return _ea .SignatureValidationResult {},_age ;};_bea ,_age :=_dbgd (_efc .MessageImprint .HashAlgorithm .Algorithm );
+if _age !=nil {return _ea .SignatureValidationResult {},_age ;};_aaea :=_bea .New ();_ade :=digest .(*_a .Buffer );_aaea .Write (_ade .Bytes ());_gde :=_aaea .Sum (nil );_dag :=_ea .SignatureValidationResult {IsSigned :true ,IsVerified :_a .Equal (_gde ,_efc .MessageImprint .HashedMessage ),GeneralizedTime :_efc .GeneralizedTime };
+return _dag ,nil ;};
 
 // DocTimeStampOpts defines options for configuring the timestamp handler.
 type DocTimeStampOpts struct{

@@ -14,255 +14,255 @@
 // page content streams and XObject forms and thus also in annotation appearance streams.
 //
 // Also defines utility functions for drawing common shapes such as rectangles, lines and circles (ovals).
-package draw ;import (_b "fmt";_f "github.com/unidoc/unipdf/v3/contentstream";_db "github.com/unidoc/unipdf/v3/core";_ab "github.com/unidoc/unipdf/v3/internal/transform";_d "github.com/unidoc/unipdf/v3/model";_e "math";);
+package draw ;import (_f "fmt";_gd "github.com/unidoc/unipdf/v3/contentstream";_d "github.com/unidoc/unipdf/v3/core";_b "github.com/unidoc/unipdf/v3/internal/transform";_a "github.com/unidoc/unipdf/v3/model";_c "math";);
 
-// AddVector adds vector to a point.
-func (_ecc Point )AddVector (v Vector )Point {_ecc .X +=v .Dx ;_ecc .Y +=v .Dy ;return _ecc };
+// Vector represents a two-dimensional vector.
+type Vector struct{Dx float64 ;Dy float64 ;};
 
-// Polyline defines a slice of points that are connected as straight lines.
-type Polyline struct{Points []Point ;LineColor _d .PdfColor ;LineWidth float64 ;};
+// RemovePoint removes the point at the index specified by number from the
+// path. The index is 1-based.
+func (_gb Path )RemovePoint (number int )Path {if number < 1||number > len (_gb .Points ){return _gb ;};_ac :=number -1;_gb .Points =append (_gb .Points [:_ac ],_gb .Points [_ac +1:]...);return _gb ;};
 
-// BoundingBox represents the smallest rectangular area that encapsulates an object.
-type BoundingBox struct{X float64 ;Y float64 ;Width float64 ;Height float64 ;};
+// PolyBezierCurve represents a composite curve that is the result of
+// joining multiple cubic Bezier curves.
+type PolyBezierCurve struct{Curves []CubicBezierCurve ;BorderWidth float64 ;BorderColor _a .PdfColor ;FillEnabled bool ;FillColor _a .PdfColor ;};
 
-// Magnitude returns the magnitude of the vector.
-func (_bga Vector )Magnitude ()float64 {return _e .Sqrt (_e .Pow (_bga .Dx ,2.0)+_e .Pow (_bga .Dy ,2.0))};
+// Draw draws the line to PDF contentstream. Generates the content stream which can be used in page contents or
+// appearance stream of annotation. Returns the stream content, XForm bounding box (local), bounding box and an error
+// if one occurred.
+func (_feg Line )Draw (gsName string )([]byte ,*_a .PdfRectangle ,error ){_ebb ,_eg :=_feg .X1 ,_feg .X2 ;_ebg ,_baa :=_feg .Y1 ,_feg .Y2 ;_dbb :=_baa -_ebg ;_abg :=_eg -_ebb ;_cbf :=_c .Atan2 (_dbb ,_abg );L :=_c .Sqrt (_c .Pow (_abg ,2.0)+_c .Pow (_dbb ,2.0));
+_ceee :=_feg .LineWidth ;_dcd :=_c .Pi ;_bb :=1.0;if _abg < 0{_bb *=-1.0;};if _dbb < 0{_bb *=-1.0;};VsX :=_bb *(-_ceee /2*_c .Cos (_cbf +_dcd /2));VsY :=_bb *(-_ceee /2*_c .Sin (_cbf +_dcd /2)+_ceee *_c .Sin (_cbf +_dcd /2));V1X :=VsX +_ceee /2*_c .Cos (_cbf +_dcd /2);
+V1Y :=VsY +_ceee /2*_c .Sin (_cbf +_dcd /2);V2X :=VsX +_ceee /2*_c .Cos (_cbf +_dcd /2)+L *_c .Cos (_cbf );V2Y :=VsY +_ceee /2*_c .Sin (_cbf +_dcd /2)+L *_c .Sin (_cbf );V3X :=VsX +_ceee /2*_c .Cos (_cbf +_dcd /2)+L *_c .Cos (_cbf )+_ceee *_c .Cos (_cbf -_dcd /2);
+V3Y :=VsY +_ceee /2*_c .Sin (_cbf +_dcd /2)+L *_c .Sin (_cbf )+_ceee *_c .Sin (_cbf -_dcd /2);V4X :=VsX +_ceee /2*_c .Cos (_cbf -_dcd /2);V4Y :=VsY +_ceee /2*_c .Sin (_cbf -_dcd /2);_degb :=NewPath ();_degb =_degb .AppendPoint (NewPoint (V1X ,V1Y ));_degb =_degb .AppendPoint (NewPoint (V2X ,V2Y ));
+_degb =_degb .AppendPoint (NewPoint (V3X ,V3Y ));_degb =_degb .AppendPoint (NewPoint (V4X ,V4Y ));_cfb :=_feg .LineEndingStyle1 ;_bbg :=_feg .LineEndingStyle2 ;_cad :=3*_ceee ;_cac :=3*_ceee ;_bfe :=(_cac -_ceee )/2;if _bbg ==LineEndingStyleArrow {_egd :=_degb .GetPointNumber (2);
+_fg :=NewVectorPolar (_cad ,_cbf +_dcd );_aad :=_egd .AddVector (_fg );_ggd :=NewVectorPolar (_cac /2,_cbf +_dcd /2);_bfg :=NewVectorPolar (_cad ,_cbf );_bfgf :=NewVectorPolar (_bfe ,_cbf +_dcd /2);_aaf :=_aad .AddVector (_bfgf );_bef :=_bfg .Add (_ggd .Flip ());
+_edeb :=_aaf .AddVector (_bef );_bdg :=_ggd .Scale (2).Flip ().Add (_bef .Flip ());_bbf :=_edeb .AddVector (_bdg );_gc :=_aad .AddVector (NewVectorPolar (_ceee ,_cbf -_dcd /2));_cff :=NewPath ();_cff =_cff .AppendPoint (_degb .GetPointNumber (1));_cff =_cff .AppendPoint (_aad );
+_cff =_cff .AppendPoint (_aaf );_cff =_cff .AppendPoint (_edeb );_cff =_cff .AppendPoint (_bbf );_cff =_cff .AppendPoint (_gc );_cff =_cff .AppendPoint (_degb .GetPointNumber (4));_degb =_cff ;};if _cfb ==LineEndingStyleArrow {_efc :=_degb .GetPointNumber (1);
+_eba :=_degb .GetPointNumber (_degb .Length ());_ddc :=NewVectorPolar (_ceee /2,_cbf +_dcd +_dcd /2);_cbfa :=_efc .AddVector (_ddc );_dfd :=NewVectorPolar (_cad ,_cbf ).Add (NewVectorPolar (_cac /2,_cbf +_dcd /2));_gec :=_cbfa .AddVector (_dfd );_def :=NewVectorPolar (_bfe ,_cbf -_dcd /2);
+_acg :=_gec .AddVector (_def );_gca :=NewVectorPolar (_cad ,_cbf );_cbee :=_eba .AddVector (_gca );_efg :=NewVectorPolar (_bfe ,_cbf +_dcd +_dcd /2);_gcf :=_cbee .AddVector (_efg );_eaf :=_cbfa ;_ga :=NewPath ();_ga =_ga .AppendPoint (_cbfa );_ga =_ga .AppendPoint (_gec );
+_ga =_ga .AppendPoint (_acg );for _ ,_acd :=range _degb .Points [1:len (_degb .Points )-1]{_ga =_ga .AppendPoint (_acd );};_ga =_ga .AppendPoint (_cbee );_ga =_ga .AppendPoint (_gcf );_ga =_ga .AppendPoint (_eaf );_degb =_ga ;};_egda :=_gd .NewContentCreator ();
+_egda .Add_q ().SetNonStrokingColor (_feg .LineColor );if len (gsName )> 1{_egda .Add_gs (_d .PdfObjectName (gsName ));};_degb =_degb .Offset (_feg .X1 ,_feg .Y1 );_efb :=_degb .GetBoundingBox ();DrawPathWithCreator (_degb ,_egda );if _feg .LineStyle ==LineStyleDashed {_egda .Add_d ([]int64 {1,1},0).Add_S ().Add_f ().Add_Q ();
+}else {_egda .Add_f ().Add_Q ();};return _egda .Bytes (),_efb .ToPdfRectangle (),nil ;};
 
 // NewVector returns a new vector with the direction specified by dx and dy.
-func NewVector (dx ,dy float64 )Vector {_fcg :=Vector {};_fcg .Dx =dx ;_fcg .Dy =dy ;return _fcg };
+func NewVector (dx ,dy float64 )Vector {_bcc :=Vector {};_bcc .Dx =dx ;_bcc .Dy =dy ;return _bcc };
 
 // Draw draws the basic line to PDF. Generates the content stream which can be used in page contents or appearance
 // stream of annotation. Returns the stream content, XForm bounding box (local), bounding box and an error if
 // one occurred.
-func (_fee BasicLine )Draw (gsName string )([]byte ,*_d .PdfRectangle ,error ){_bgdc :=_fee .LineWidth ;_ecb :=NewPath ();_ecb =_ecb .AppendPoint (NewPoint (_fee .X1 ,_fee .Y1 ));_ecb =_ecb .AppendPoint (NewPoint (_fee .X2 ,_fee .Y2 ));_dfg :=_f .NewContentCreator ();
-_add :=_ecb .GetBoundingBox ();DrawPathWithCreator (_ecb ,_dfg );if _fee .LineStyle ==LineStyleDashed {_dfg .Add_d ([]int64 {1,1},0);};_dfg .SetStrokingColor (_fee .LineColor ).Add_w (_bgdc ).Add_S ().Add_Q ();return _dfg .Bytes (),_add .ToPdfRectangle (),nil ;
+func (_ag BasicLine )Draw (gsName string )([]byte ,*_a .PdfRectangle ,error ){_fcf :=_ag .LineWidth ;_bad :=NewPath ();_bad =_bad .AppendPoint (NewPoint (_ag .X1 ,_ag .Y1 ));_bad =_bad .AppendPoint (NewPoint (_ag .X2 ,_ag .Y2 ));_ff :=_gd .NewContentCreator ();
+_ddf :=_bad .GetBoundingBox ();DrawPathWithCreator (_bad ,_ff );if _ag .LineStyle ==LineStyleDashed {_ff .Add_d ([]int64 {1,1},0);};_ff .SetStrokingColor (_ag .LineColor ).Add_w (_fcf ).Add_S ().Add_Q ();return _ff .Bytes (),_ddf .ToPdfRectangle (),nil ;
 };
 
-// Point represents a two-dimensional point.
-type Point struct{X float64 ;Y float64 ;};
+// Add adds the specified vector to the current one and returns the result.
+func (_ece Vector )Add (other Vector )Vector {_ece .Dx +=other .Dx ;_ece .Dy +=other .Dy ;return _ece };
 
-// Offset shifts the path with the specified offsets.
-func (_dg Path )Offset (offX ,offY float64 )Path {for _ede ,_gcd :=range _dg .Points {_dg .Points [_ede ]=_gcd .Add (offX ,offY );};return _dg ;};
+// ToPdfRectangle returns the bounding box as a PDF rectangle.
+func (_cbd BoundingBox )ToPdfRectangle ()*_a .PdfRectangle {return &_a .PdfRectangle {Llx :_cbd .X ,Lly :_cbd .Y ,Urx :_cbd .X +_cbd .Width ,Ury :_cbd .Y +_cbd .Height };};
+
+// NewCubicBezierCurve returns a new cubic Bezier curve.
+func NewCubicBezierCurve (x0 ,y0 ,x1 ,y1 ,x2 ,y2 ,x3 ,y3 float64 )CubicBezierCurve {_e :=CubicBezierCurve {};_e .P0 =NewPoint (x0 ,y0 );_e .P1 =NewPoint (x1 ,y1 );_e .P2 =NewPoint (x2 ,y2 );_e .P3 =NewPoint (x3 ,y3 );return _e ;};
+
+// GetBoundingBox returns the bounding box of the path.
+func (_bgc Path )GetBoundingBox ()BoundingBox {_gbg :=BoundingBox {};_gg :=0.0;_aae :=0.0;_bd :=0.0;_af :=0.0;for _cbe ,_fa :=range _bgc .Points {if _cbe ==0{_gg =_fa .X ;_aae =_fa .X ;_bd =_fa .Y ;_af =_fa .Y ;continue ;};if _fa .X < _gg {_gg =_fa .X ;
+};if _fa .X > _aae {_aae =_fa .X ;};if _fa .Y < _bd {_bd =_fa .Y ;};if _fa .Y > _af {_af =_fa .Y ;};};_gbg .X =_gg ;_gbg .Y =_bd ;_gbg .Width =_aae -_gg ;_gbg .Height =_af -_bd ;return _gbg ;};
+
+// Draw draws the circle. Can specify a graphics state (gsName) for setting opacity etc.  Otherwise leave empty ("").
+// Returns the content stream as a byte array, the bounding box and an error on failure.
+func (_fdf Circle )Draw (gsName string )([]byte ,*_a .PdfRectangle ,error ){_ab :=_fdf .Width /2;_fcd :=_fdf .Height /2;if _fdf .BorderEnabled {_ab -=_fdf .BorderWidth /2;_fcd -=_fdf .BorderWidth /2;};_df :=0.551784;_abc :=_ab *_df ;_ba :=_fcd *_df ;_dde :=NewCubicBezierPath ();
+_dde =_dde .AppendCurve (NewCubicBezierCurve (-_ab ,0,-_ab ,_ba ,-_abc ,_fcd ,0,_fcd ));_dde =_dde .AppendCurve (NewCubicBezierCurve (0,_fcd ,_abc ,_fcd ,_ab ,_ba ,_ab ,0));_dde =_dde .AppendCurve (NewCubicBezierCurve (_ab ,0,_ab ,-_ba ,_abc ,-_fcd ,0,-_fcd ));
+_dde =_dde .AppendCurve (NewCubicBezierCurve (0,-_fcd ,-_abc ,-_fcd ,-_ab ,-_ba ,-_ab ,0));_dde =_dde .Offset (_ab ,_fcd );if _fdf .BorderEnabled {_dde =_dde .Offset (_fdf .BorderWidth /2,_fdf .BorderWidth /2);};if _fdf .X !=0||_fdf .Y !=0{_dde =_dde .Offset (_fdf .X ,_fdf .Y );
+};_ddea :=_gd .NewContentCreator ();_ddea .Add_q ();if _fdf .FillEnabled {_ddea .SetNonStrokingColor (_fdf .FillColor );};if _fdf .BorderEnabled {_ddea .SetStrokingColor (_fdf .BorderColor );_ddea .Add_w (_fdf .BorderWidth );};if len (gsName )> 1{_ddea .Add_gs (_d .PdfObjectName (gsName ));
+};DrawBezierPathWithCreator (_dde ,_ddea );_ddea .Add_h ();if _fdf .FillEnabled &&_fdf .BorderEnabled {_ddea .Add_B ();}else if _fdf .FillEnabled {_ddea .Add_f ();}else if _fdf .BorderEnabled {_ddea .Add_S ();};_ddea .Add_Q ();_ef :=_dde .GetBoundingBox ();
+if _fdf .BorderEnabled {_ef .Height +=_fdf .BorderWidth ;_ef .Width +=_fdf .BorderWidth ;_ef .X -=_fdf .BorderWidth /2;_ef .Y -=_fdf .BorderWidth /2;};return _ddea .Bytes (),_ef .ToPdfRectangle (),nil ;};
+
+// Draw draws the composite Bezier curve. A graphics state name can be
+// specified for setting the curve properties (e.g. setting the opacity).
+// Otherwise leave empty (""). Returns the content stream as a byte array and
+// the curve bounding box.
+func (_cg PolyBezierCurve )Draw (gsName string )([]byte ,*_a .PdfRectangle ,error ){if _cg .BorderColor ==nil {_cg .BorderColor =_a .NewPdfColorDeviceRGB (0,0,0);};_cbdc :=NewCubicBezierPath ();for _ ,_aff :=range _cg .Curves {_cbdc =_cbdc .AppendCurve (_aff );
+};_fcb :=_gd .NewContentCreator ();_fcb .Add_q ();_cg .FillEnabled =_cg .FillEnabled &&_cg .FillColor !=nil ;if _cg .FillEnabled {_fcb .SetNonStrokingColor (_cg .FillColor );};_fcb .SetStrokingColor (_cg .BorderColor );_fcb .Add_w (_cg .BorderWidth );if len (gsName )> 1{_fcb .Add_gs (_d .PdfObjectName (gsName ));
+};for _gbga ,_ebf :=range _cbdc .Curves {if _gbga ==0{_fcb .Add_m (_ebf .P0 .X ,_ebf .P0 .Y );}else {_fcb .Add_l (_ebf .P0 .X ,_ebf .P0 .Y );};_fcb .Add_c (_ebf .P1 .X ,_ebf .P1 .Y ,_ebf .P2 .X ,_ebf .P2 .Y ,_ebf .P3 .X ,_ebf .P3 .Y );};if _cg .FillEnabled {_fcb .Add_h ();
+_fcb .Add_B ();}else {_fcb .Add_S ();};_fcb .Add_Q ();return _fcb .Bytes (),_cbdc .GetBoundingBox ().ToPdfRectangle (),nil ;};
+
+// GetPointNumber returns the path point at the index specified by number.
+// The index is 1-based.
+func (_bea Path )GetPointNumber (number int )Point {if number < 1||number > len (_bea .Points ){return Point {};};return _bea .Points [number -1];};
+
+// FlipY flips the sign of the Dy component of the vector.
+func (_bfgb Vector )FlipY ()Vector {_bfgb .Dy =-_bfgb .Dy ;return _bfgb };
+
+// Copy returns a clone of the Bezier path.
+func (_fc CubicBezierPath )Copy ()CubicBezierPath {_dg :=CubicBezierPath {};_dg .Curves =append (_dg .Curves ,_fc .Curves ...);return _dg ;};
+
+// Magnitude returns the magnitude of the vector.
+func (_bee Vector )Magnitude ()float64 {return _c .Sqrt (_c .Pow (_bee .Dx ,2.0)+_c .Pow (_bee .Dy ,2.0))};
+
+// Rotate rotates the vector by the specified angle.
+func (_efa Vector )Rotate (phi float64 )Vector {_edac :=_efa .Magnitude ();_eaa :=_efa .GetPolarAngle ();return NewVectorPolar (_edac ,_eaa +phi );};
+
+// Circle represents a circle shape with fill and border properties that can be drawn to a PDF content stream.
+type Circle struct{X float64 ;Y float64 ;Width float64 ;Height float64 ;FillEnabled bool ;FillColor _a .PdfColor ;BorderEnabled bool ;BorderWidth float64 ;BorderColor _a .PdfColor ;Opacity float64 ;};
+
+// AddOffsetXY adds X,Y offset to all points on a curve.
+func (_gdd CubicBezierCurve )AddOffsetXY (offX ,offY float64 )CubicBezierCurve {_gdd .P0 .X +=offX ;_gdd .P1 .X +=offX ;_gdd .P2 .X +=offX ;_gdd .P3 .X +=offX ;_gdd .P0 .Y +=offY ;_gdd .P1 .Y +=offY ;_gdd .P2 .Y +=offY ;_gdd .P3 .Y +=offY ;return _gdd ;
+};
+
+// AddVector adds vector to a point.
+func (_gfg Point )AddVector (v Vector )Point {_gfg .X +=v .Dx ;_gfg .Y +=v .Dy ;return _gfg };
+
+// CurvePolygon is a multi-point shape with rings containing curves that can be
+// drawn to a PDF content stream.
+type CurvePolygon struct{Rings [][]CubicBezierCurve ;FillEnabled bool ;FillColor _a .PdfColor ;BorderEnabled bool ;BorderColor _a .PdfColor ;BorderWidth float64 ;};
+
+// BoundingBox represents the smallest rectangular area that encapsulates an object.
+type BoundingBox struct{X float64 ;Y float64 ;Width float64 ;Height float64 ;};
+
+// GetBounds returns the bounding box of the Bezier curve.
+func (_cd CubicBezierCurve )GetBounds ()_a .PdfRectangle {_ec :=_cd .P0 .X ;_gf :=_cd .P0 .X ;_dc :=_cd .P0 .Y ;_aa :=_cd .P0 .Y ;for _ge :=0.0;_ge <=1.0;_ge +=0.001{Rx :=_cd .P0 .X *_c .Pow (1-_ge ,3)+_cd .P1 .X *3*_ge *_c .Pow (1-_ge ,2)+_cd .P2 .X *3*_c .Pow (_ge ,2)*(1-_ge )+_cd .P3 .X *_c .Pow (_ge ,3);
+Ry :=_cd .P0 .Y *_c .Pow (1-_ge ,3)+_cd .P1 .Y *3*_ge *_c .Pow (1-_ge ,2)+_cd .P2 .Y *3*_c .Pow (_ge ,2)*(1-_ge )+_cd .P3 .Y *_c .Pow (_ge ,3);if Rx < _ec {_ec =Rx ;};if Rx > _gf {_gf =Rx ;};if Ry < _dc {_dc =Ry ;};if Ry > _aa {_aa =Ry ;};};_ed :=_a .PdfRectangle {};
+_ed .Llx =_ec ;_ed .Lly =_dc ;_ed .Urx =_gf ;_ed .Ury =_aa ;return _ed ;};
+
+// Draw draws the composite curve polygon. A graphics state name can be
+// specified for setting the curve properties (e.g. setting the opacity).
+// Otherwise leave empty (""). Returns the content stream as a byte array
+// and the bounding box of the polygon.
+func (_cee CurvePolygon )Draw (gsName string )([]byte ,*_a .PdfRectangle ,error ){_cfa :=_gd .NewContentCreator ();_cfa .Add_q ();_cee .FillEnabled =_cee .FillEnabled &&_cee .FillColor !=nil ;if _cee .FillEnabled {_cfa .SetNonStrokingColor (_cee .FillColor );
+};_cee .BorderEnabled =_cee .BorderEnabled &&_cee .BorderColor !=nil ;if _cee .BorderEnabled {_cfa .SetStrokingColor (_cee .BorderColor );_cfa .Add_w (_cee .BorderWidth );};if len (gsName )> 1{_cfa .Add_gs (_d .PdfObjectName (gsName ));};_fb :=NewCubicBezierPath ();
+for _ ,_fbc :=range _cee .Rings {for _cbc ,_bae :=range _fbc {if _cbc ==0{_cfa .Add_m (_bae .P0 .X ,_bae .P0 .Y );}else {_cfa .Add_l (_bae .P0 .X ,_bae .P0 .Y );};_cfa .Add_c (_bae .P1 .X ,_bae .P1 .Y ,_bae .P2 .X ,_bae .P2 .Y ,_bae .P3 .X ,_bae .P3 .Y );
+_fb =_fb .AppendCurve (_bae );};_cfa .Add_h ();};if _cee .FillEnabled &&_cee .BorderEnabled {_cfa .Add_B ();}else if _cee .FillEnabled {_cfa .Add_f ();}else if _cee .BorderEnabled {_cfa .Add_S ();};_cfa .Add_Q ();return _cfa .Bytes (),_fb .GetBoundingBox ().ToPdfRectangle (),nil ;
+};
+
+// NewCubicBezierPath returns a new empty cubic Bezier path.
+func NewCubicBezierPath ()CubicBezierPath {_ecf :=CubicBezierPath {};_ecf .Curves =[]CubicBezierCurve {};return _ecf ;};
+
+// Path consists of straight line connections between each point defined in an array of points.
+type Path struct{Points []Point ;};
+
+// BasicLine defines a line between point 1 (X1,Y1) and point 2 (X2,Y2). The line has a specified width, color and opacity.
+type BasicLine struct{X1 float64 ;Y1 float64 ;X2 float64 ;Y2 float64 ;LineColor _a .PdfColor ;Opacity float64 ;LineWidth float64 ;LineStyle LineStyle ;};
+
+// DrawBezierPathWithCreator makes the bezier path with the content creator.
+// Adds the PDF commands to draw the path to the creator instance.
+func DrawBezierPathWithCreator (bpath CubicBezierPath ,creator *_gd .ContentCreator ){for _acf ,_bec :=range bpath .Curves {if _acf ==0{creator .Add_m (_bec .P0 .X ,_bec .P0 .Y );};creator .Add_c (_bec .P1 .X ,_bec .P1 .Y ,_bec .P2 .X ,_bec .P2 .Y ,_bec .P3 .X ,_bec .P3 .Y );
+};};
+
+// Scale scales the vector by the specified factor.
+func (_bce Vector )Scale (factor float64 )Vector {_bcec :=_bce .Magnitude ();_ae :=_bce .GetPolarAngle ();_bce .Dx =factor *_bcec *_c .Cos (_ae );_bce .Dy =factor *_bcec *_c .Sin (_ae );return _bce ;};
+
+// Polyline defines a slice of points that are connected as straight lines.
+type Polyline struct{Points []Point ;LineColor _a .PdfColor ;LineWidth float64 ;};
+
+// Add shifts the coordinates of the point with dx, dy and returns the result.
+func (_cfg Point )Add (dx ,dy float64 )Point {_cfg .X +=dx ;_cfg .Y +=dy ;return _cfg };
+
+// Copy returns a clone of the path.
+func (_bc Path )Copy ()Path {_edef :=Path {};_edef .Points =append (_edef .Points ,_bc .Points ...);return _edef ;};
+
+// Polygon is a multi-point shape that can be drawn to a PDF content stream.
+type Polygon struct{Points [][]Point ;FillEnabled bool ;FillColor _a .PdfColor ;BorderEnabled bool ;BorderColor _a .PdfColor ;BorderWidth float64 ;};
 
 // CubicBezierCurve is defined by:
 // R(t) = P0*(1-t)^3 + P1*3*t*(1-t)^2 + P2*3*t^2*(1-t) + P3*t^3
 // where P0 is the current point, P1, P2 control points and P3 the final point.
 type CubicBezierCurve struct{P0 Point ;P1 Point ;P2 Point ;P3 Point ;};
 
-// RemovePoint removes the point at the index specified by number from the
-// path. The index is 1-based.
-func (_ba Path )RemovePoint (number int )Path {if number < 1||number > len (_ba .Points ){return _ba ;};_egc :=number -1;_ba .Points =append (_ba .Points [:_egc ],_ba .Points [_egc +1:]...);return _ba ;};
-
-// Line defines a line shape between point 1 (X1,Y1) and point 2 (X2,Y2).  The line ending styles can be none (regular line),
-// or arrows at either end.  The line also has a specified width, color and opacity.
-type Line struct{X1 float64 ;Y1 float64 ;X2 float64 ;Y2 float64 ;LineColor _d .PdfColor ;Opacity float64 ;LineWidth float64 ;LineEndingStyle1 LineEndingStyle ;LineEndingStyle2 LineEndingStyle ;LineStyle LineStyle ;};
-
-// GetPointNumber returns the path point at the index specified by number.
-// The index is 1-based.
-func (_bea Path )GetPointNumber (number int )Point {if number < 1||number > len (_bea .Points ){return Point {};};return _bea .Points [number -1];};
-
-// DrawPathWithCreator makes the path with the content creator.
-// Adds the PDF commands to draw the path to the creator instance.
-func DrawPathWithCreator (path Path ,creator *_f .ContentCreator ){for _gag ,_ced :=range path .Points {if _gag ==0{creator .Add_m (_ced .X ,_ced .Y );}else {creator .Add_l (_ced .X ,_ced .Y );};};};
-
-// AppendPoint adds the specified point to the path.
-func (_aga Path )AppendPoint (point Point )Path {_aga .Points =append (_aga .Points ,point );return _aga };
-
-// LineEndingStyle defines the line ending style for lines.
-// The currently supported line ending styles are None, Arrow (ClosedArrow) and Butt.
-type LineEndingStyle int ;
-
-// Rectangle is a shape with a specified Width and Height and a lower left corner at (X,Y) that can be
-// drawn to a PDF content stream.  The rectangle can optionally have a border and a filling color.
-// The Width/Height includes the border (if any specified), i.e. is positioned inside.
-type Rectangle struct{X float64 ;Y float64 ;Width float64 ;Height float64 ;FillEnabled bool ;FillColor _d .PdfColor ;BorderEnabled bool ;BorderWidth float64 ;BorderColor _d .PdfColor ;Opacity float64 ;};
-
-// Draw draws the circle. Can specify a graphics state (gsName) for setting opacity etc.  Otherwise leave empty ("").
-// Returns the content stream as a byte array, the bounding box and an error on failure.
-func (_dag Circle )Draw (gsName string )([]byte ,*_d .PdfRectangle ,error ){_bb :=_dag .Width /2;_ge :=_dag .Height /2;if _dag .BorderEnabled {_bb -=_dag .BorderWidth /2;_ge -=_dag .BorderWidth /2;};_dgf :=0.551784;_dbd :=_bb *_dgf ;_fdf :=_ge *_dgf ;_cdg :=NewCubicBezierPath ();
-_cdg =_cdg .AppendCurve (NewCubicBezierCurve (-_bb ,0,-_bb ,_fdf ,-_dbd ,_ge ,0,_ge ));_cdg =_cdg .AppendCurve (NewCubicBezierCurve (0,_ge ,_dbd ,_ge ,_bb ,_fdf ,_bb ,0));_cdg =_cdg .AppendCurve (NewCubicBezierCurve (_bb ,0,_bb ,-_fdf ,_dbd ,-_ge ,0,-_ge ));
-_cdg =_cdg .AppendCurve (NewCubicBezierCurve (0,-_ge ,-_dbd ,-_ge ,-_bb ,-_fdf ,-_bb ,0));_cdg =_cdg .Offset (_bb ,_ge );if _dag .BorderEnabled {_cdg =_cdg .Offset (_dag .BorderWidth /2,_dag .BorderWidth /2);};if _dag .X !=0||_dag .Y !=0{_cdg =_cdg .Offset (_dag .X ,_dag .Y );
-};_gd :=_f .NewContentCreator ();_gd .Add_q ();if _dag .FillEnabled {_gd .SetNonStrokingColor (_dag .FillColor );};if _dag .BorderEnabled {_gd .SetStrokingColor (_dag .BorderColor );_gd .Add_w (_dag .BorderWidth );};if len (gsName )> 1{_gd .Add_gs (_db .PdfObjectName (gsName ));
-};DrawBezierPathWithCreator (_cdg ,_gd );_gd .Add_h ();if _dag .FillEnabled &&_dag .BorderEnabled {_gd .Add_B ();}else if _dag .FillEnabled {_gd .Add_f ();}else if _dag .BorderEnabled {_gd .Add_S ();};_gd .Add_Q ();_bdc :=_cdg .GetBoundingBox ();if _dag .BorderEnabled {_bdc .Height +=_dag .BorderWidth ;
-_bdc .Width +=_dag .BorderWidth ;_bdc .X -=_dag .BorderWidth /2;_bdc .Y -=_dag .BorderWidth /2;};return _gd .Bytes (),_bdc .ToPdfRectangle (),nil ;};
-
-// NewCubicBezierPath returns a new empty cubic Bezier path.
-func NewCubicBezierPath ()CubicBezierPath {_da :=CubicBezierPath {};_da .Curves =[]CubicBezierCurve {};return _da ;};
+// NewPoint returns a new point with the coordinates x, y.
+func NewPoint (x ,y float64 )Point {return Point {X :x ,Y :y }};
 
 // Draw draws the polyline. A graphics state name can be specified for
 // setting the polyline properties (e.g. setting the opacity). Otherwise leave
 // empty (""). Returns the content stream as a byte array and the polyline
 // bounding box.
-func (_beg Polyline )Draw (gsName string )([]byte ,*_d .PdfRectangle ,error ){if _beg .LineColor ==nil {_beg .LineColor =_d .NewPdfColorDeviceRGB (0,0,0);};_gae :=NewPath ();for _ ,_bbga :=range _beg .Points {_gae =_gae .AppendPoint (_bbga );};_cff :=_f .NewContentCreator ();
-_cff .Add_q ().SetStrokingColor (_beg .LineColor ).Add_w (_beg .LineWidth );if len (gsName )> 1{_cff .Add_gs (_db .PdfObjectName (gsName ));};DrawPathWithCreator (_gae ,_cff );_cff .Add_S ();_cff .Add_Q ();return _cff .Bytes (),_gae .GetBoundingBox ().ToPdfRectangle (),nil ;
+func (_ffe Polyline )Draw (gsName string )([]byte ,*_a .PdfRectangle ,error ){if _ffe .LineColor ==nil {_ffe .LineColor =_a .NewPdfColorDeviceRGB (0,0,0);};_dgg :=NewPath ();for _ ,_gcg :=range _ffe .Points {_dgg =_dgg .AppendPoint (_gcg );};_fegd :=_gd .NewContentCreator ();
+_fegd .Add_q ().SetStrokingColor (_ffe .LineColor ).Add_w (_ffe .LineWidth );if len (gsName )> 1{_fegd .Add_gs (_d .PdfObjectName (gsName ));};DrawPathWithCreator (_dgg ,_fegd );_fegd .Add_S ();_fegd .Add_Q ();return _fegd .Bytes (),_dgg .GetBoundingBox ().ToPdfRectangle (),nil ;
 };
+
+// Flip changes the sign of the vector: -vector.
+func (_baeb Vector )Flip ()Vector {_dee :=_baeb .Magnitude ();_bde :=_baeb .GetPolarAngle ();_baeb .Dx =_dee *_c .Cos (_bde +_c .Pi );_baeb .Dy =_dee *_c .Sin (_bde +_c .Pi );return _baeb ;};
+
+// Length returns the number of points in the path.
+func (_eaed Path )Length ()int {return len (_eaed .Points )};
+
+// LineEndingStyle defines the line ending style for lines.
+// The currently supported line ending styles are None, Arrow (ClosedArrow) and Butt.
+type LineEndingStyle int ;const (LineStyleSolid LineStyle =0;LineStyleDashed LineStyle =1;);func (_bcf Point )String ()string {return _f .Sprintf ("(\u0025\u002e\u0031\u0066\u002c\u0025\u002e\u0031\u0066\u0029",_bcf .X ,_bcf .Y );};
+
+// Draw draws the rectangle. Can specify a graphics state (gsName) for setting opacity etc.
+// Otherwise leave empty (""). Returns the content stream as a byte array, bounding box and an error on failure.
+func (_dcb Rectangle )Draw (gsName string )([]byte ,*_a .PdfRectangle ,error ){_fec :=NewPath ();_fec =_fec .AppendPoint (NewPoint (0,0));_fec =_fec .AppendPoint (NewPoint (0,_dcb .Height ));_fec =_fec .AppendPoint (NewPoint (_dcb .Width ,_dcb .Height ));
+_fec =_fec .AppendPoint (NewPoint (_dcb .Width ,0));_fec =_fec .AppendPoint (NewPoint (0,0));if _dcb .X !=0||_dcb .Y !=0{_fec =_fec .Offset (_dcb .X ,_dcb .Y );};_beb :=_gd .NewContentCreator ();_beb .Add_q ();if _dcb .FillEnabled {_beb .SetNonStrokingColor (_dcb .FillColor );
+};if _dcb .BorderEnabled {_beb .SetStrokingColor (_dcb .BorderColor );_beb .Add_w (_dcb .BorderWidth );};if len (gsName )> 1{_beb .Add_gs (_d .PdfObjectName (gsName ));};DrawPathWithCreator (_fec ,_beb );_beb .Add_h ();if _dcb .FillEnabled &&_dcb .BorderEnabled {_beb .Add_B ();
+}else if _dcb .FillEnabled {_beb .Add_f ();}else if _dcb .BorderEnabled {_beb .Add_S ();};_beb .Add_Q ();return _beb .Bytes (),_fec .GetBoundingBox ().ToPdfRectangle (),nil ;};
+
+// AppendCurve appends the specified Bezier curve to the path.
+func (_ede CubicBezierPath )AppendCurve (curve CubicBezierCurve )CubicBezierPath {_ede .Curves =append (_ede .Curves ,curve );return _ede ;};
+
+// Offset shifts the Bezier path with the specified offsets.
+func (_cf CubicBezierPath )Offset (offX ,offY float64 )CubicBezierPath {for _edg ,_bf :=range _cf .Curves {_cf .Curves [_edg ]=_bf .AddOffsetXY (offX ,offY );};return _cf ;};
+
+// NewVectorPolar returns a new vector calculated from the specified
+// magnitude and angle.
+func NewVectorPolar (length float64 ,theta float64 )Vector {_ceb :=Vector {};_ceb .Dx =length *_c .Cos (theta );_ceb .Dy =length *_c .Sin (theta );return _ceb ;};
+
+// FlipX flips the sign of the Dx component of the vector.
+func (_aab Vector )FlipX ()Vector {_aab .Dx =-_aab .Dx ;return _aab };
 
 // NewPath returns a new empty path.
 func NewPath ()Path {return Path {}};
 
+// AppendPoint adds the specified point to the path.
+func (_cb Path )AppendPoint (point Point )Path {_cb .Points =append (_cb .Points ,point );return _cb };
+
+// Rectangle is a shape with a specified Width and Height and a lower left corner at (X,Y) that can be
+// drawn to a PDF content stream.  The rectangle can optionally have a border and a filling color.
+// The Width/Height includes the border (if any specified), i.e. is positioned inside.
+type Rectangle struct{X float64 ;Y float64 ;Width float64 ;Height float64 ;FillEnabled bool ;FillColor _a .PdfColor ;BorderEnabled bool ;BorderWidth float64 ;BorderColor _a .PdfColor ;Opacity float64 ;};
+
+// Offset shifts the path with the specified offsets.
+func (_ce Path )Offset (offX ,offY float64 )Path {for _eb ,_fd :=range _ce .Points {_ce .Points [_eb ]=_fd .Add (offX ,offY );};return _ce ;};
+
+// ToPdfRectangle returns the rectangle as a PDF rectangle.
+func (_eda Rectangle )ToPdfRectangle ()*_a .PdfRectangle {return &_a .PdfRectangle {Llx :_eda .X ,Lly :_eda .Y ,Urx :_eda .X +_eda .Width ,Ury :_eda .Y +_eda .Height };};
+
 // GetBoundingBox returns the bounding box of the Bezier path.
-func (_ga CubicBezierPath )GetBoundingBox ()Rectangle {_ca :=Rectangle {};_gcg :=0.0;_bc :=0.0;_cf :=0.0;_fd :=0.0;for _ac ,_ed :=range _ga .Curves {_bd :=_ed .GetBounds ();if _ac ==0{_gcg =_bd .Llx ;_bc =_bd .Urx ;_cf =_bd .Lly ;_fd =_bd .Ury ;continue ;
-};if _bd .Llx < _gcg {_gcg =_bd .Llx ;};if _bd .Urx > _bc {_bc =_bd .Urx ;};if _bd .Lly < _cf {_cf =_bd .Lly ;};if _bd .Ury > _fd {_fd =_bd .Ury ;};};_ca .X =_gcg ;_ca .Y =_cf ;_ca .Width =_bc -_gcg ;_ca .Height =_fd -_cf ;return _ca ;};
+func (_dd CubicBezierPath )GetBoundingBox ()Rectangle {_ad :=Rectangle {};_be :=0.0;_ea :=0.0;_db :=0.0;_eae :=0.0;for _ca ,_bg :=range _dd .Curves {_de :=_bg .GetBounds ();if _ca ==0{_be =_de .Llx ;_ea =_de .Urx ;_db =_de .Lly ;_eae =_de .Ury ;continue ;
+};if _de .Llx < _be {_be =_de .Llx ;};if _de .Urx > _ea {_ea =_de .Urx ;};if _de .Lly < _db {_db =_de .Lly ;};if _de .Ury > _eae {_eae =_de .Ury ;};};_ad .X =_be ;_ad .Y =_db ;_ad .Width =_ea -_be ;_ad .Height =_eae -_db ;return _ad ;};
+
+// Rotate returns a new Point at `p` rotated by `theta` degrees.
+func (_bdb Point )Rotate (theta float64 )Point {_gfga :=_b .NewPoint (_bdb .X ,_bdb .Y ).Rotate (theta );return NewPoint (_gfga .X ,_gfga .Y );};const (LineEndingStyleNone LineEndingStyle =0;LineEndingStyleArrow LineEndingStyle =1;LineEndingStyleButt LineEndingStyle =2;
+);
+
+// CubicBezierPath represents a collection of cubic Bezier curves.
+type CubicBezierPath struct{Curves []CubicBezierCurve ;};
+
+// GetPolarAngle returns the angle the magnitude of the vector forms with the
+// positive X-axis going counterclockwise.
+func (_fge Vector )GetPolarAngle ()float64 {return _c .Atan2 (_fge .Dy ,_fge .Dx )};
 
 // Draw draws the polygon. A graphics state name can be specified for
 // setting the polygon properties (e.g. setting the opacity). Otherwise leave
 // empty (""). Returns the content stream as a byte array and the polygon
 // bounding box.
-func (_df Polygon )Draw (gsName string )([]byte ,*_d .PdfRectangle ,error ){_gbf :=_f .NewContentCreator ();_gbf .Add_q ();_df .FillEnabled =_df .FillEnabled &&_df .FillColor !=nil ;if _df .FillEnabled {_gbf .SetNonStrokingColor (_df .FillColor );};_df .BorderEnabled =_df .BorderEnabled &&_df .BorderColor !=nil ;
-if _df .BorderEnabled {_gbf .SetStrokingColor (_df .BorderColor );_gbf .Add_w (_df .BorderWidth );};if len (gsName )> 1{_gbf .Add_gs (_db .PdfObjectName (gsName ));};_gf :=NewPath ();for _ ,_cae :=range _df .Points {for _abc ,_cfb :=range _cae {_gf =_gf .AppendPoint (_cfb );
-if _abc ==0{_gbf .Add_m (_cfb .X ,_cfb .Y );}else {_gbf .Add_l (_cfb .X ,_cfb .Y );};};_gbf .Add_h ();};if _df .FillEnabled &&_df .BorderEnabled {_gbf .Add_B ();}else if _df .FillEnabled {_gbf .Add_f ();}else if _df .BorderEnabled {_gbf .Add_S ();};_gbf .Add_Q ();
-return _gbf .Bytes (),_gf .GetBoundingBox ().ToPdfRectangle (),nil ;};
+func (_fe Polygon )Draw (gsName string )([]byte ,*_a .PdfRectangle ,error ){_ebfb :=_gd .NewContentCreator ();_ebfb .Add_q ();_fe .FillEnabled =_fe .FillEnabled &&_fe .FillColor !=nil ;if _fe .FillEnabled {_ebfb .SetNonStrokingColor (_fe .FillColor );};
+_fe .BorderEnabled =_fe .BorderEnabled &&_fe .BorderColor !=nil ;if _fe .BorderEnabled {_ebfb .SetStrokingColor (_fe .BorderColor );_ebfb .Add_w (_fe .BorderWidth );};if len (gsName )> 1{_ebfb .Add_gs (_d .PdfObjectName (gsName ));};_deg :=NewPath ();for _ ,_dcg :=range _fe .Points {for _ecb ,_bgb :=range _dcg {_deg =_deg .AppendPoint (_bgb );
+if _ecb ==0{_ebfb .Add_m (_bgb .X ,_bgb .Y );}else {_ebfb .Add_l (_bgb .X ,_bgb .Y );};};_ebfb .Add_h ();};if _fe .FillEnabled &&_fe .BorderEnabled {_ebfb .Add_B ();}else if _fe .FillEnabled {_ebfb .Add_f ();}else if _fe .BorderEnabled {_ebfb .Add_S ();
+};_ebfb .Add_Q ();return _ebfb .Bytes (),_deg .GetBoundingBox ().ToPdfRectangle (),nil ;};
 
-// NewCubicBezierCurve returns a new cubic Bezier curve.
-func NewCubicBezierCurve (x0 ,y0 ,x1 ,y1 ,x2 ,y2 ,x3 ,y3 float64 )CubicBezierCurve {_fc :=CubicBezierCurve {};_fc .P0 =NewPoint (x0 ,y0 );_fc .P1 =NewPoint (x1 ,y1 );_fc .P2 =NewPoint (x2 ,y2 );_fc .P3 =NewPoint (x3 ,y3 );return _fc ;};
+// Line defines a line shape between point 1 (X1,Y1) and point 2 (X2,Y2).  The line ending styles can be none (regular line),
+// or arrows at either end.  The line also has a specified width, color and opacity.
+type Line struct{X1 float64 ;Y1 float64 ;X2 float64 ;Y2 float64 ;LineColor _a .PdfColor ;Opacity float64 ;LineWidth float64 ;LineEndingStyle1 LineEndingStyle ;LineEndingStyle2 LineEndingStyle ;LineStyle LineStyle ;};
+
+// DrawPathWithCreator makes the path with the content creator.
+// Adds the PDF commands to draw the path to the creator instance.
+func DrawPathWithCreator (path Path ,creator *_gd .ContentCreator ){for _afc ,_ebc :=range path .Points {if _afc ==0{creator .Add_m (_ebc .X ,_ebc .Y );}else {creator .Add_l (_ebc .X ,_ebc .Y );};};};
 
 // NewVectorBetween returns a new vector with the direction specified by
 // the subtraction of point a from point b (b-a).
-func NewVectorBetween (a Point ,b Point )Vector {_gcga :=Vector {};_gcga .Dx =b .X -a .X ;_gcga .Dy =b .Y -a .Y ;return _gcga ;};
+func NewVectorBetween (a Point ,b Point )Vector {_adff :=Vector {};_adff .Dx =b .X -a .X ;_adff .Dy =b .Y -a .Y ;return _adff ;};
 
-// NewPoint returns a new point with the coordinates x, y.
-func NewPoint (x ,y float64 )Point {return Point {X :x ,Y :y }};
-
-// GetBounds returns the bounding box of the Bezier curve.
-func (_ec CubicBezierCurve )GetBounds ()_d .PdfRectangle {_g :=_ec .P0 .X ;_fa :=_ec .P0 .X ;_ecg :=_ec .P0 .Y ;_ad :=_ec .P0 .Y ;for _eb :=0.0;_eb <=1.0;_eb +=0.001{Rx :=_ec .P0 .X *_e .Pow (1-_eb ,3)+_ec .P1 .X *3*_eb *_e .Pow (1-_eb ,2)+_ec .P2 .X *3*_e .Pow (_eb ,2)*(1-_eb )+_ec .P3 .X *_e .Pow (_eb ,3);
-Ry :=_ec .P0 .Y *_e .Pow (1-_eb ,3)+_ec .P1 .Y *3*_eb *_e .Pow (1-_eb ,2)+_ec .P2 .Y *3*_e .Pow (_eb ,2)*(1-_eb )+_ec .P3 .Y *_e .Pow (_eb ,3);if Rx < _g {_g =Rx ;};if Rx > _fa {_fa =Rx ;};if Ry < _ecg {_ecg =Ry ;};if Ry > _ad {_ad =Ry ;};};_dbc :=_d .PdfRectangle {};
-_dbc .Llx =_g ;_dbc .Lly =_ecg ;_dbc .Urx =_fa ;_dbc .Ury =_ad ;return _dbc ;};
-
-// Draw draws the composite Bezier curve. A graphics state name can be
-// specified for setting the curve properties (e.g. setting the opacity).
-// Otherwise leave empty (""). Returns the content stream as a byte array and
-// the curve bounding box.
-func (_ebe PolyBezierCurve )Draw (gsName string )([]byte ,*_d .PdfRectangle ,error ){if _ebe .BorderColor ==nil {_ebe .BorderColor =_d .NewPdfColorDeviceRGB (0,0,0);};_aa :=NewCubicBezierPath ();for _ ,_bde :=range _ebe .Curves {_aa =_aa .AppendCurve (_bde );
-};_cdc :=_f .NewContentCreator ();_cdc .Add_q ();_ebe .FillEnabled =_ebe .FillEnabled &&_ebe .FillColor !=nil ;if _ebe .FillEnabled {_cdc .SetNonStrokingColor (_ebe .FillColor );};_cdc .SetStrokingColor (_ebe .BorderColor );_cdc .Add_w (_ebe .BorderWidth );
-if len (gsName )> 1{_cdc .Add_gs (_db .PdfObjectName (gsName ));};for _edd ,_fab :=range _aa .Curves {if _edd ==0{_cdc .Add_m (_fab .P0 .X ,_fab .P0 .Y );}else {_cdc .Add_l (_fab .P0 .X ,_fab .P0 .Y );};_cdc .Add_c (_fab .P1 .X ,_fab .P1 .Y ,_fab .P2 .X ,_fab .P2 .Y ,_fab .P3 .X ,_fab .P3 .Y );
-};if _ebe .FillEnabled {_cdc .Add_h ();_cdc .Add_B ();}else {_cdc .Add_S ();};_cdc .Add_Q ();return _cdc .Bytes (),_aa .GetBoundingBox ().ToPdfRectangle (),nil ;};
-
-// NewVectorPolar returns a new vector calculated from the specified
-// magnitude and angle.
-func NewVectorPolar (length float64 ,theta float64 )Vector {_bda :=Vector {};_bda .Dx =length *_e .Cos (theta );_bda .Dy =length *_e .Sin (theta );return _bda ;};
-
-// Draw draws the line to PDF contentstream. Generates the content stream which can be used in page contents or
-// appearance stream of annotation. Returns the stream content, XForm bounding box (local), bounding box and an error
-// if one occurred.
-func (_bfd Line )Draw (gsName string )([]byte ,*_d .PdfRectangle ,error ){_bbf ,_cg :=_bfd .X1 ,_bfd .X2 ;_bbc ,_gg :=_bfd .Y1 ,_bfd .Y2 ;_fe :=_gg -_bbc ;_dfd :=_cg -_bbf ;_bfe :=_e .Atan2 (_fe ,_dfd );L :=_e .Sqrt (_e .Pow (_dfd ,2.0)+_e .Pow (_fe ,2.0));
-_bdd :=_bfd .LineWidth ;_ea :=_e .Pi ;_agc :=1.0;if _dfd < 0{_agc *=-1.0;};if _fe < 0{_agc *=-1.0;};VsX :=_agc *(-_bdd /2*_e .Cos (_bfe +_ea /2));VsY :=_agc *(-_bdd /2*_e .Sin (_bfe +_ea /2)+_bdd *_e .Sin (_bfe +_ea /2));V1X :=VsX +_bdd /2*_e .Cos (_bfe +_ea /2);
-V1Y :=VsY +_bdd /2*_e .Sin (_bfe +_ea /2);V2X :=VsX +_bdd /2*_e .Cos (_bfe +_ea /2)+L *_e .Cos (_bfe );V2Y :=VsY +_bdd /2*_e .Sin (_bfe +_ea /2)+L *_e .Sin (_bfe );V3X :=VsX +_bdd /2*_e .Cos (_bfe +_ea /2)+L *_e .Cos (_bfe )+_bdd *_e .Cos (_bfe -_ea /2);
-V3Y :=VsY +_bdd /2*_e .Sin (_bfe +_ea /2)+L *_e .Sin (_bfe )+_bdd *_e .Sin (_bfe -_ea /2);V4X :=VsX +_bdd /2*_e .Cos (_bfe -_ea /2);V4Y :=VsY +_bdd /2*_e .Sin (_bfe -_ea /2);_bcb :=NewPath ();_bcb =_bcb .AppendPoint (NewPoint (V1X ,V1Y ));_bcb =_bcb .AppendPoint (NewPoint (V2X ,V2Y ));
-_bcb =_bcb .AppendPoint (NewPoint (V3X ,V3Y ));_bcb =_bcb .AppendPoint (NewPoint (V4X ,V4Y ));_bbg :=_bfd .LineEndingStyle1 ;_fg :=_bfd .LineEndingStyle2 ;_cc :=3*_bdd ;_bfb :=3*_bdd ;_ccb :=(_bfb -_bdd )/2;if _fg ==LineEndingStyleArrow {_bcg :=_bcb .GetPointNumber (2);
-_fb :=NewVectorPolar (_cc ,_bfe +_ea );_fbb :=_bcg .AddVector (_fb );_cbd :=NewVectorPolar (_bfb /2,_bfe +_ea /2);_aag :=NewVectorPolar (_cc ,_bfe );_acb :=NewVectorPolar (_ccb ,_bfe +_ea /2);_becc :=_fbb .AddVector (_acb );_beaa :=_aag .Add (_cbd .Flip ());
-_aff :=_becc .AddVector (_beaa );_edb :=_cbd .Scale (2).Flip ().Add (_beaa .Flip ());_cbg :=_aff .AddVector (_edb );_ce :=_fbb .AddVector (NewVectorPolar (_bdd ,_bfe -_ea /2));_ebdc :=NewPath ();_ebdc =_ebdc .AppendPoint (_bcb .GetPointNumber (1));_ebdc =_ebdc .AppendPoint (_fbb );
-_ebdc =_ebdc .AppendPoint (_becc );_ebdc =_ebdc .AppendPoint (_aff );_ebdc =_ebdc .AppendPoint (_cbg );_ebdc =_ebdc .AppendPoint (_ce );_ebdc =_ebdc .AppendPoint (_bcb .GetPointNumber (4));_bcb =_ebdc ;};if _bbg ==LineEndingStyleArrow {_cab :=_bcb .GetPointNumber (1);
-_cfd :=_bcb .GetPointNumber (_bcb .Length ());_gbb :=NewVectorPolar (_bdd /2,_bfe +_ea +_ea /2);_dbea :=_cab .AddVector (_gbb );_dce :=NewVectorPolar (_cc ,_bfe ).Add (NewVectorPolar (_bfb /2,_bfe +_ea /2));_cce :=_dbea .AddVector (_dce );_fgc :=NewVectorPolar (_ccb ,_bfe -_ea /2);
-_ccc :=_cce .AddVector (_fgc );_eac :=NewVectorPolar (_cc ,_bfe );_fbg :=_cfd .AddVector (_eac );_efa :=NewVectorPolar (_ccb ,_bfe +_ea +_ea /2);_dbg :=_fbg .AddVector (_efa );_cge :=_dbea ;_ggd :=NewPath ();_ggd =_ggd .AppendPoint (_dbea );_ggd =_ggd .AppendPoint (_cce );
-_ggd =_ggd .AppendPoint (_ccc );for _ ,_egb :=range _bcb .Points [1:len (_bcb .Points )-1]{_ggd =_ggd .AppendPoint (_egb );};_ggd =_ggd .AppendPoint (_fbg );_ggd =_ggd .AppendPoint (_dbg );_ggd =_ggd .AppendPoint (_cge );_bcb =_ggd ;};_fed :=_f .NewContentCreator ();
-_fed .Add_q ().SetNonStrokingColor (_bfd .LineColor );if len (gsName )> 1{_fed .Add_gs (_db .PdfObjectName (gsName ));};_bcb =_bcb .Offset (_bfd .X1 ,_bfd .Y1 );_bgd :=_bcb .GetBoundingBox ();DrawPathWithCreator (_bcb ,_fed );if _bfd .LineStyle ==LineStyleDashed {_fed .Add_d ([]int64 {1,1},0).Add_S ().Add_f ().Add_Q ();
-}else {_fed .Add_f ().Add_Q ();};return _fed .Bytes (),_bgd .ToPdfRectangle (),nil ;};
-
-// AppendCurve appends the specified Bezier curve to the path.
-func (_gc CubicBezierPath )AppendCurve (curve CubicBezierCurve )CubicBezierPath {_gc .Curves =append (_gc .Curves ,curve );return _gc ;};
-
-// Rotate rotates the vector by the specified angle.
-func (_fea Vector )Rotate (phi float64 )Vector {_cgb :=_fea .Magnitude ();_abd :=_fea .GetPolarAngle ();return NewVectorPolar (_cgb ,_abd +phi );};
-
-// Add adds the specified vector to the current one and returns the result.
-func (_dcaf Vector )Add (other Vector )Vector {_dcaf .Dx +=other .Dx ;_dcaf .Dy +=other .Dy ;return _dcaf ;};
-
-// DrawBezierPathWithCreator makes the bezier path with the content creator.
-// Adds the PDF commands to draw the path to the creator instance.
-func DrawBezierPathWithCreator (bpath CubicBezierPath ,creator *_f .ContentCreator ){for _de ,_ee :=range bpath .Curves {if _de ==0{creator .Add_m (_ee .P0 .X ,_ee .P0 .Y );};creator .Add_c (_ee .P1 .X ,_ee .P1 .Y ,_ee .P2 .X ,_ee .P2 .Y ,_ee .P3 .X ,_ee .P3 .Y );
-};};
-
-// Flip changes the sign of the vector: -vector.
-func (_bfde Vector )Flip ()Vector {_ggg :=_bfde .Magnitude ();_ggga :=_bfde .GetPolarAngle ();_bfde .Dx =_ggg *_e .Cos (_ggga +_e .Pi );_bfde .Dy =_ggg *_e .Sin (_ggga +_e .Pi );return _bfde ;};
-
-// Draw draws the rectangle. Can specify a graphics state (gsName) for setting opacity etc.
-// Otherwise leave empty (""). Returns the content stream as a byte array, bounding box and an error on failure.
-func (_abb Rectangle )Draw (gsName string )([]byte ,*_d .PdfRectangle ,error ){_ef :=NewPath ();_ef =_ef .AppendPoint (NewPoint (0,0));_ef =_ef .AppendPoint (NewPoint (0,_abb .Height ));_ef =_ef .AppendPoint (NewPoint (_abb .Width ,_abb .Height ));_ef =_ef .AppendPoint (NewPoint (_abb .Width ,0));
-_ef =_ef .AppendPoint (NewPoint (0,0));if _abb .X !=0||_abb .Y !=0{_ef =_ef .Offset (_abb .X ,_abb .Y );};_bf :=_f .NewContentCreator ();_bf .Add_q ();if _abb .FillEnabled {_bf .SetNonStrokingColor (_abb .FillColor );};if _abb .BorderEnabled {_bf .SetStrokingColor (_abb .BorderColor );
-_bf .Add_w (_abb .BorderWidth );};if len (gsName )> 1{_bf .Add_gs (_db .PdfObjectName (gsName ));};DrawPathWithCreator (_ef ,_bf );_bf .Add_h ();if _abb .FillEnabled &&_abb .BorderEnabled {_bf .Add_B ();}else if _abb .FillEnabled {_bf .Add_f ();}else if _abb .BorderEnabled {_bf .Add_S ();
-};_bf .Add_Q ();return _bf .Bytes (),_ef .GetBoundingBox ().ToPdfRectangle (),nil ;};
-
-// Add shifts the coordinates of the point with dx, dy and returns the result.
-func (_ebd Point )Add (dx ,dy float64 )Point {_ebd .X +=dx ;_ebd .Y +=dy ;return _ebd };
-
-// AddOffsetXY adds X,Y offset to all points on a curve.
-func (_eg CubicBezierCurve )AddOffsetXY (offX ,offY float64 )CubicBezierCurve {_eg .P0 .X +=offX ;_eg .P1 .X +=offX ;_eg .P2 .X +=offX ;_eg .P3 .X +=offX ;_eg .P0 .Y +=offY ;_eg .P1 .Y +=offY ;_eg .P2 .Y +=offY ;_eg .P3 .Y +=offY ;return _eg ;};
-
-// FlipX flips the sign of the Dx component of the vector.
-func (_aed Vector )FlipX ()Vector {_aed .Dx =-_aed .Dx ;return _aed };
-
-// Draw draws the composite curve polygon. A graphics state name can be
-// specified for setting the curve properties (e.g. setting the opacity).
-// Otherwise leave empty (""). Returns the content stream as a byte array
-// and the bounding box of the polygon.
-func (_dca CurvePolygon )Draw (gsName string )([]byte ,*_d .PdfRectangle ,error ){_egf :=_f .NewContentCreator ();_egf .Add_q ();_dca .FillEnabled =_dca .FillEnabled &&_dca .FillColor !=nil ;if _dca .FillEnabled {_egf .SetNonStrokingColor (_dca .FillColor );
-};_dca .BorderEnabled =_dca .BorderEnabled &&_dca .BorderColor !=nil ;if _dca .BorderEnabled {_egf .SetStrokingColor (_dca .BorderColor );_egf .Add_w (_dca .BorderWidth );};if len (gsName )> 1{_egf .Add_gs (_db .PdfObjectName (gsName ));};_aaa :=NewCubicBezierPath ();
-for _ ,_bec :=range _dca .Rings {for _af ,_gfb :=range _bec {if _af ==0{_egf .Add_m (_gfb .P0 .X ,_gfb .P0 .Y );}else {_egf .Add_l (_gfb .P0 .X ,_gfb .P0 .Y );};_egf .Add_c (_gfb .P1 .X ,_gfb .P1 .Y ,_gfb .P2 .X ,_gfb .P2 .Y ,_gfb .P3 .X ,_gfb .P3 .Y );
-_aaa =_aaa .AppendCurve (_gfb );};_egf .Add_h ();};if _dca .FillEnabled &&_dca .BorderEnabled {_egf .Add_B ();}else if _dca .FillEnabled {_egf .Add_f ();}else if _dca .BorderEnabled {_egf .Add_S ();};_egf .Add_Q ();return _egf .Bytes (),_aaa .GetBoundingBox ().ToPdfRectangle (),nil ;
-};
-
-// PolyBezierCurve represents a composite curve that is the result of
-// joining multiple cubic Bezier curves.
-type PolyBezierCurve struct{Curves []CubicBezierCurve ;BorderWidth float64 ;BorderColor _d .PdfColor ;FillEnabled bool ;FillColor _d .PdfColor ;};
-
-// Offset shifts the Bezier path with the specified offsets.
-func (_bg CubicBezierPath )Offset (offX ,offY float64 )CubicBezierPath {for _dc ,_be :=range _bg .Curves {_bg .Curves [_dc ]=_be .AddOffsetXY (offX ,offY );};return _bg ;};
-
-// FlipY flips the sign of the Dy component of the vector.
-func (_fbc Vector )FlipY ()Vector {_fbc .Dy =-_fbc .Dy ;return _fbc };const (LineStyleSolid LineStyle =0;LineStyleDashed LineStyle =1;);
-
-// Copy returns a clone of the Bezier path.
-func (_c CubicBezierPath )Copy ()CubicBezierPath {_ag :=CubicBezierPath {};_ag .Curves =append (_ag .Curves ,_c .Curves ...);return _ag ;};
-
-// Length returns the number of points in the path.
-func (_cd Path )Length ()int {return len (_cd .Points )};
-
-// BasicLine defines a line between point 1 (X1,Y1) and point 2 (X2,Y2). The line has a specified width, color and opacity.
-type BasicLine struct{X1 float64 ;Y1 float64 ;X2 float64 ;Y2 float64 ;LineColor _d .PdfColor ;Opacity float64 ;LineWidth float64 ;LineStyle LineStyle ;};
-
-// ToPdfRectangle returns the bounding box as a PDF rectangle.
-func (_abe BoundingBox )ToPdfRectangle ()*_d .PdfRectangle {return &_d .PdfRectangle {Llx :_abe .X ,Lly :_abe .Y ,Urx :_abe .X +_abe .Width ,Ury :_abe .Y +_abe .Height };};func (_gcb Point )String ()string {return _b .Sprintf ("(\u0025\u002e\u0031\u0066\u002c\u0025\u002e\u0031\u0066\u0029",_gcb .X ,_gcb .Y );
-};
-
-// Polygon is a multi-point shape that can be drawn to a PDF content stream.
-type Polygon struct{Points [][]Point ;FillEnabled bool ;FillColor _d .PdfColor ;BorderEnabled bool ;BorderColor _d .PdfColor ;BorderWidth float64 ;};const (LineEndingStyleNone LineEndingStyle =0;LineEndingStyleArrow LineEndingStyle =1;LineEndingStyleButt LineEndingStyle =2;
-);
-
-// Copy returns a clone of the path.
-func (_bcf Path )Copy ()Path {_egcg :=Path {};_egcg .Points =append (_egcg .Points ,_bcf .Points ...);return _egcg ;};
-
-// Path consists of straight line connections between each point defined in an array of points.
-type Path struct{Points []Point ;};
+// Point represents a two-dimensional point.
+type Point struct{X float64 ;Y float64 ;};
 
 // LineStyle refers to how the line will be created.
 type LineStyle int ;
-
-// Rotate returns a new Point at `p` rotated by `theta` degrees.
-func (_egce Point )Rotate (theta float64 )Point {_dcf :=_ab .NewPoint (_egce .X ,_egce .Y ).Rotate (theta );return NewPoint (_dcf .X ,_dcf .Y );};
-
-// CurvePolygon is a multi-point shape with rings containing curves that can be
-// drawn to a PDF content stream.
-type CurvePolygon struct{Rings [][]CubicBezierCurve ;FillEnabled bool ;FillColor _d .PdfColor ;BorderEnabled bool ;BorderColor _d .PdfColor ;BorderWidth float64 ;};
-
-// ToPdfRectangle returns the rectangle as a PDF rectangle.
-func (_bdec Rectangle )ToPdfRectangle ()*_d .PdfRectangle {return &_d .PdfRectangle {Llx :_bdec .X ,Lly :_bdec .Y ,Urx :_bdec .X +_bdec .Width ,Ury :_bdec .Y +_bdec .Height };};
-
-// Circle represents a circle shape with fill and border properties that can be drawn to a PDF content stream.
-type Circle struct{X float64 ;Y float64 ;Width float64 ;Height float64 ;FillEnabled bool ;FillColor _d .PdfColor ;BorderEnabled bool ;BorderWidth float64 ;BorderColor _d .PdfColor ;Opacity float64 ;};
-
-// GetBoundingBox returns the bounding box of the path.
-func (_acc Path )GetBoundingBox ()BoundingBox {_ae :=BoundingBox {};_gb :=0.0;_fag :=0.0;_cb :=0.0;_aef :=0.0;for _cad ,_dga :=range _acc .Points {if _cad ==0{_gb =_dga .X ;_fag =_dga .X ;_cb =_dga .Y ;_aef =_dga .Y ;continue ;};if _dga .X < _gb {_gb =_dga .X ;
-};if _dga .X > _fag {_fag =_dga .X ;};if _dga .Y < _cb {_cb =_dga .Y ;};if _dga .Y > _aef {_aef =_dga .Y ;};};_ae .X =_gb ;_ae .Y =_cb ;_ae .Width =_fag -_gb ;_ae .Height =_aef -_cb ;return _ae ;};
-
-// Scale scales the vector by the specified factor.
-func (_daf Vector )Scale (factor float64 )Vector {_aea :=_daf .Magnitude ();_ceb :=_daf .GetPolarAngle ();_daf .Dx =factor *_aea *_e .Cos (_ceb );_daf .Dy =factor *_aea *_e .Sin (_ceb );return _daf ;};
-
-// GetPolarAngle returns the angle the magnitude of the vector forms with the
-// positive X-axis going counterclockwise.
-func (_cba Vector )GetPolarAngle ()float64 {return _e .Atan2 (_cba .Dy ,_cba .Dx )};
-
-// CubicBezierPath represents a collection of cubic Bezier curves.
-type CubicBezierPath struct{Curves []CubicBezierCurve ;};
-
-// Vector represents a two-dimensional vector.
-type Vector struct{Dx float64 ;Dy float64 ;};
