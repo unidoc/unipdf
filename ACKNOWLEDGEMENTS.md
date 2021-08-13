@@ -133,3 +133,63 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     DanBloomberg Leptonica is an amazing C/C++ Open Source library. It provides raster operations, binary expansion and
     reduction, JBIG2 component creators, correlation scoring and a lot more perfectly commented image operation functions.
     That library was used as a very solid base for our image operation algorithms used by the JBIG2 Encoder.
+
+* [sRGB2014 - Color Profile](http://www.color.org/srgbprofiles.xalter), Copyright International Color Consortium, 2015
+    This profile is made available by the International Color Consortium, and may be copied,
+    distributed, embedded, made, used, and sold without restriction. Altered versions of this
+    profile shall have the original identification and copyright information removed and
+    shall not be misrepresented as the original profile.
+
+* [sRGB v4 ICC preference - Color Profile](http://www.color.org/srgbprofiles.xalter), Copyright 2007 International Color Consortium
+    This profile is made available by the International Color Consortium, and may be copied,
+    distributed, embedded, made, used, and sold without restriction. Altered versions of this
+    profile shall have the original identification and copyright information removed and
+    shall not be misrepresented as the original profile.
+ 
+* [ISO Coated v2 Grey1c bas - Color Profile](https://www.colormanagement.org/en/isoprofile2009.html#ISOcoated_v2_grey1c_bas), 
+    Copyright (c) 2007, basICColor GmbH
+    
+    This software is provided 'as-is', without any express or implied
+    warranty. In no event will the authors be held liable for any damages
+    arising from the use of this software.
+    
+    Permission is granted to anyone to use this software for any purpose,
+    including commercial applications, and to alter it and redistribute it
+    freely, subject to the following restrictions:
+    
+    1. The origin of this software must not be misrepresented; you must  
+       not
+       claim that you wrote the original software. If you use this software
+       in a product, an acknowledgment in the product documentation would be
+       appreciated but is not required.
+    
+    2. Altered source versions must be plainly marked as such, and must  
+       not be
+       misrepresented as being the original software.
+    
+    3. This notice may not be removed or altered from any source
+       distribution.
+
+* [ISO Coated v2 300 bas - Color Profile](https://www.colormanagement.org/en/isoprofile2009.html#ISOcoated_v2_300_bas), 
+    Copyright (c) 2007-2010, basICColor GmbH
+    
+    This software is provided 'as-is', without any express or implied
+    warranty. In no event will the authors be held liable for any damages
+    arising from the use of this software.
+    
+    Permission is granted to anyone to use this software for any purpose,
+    including commercial applications, and to alter it and redistribute it
+    freely, subject to the following restrictions:
+    
+    1. The origin of this software must not be misrepresented; you must  
+       not
+       claim that you wrote the original software. If you use this software
+       in a product, an acknowledgment in the product documentation would be
+       appreciated but is not required.
+    
+    2. Altered source versions must be plainly marked as such, and must  
+       not be
+       misrepresented as being the original software.
+    
+    3. This notice may not be removed or altered from any source
+       distribution.
