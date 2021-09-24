@@ -10,25 +10,25 @@
 // terms that can be accessed at https://unidoc.io/eula/
 
 // Package license helps manage commercial licenses and check if they are valid for the version of unipdf used.
-package license ;import _a "github.com/unidoc/unipdf/v3/internal/license";
+package license ;import _c "github.com/unidoc/unipdf/v3/internal/license";
 
 // MakeUnlicensedKey returns a default key.
-func MakeUnlicensedKey ()*LicenseKey {return _a .MakeUnlicensedKey ()};
-
-// SetLicenseKey sets and validates the license key.
-func SetLicenseKey (content string ,customerName string )error {return _a .SetLicenseKey (content ,customerName );};const (LicenseTierUnlicensed =_a .LicenseTierUnlicensed ;LicenseTierCommunity =_a .LicenseTierCommunity ;LicenseTierIndividual =_a .LicenseTierIndividual ;
-LicenseTierBusiness =_a .LicenseTierBusiness ;);
-
-// GetMeteredState checks the currently used metered document usage status,
-// documents used and credits available.
-func GetMeteredState ()(_a .MeteredStatus ,error ){return _a .GetMeteredState ()};
-
-// LicenseKey represents a loaded license key.
-type LicenseKey =_a .LicenseKey ;
-
-// GetLicenseKey returns the currently loaded license key.
-func GetLicenseKey ()*LicenseKey {return _a .GetLicenseKey ()};
+func MakeUnlicensedKey ()*LicenseKey {return _c .MakeUnlicensedKey ()};
 
 // SetMeteredKey sets the metered API key required for SaaS operation.
 // Document usage is reported periodically for the product to function correctly.
-func SetMeteredKey (apiKey string )error {return _a .SetMeteredKey (apiKey )};
+func SetMeteredKey (apiKey string )error {return _c .SetMeteredKey (apiKey )};
+
+// GetMeteredState checks the currently used metered document usage status,
+// documents used and credits available.
+func GetMeteredState ()(_c .MeteredStatus ,error ){return _c .GetMeteredState ()};const (LicenseTierUnlicensed =_c .LicenseTierUnlicensed ;LicenseTierCommunity =_c .LicenseTierCommunity ;LicenseTierIndividual =_c .LicenseTierIndividual ;LicenseTierBusiness =_c .LicenseTierBusiness ;
+);
+
+// LicenseKey represents a loaded license key.
+type LicenseKey =_c .LicenseKey ;
+
+// SetLicenseKey sets and validates the license key.
+func SetLicenseKey (content string ,customerName string )error {return _c .SetLicenseKey (content ,customerName );};
+
+// GetLicenseKey returns the currently loaded license key.
+func GetLicenseKey ()*LicenseKey {return _c .GetLicenseKey ()};
