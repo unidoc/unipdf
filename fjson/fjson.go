@@ -10,43 +10,43 @@
 // terms that can be accessed at https://unidoc.io/eula/
 
 // Package fjson provides support for loading PDF form field data from JSON data/files.
-package fjson ;import (_gd "encoding/json";_d "github.com/unidoc/unipdf/v3/common";_af "github.com/unidoc/unipdf/v3/core";_a "github.com/unidoc/unipdf/v3/model";_b "io";_c "os";);
-
-// LoadFromJSON loads JSON form data from `r`.
-func LoadFromJSON (r _b .Reader )(*FieldData ,error ){var _f FieldData ;_ff :=_gd .NewDecoder (r ).Decode (&_f ._ag );if _ff !=nil {return nil ,_ff ;};return &_f ,nil ;};
-
-// LoadFromJSONFile loads form field data from a JSON file.
-func LoadFromJSONFile (filePath string )(*FieldData ,error ){_e ,_bd :=_c .Open (filePath );if _bd !=nil {return nil ,_bd ;};defer _e .Close ();return LoadFromJSON (_e );};
-
-// FieldValues implements model.FieldValueProvider interface.
-func (_fe *FieldData )FieldValues ()(map[string ]_af .PdfObject ,error ){_bfc :=make (map[string ]_af .PdfObject );for _ ,_cg :=range _fe ._ag {if len (_cg .Value )> 0{_bfc [_cg .Name ]=_af .MakeString (_cg .Value );};};return _bfc ,nil ;};type fieldValue struct{Name string `json:"name"`;
-Value string `json:"value"`;ImageValue *_a .Image `json:"-"`;
+package fjson ;import (_b "encoding/json";_a "github.com/unidoc/unipdf/v3/common";_gb "github.com/unidoc/unipdf/v3/core";_fc "github.com/unidoc/unipdf/v3/model";_g "io";_f "os";);type fieldValue struct{Name string `json:"name"`;Value string `json:"value"`;
+ImageValue *_fc .Image `json:"-"`;
 
 // Options lists allowed values if present.
 Options []string `json:"options,omitempty"`;};
 
-// LoadFromPDF loads form field data from a PDF.
-func LoadFromPDF (rs _b .ReadSeeker )(*FieldData ,error ){_fa ,_ac :=_a .NewPdfReader (rs );if _ac !=nil {return nil ,_ac ;};if _fa .AcroForm ==nil {return nil ,nil ;};var _afb []fieldValue ;_dd :=_fa .AcroForm .AllFields ();for _ ,_ea :=range _dd {var _bb []string ;
-_acd :=make (map[string ]struct{});_ab ,_agf :=_ea .FullName ();if _agf !=nil {return nil ,_agf ;};if _de ,_fb :=_ea .V .(*_af .PdfObjectString );_fb {_afb =append (_afb ,fieldValue {Name :_ab ,Value :_de .Decoded ()});continue ;};var _bf string ;for _ ,_cb :=range _ea .Annotations {_gg ,_dc :=_af .GetName (_cb .AS );
-if _dc {_bf =_gg .String ();};_abb ,_eab :=_af .GetDict (_cb .AP );if !_eab {continue ;};_deef ,_ :=_af .GetDict (_abb .Get ("\u004e"));for _ ,_eac :=range _deef .Keys (){_ffg :=_eac .String ();if _ ,_bfa :=_acd [_ffg ];!_bfa {_bb =append (_bb ,_ffg );
-_acd [_ffg ]=struct{}{};};};_fg ,_ :=_af .GetDict (_abb .Get ("\u0044"));for _ ,_ba :=range _fg .Keys (){_ae :=_ba .String ();if _ ,_ec :=_acd [_ae ];!_ec {_bb =append (_bb ,_ae );_acd [_ae ]=struct{}{};};};};_fc :=fieldValue {Name :_ab ,Value :_bf ,Options :_bb };
-_afb =append (_afb ,_fc );};_aed :=FieldData {_ag :_afb };return &_aed ,nil ;};
-
-// SetImage assign model.Image to a specific field identified by fieldName.
-func (_ca *FieldData )SetImage (fieldName string ,img *_a .Image ,opt []string )error {_afc :=fieldValue {Name :fieldName ,ImageValue :img ,Options :opt };_ca ._ag =append (_ca ._ag ,_afc );return nil ;};
-
-// SetImageFromFile assign image file to a specific field identified by fieldName.
-func (_eg *FieldData )SetImageFromFile (fieldName string ,imagePath string ,opt []string )error {_bff ,_ege :=_c .Open (imagePath );if _ege !=nil {return _ege ;};defer _bff .Close ();_fda ,_ege :=_a .ImageHandling .Read (_bff );if _ege !=nil {_d .Log .Error ("\u0045\u0072\u0072or\u0020\u006c\u006f\u0061\u0064\u0069\u006e\u0067\u0020\u0069\u006d\u0061\u0067\u0065\u003a\u0020\u0025\u0073",_ege );
-return _ege ;};return _eg .SetImage (fieldName ,_fda ,opt );};
-
-// JSON returns the field data as a string in JSON format.
-func (_bbf FieldData )JSON ()(string ,error ){_bae ,_ee :=_gd .MarshalIndent (_bbf ._ag ,"","\u0020\u0020\u0020\u0020");return string (_bae ),_ee ;};
-
 // LoadFromPDFFile loads form field data from a PDF file.
-func LoadFromPDFFile (filePath string )(*FieldData ,error ){_gda ,_efa :=_c .Open (filePath );if _efa !=nil {return nil ,_efa ;};defer _gda .Close ();return LoadFromPDF (_gda );};
+func LoadFromPDFFile (filePath string )(*FieldData ,error ){_af ,_dge :=_f .Open (filePath );if _dge !=nil {return nil ,_dge ;};defer _af .Close ();return LoadFromPDF (_af );};
 
 // FieldData represents form field data loaded from JSON file.
-type FieldData struct{_ag []fieldValue };
+type FieldData struct{_bb []fieldValue };
+
+// LoadFromJSON loads JSON form data from `r`.
+func LoadFromJSON (r _g .Reader )(*FieldData ,error ){var _gc FieldData ;_bg :=_b .NewDecoder (r ).Decode (&_gc ._bb );if _bg !=nil {return nil ,_bg ;};return &_gc ,nil ;};
+
+// FieldValues implements model.FieldValueProvider interface.
+func (_de *FieldData )FieldValues ()(map[string ]_gb .PdfObject ,error ){_ea :=make (map[string ]_gb .PdfObject );for _ ,_fgc :=range _de ._bb {if len (_fgc .Value )> 0{_ea [_fgc .Name ]=_gb .MakeString (_fgc .Value );};};return _ea ,nil ;};
+
+// LoadFromJSONFile loads form field data from a JSON file.
+func LoadFromJSONFile (filePath string )(*FieldData ,error ){_fb ,_cd :=_f .Open (filePath );if _cd !=nil {return nil ,_cd ;};defer _fb .Close ();return LoadFromJSON (_fb );};
+
+// SetImage assign model.Image to a specific field identified by fieldName.
+func (_bea *FieldData )SetImage (fieldName string ,img *_fc .Image ,opt []string )error {_dfb :=fieldValue {Name :fieldName ,ImageValue :img ,Options :opt };_bea ._bb =append (_bea ._bb ,_dfb );return nil ;};
+
+// JSON returns the field data as a string in JSON format.
+func (_ce FieldData )JSON ()(string ,error ){_dfa ,_gef :=_b .MarshalIndent (_ce ._bb ,"","\u0020\u0020\u0020\u0020");return string (_dfa ),_gef ;};
+
+// LoadFromPDF loads form field data from a PDF.
+func LoadFromPDF (rs _g .ReadSeeker )(*FieldData ,error ){_d ,_ca :=_fc .NewPdfReader (rs );if _ca !=nil {return nil ,_ca ;};if _d .AcroForm ==nil {return nil ,nil ;};var _gf []fieldValue ;_e :=_d .AcroForm .AllFields ();for _ ,_cg :=range _e {var _bbg []string ;
+_ge :=make (map[string ]struct{});_bc ,_ff :=_cg .FullName ();if _ff !=nil {return nil ,_ff ;};if _bf ,_cb :=_cg .V .(*_gb .PdfObjectString );_cb {_gf =append (_gf ,fieldValue {Name :_bc ,Value :_bf .Decoded ()});continue ;};var _gfd string ;for _ ,_dd :=range _cg .Annotations {_fba ,_df :=_gb .GetName (_dd .AS );
+if _df {_gfd =_fba .String ();};_gg ,_ga :=_gb .GetDict (_dd .AP );if !_ga {continue ;};_ddb ,_ :=_gb .GetDict (_gg .Get ("\u004e"));for _ ,_be :=range _ddb .Keys (){_dg :=_be .String ();if _ ,_eg :=_ge [_dg ];!_eg {_bbg =append (_bbg ,_dg );_ge [_dg ]=struct{}{};
+};};_ec ,_ :=_gb .GetDict (_gg .Get ("\u0044"));for _ ,_gd :=range _ec .Keys (){_ae :=_gd .String ();if _ ,_ef :=_ge [_ae ];!_ef {_bbg =append (_bbg ,_ae );_ge [_ae ]=struct{}{};};};};_ac :=fieldValue {Name :_bc ,Value :_gfd ,Options :_bbg };_gf =append (_gf ,_ac );
+};_aec :=FieldData {_bb :_gf };return &_aec ,nil ;};
 
 // FieldImageValues implements model.FieldImageProvider interface.
-func (_dce *FieldData )FieldImageValues ()(map[string ]*_a .Image ,error ){_eb :=make (map[string ]*_a .Image );for _ ,_ceb :=range _dce ._ag {if _ceb .ImageValue !=nil {_eb [_ceb .Name ]=_ceb .ImageValue ;};};return _eb ,nil ;};
+func (_da *FieldData )FieldImageValues ()(map[string ]*_fc .Image ,error ){_ag :=make (map[string ]*_fc .Image );for _ ,_eag :=range _da ._bb {if _eag .ImageValue !=nil {_ag [_eag .Name ]=_eag .ImageValue ;};};return _ag ,nil ;};
+
+// SetImageFromFile assign image file to a specific field identified by fieldName.
+func (_cdb *FieldData )SetImageFromFile (fieldName string ,imagePath string ,opt []string )error {_dc ,_cgc :=_f .Open (imagePath );if _cgc !=nil {return _cgc ;};defer _dc .Close ();_dfc ,_cgc :=_fc .ImageHandling .Read (_dc );if _cgc !=nil {_a .Log .Error ("\u0045\u0072\u0072or\u0020\u006c\u006f\u0061\u0064\u0069\u006e\u0067\u0020\u0069\u006d\u0061\u0067\u0065\u003a\u0020\u0025\u0073",_cgc );
+return _cgc ;};return _cdb .SetImage (fieldName ,_dfc ,opt );};
