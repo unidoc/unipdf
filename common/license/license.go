@@ -10,25 +10,25 @@
 // terms that can be accessed at https://unidoc.io/eula/
 
 // Package license helps manage commercial licenses and check if they are valid for the version of unipdf used.
-package license ;import _a "github.com/unidoc/unipdf/v3/internal/license";
-
-// LicenseKey represents a loaded license key.
-type LicenseKey =_a .LicenseKey ;
+package license ;import _e "github.com/unidoc/unipdf/v3/internal/license";
 
 // GetLicenseKey returns the currently loaded license key.
-func GetLicenseKey ()*LicenseKey {return _a .GetLicenseKey ()};
+func GetLicenseKey ()*LicenseKey {return _e .GetLicenseKey ()};
 
-// MakeUnlicensedKey returns a default key.
-func MakeUnlicensedKey ()*LicenseKey {return _a .MakeUnlicensedKey ()};
-
-// SetMeteredKey sets the metered API key required for SaaS operation.
-// Document usage is reported periodically for the product to function correctly.
-func SetMeteredKey (apiKey string )error {return _a .SetMeteredKey (apiKey )};
+// LicenseKey represents a loaded license key.
+type LicenseKey =_e .LicenseKey ;
 
 // SetLicenseKey sets and validates the license key.
-func SetLicenseKey (content string ,customerName string )error {return _a .SetLicenseKey (content ,customerName );};const (LicenseTierUnlicensed =_a .LicenseTierUnlicensed ;LicenseTierCommunity =_a .LicenseTierCommunity ;LicenseTierIndividual =_a .LicenseTierIndividual ;
-LicenseTierBusiness =_a .LicenseTierBusiness ;);
+func SetLicenseKey (content string ,customerName string )error {return _e .SetLicenseKey (content ,customerName );};
 
 // GetMeteredState checks the currently used metered document usage status,
 // documents used and credits available.
-func GetMeteredState ()(_a .MeteredStatus ,error ){return _a .GetMeteredState ()};
+func GetMeteredState ()(_e .MeteredStatus ,error ){return _e .GetMeteredState ()};const (LicenseTierUnlicensed =_e .LicenseTierUnlicensed ;LicenseTierCommunity =_e .LicenseTierCommunity ;LicenseTierIndividual =_e .LicenseTierIndividual ;LicenseTierBusiness =_e .LicenseTierBusiness ;
+);
+
+// MakeUnlicensedKey returns a default key.
+func MakeUnlicensedKey ()*LicenseKey {return _e .MakeUnlicensedKey ()};
+
+// SetMeteredKey sets the metered API key required for SaaS operation.
+// Document usage is reported periodically for the product to function correctly.
+func SetMeteredKey (apiKey string )error {return _e .SetMeteredKey (apiKey )};
