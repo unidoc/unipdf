@@ -9,8 +9,9 @@
 // Use of this source code is governed by the UniDoc End User License Agreement
 // terms that can be accessed at https://unidoc.io/eula/
 
-package errors ;import (_e "fmt";_ee "golang.org/x/xerrors";);func (_a *processError )Unwrap ()error {return _a ._bg };func Errorf (processName ,message string ,arguments ...interface{})error {return _bf (_e .Sprintf (message ,arguments ...),processName );
-};var _ _ee .Wrapper =(*processError )(nil );func Error (processName ,message string )error {return _bf (message ,processName )};func (_ag *processError )Error ()string {var _d string ;if _ag ._b !=""{_d =_ag ._b ;};_d +="\u0050r\u006f\u0063\u0065\u0073\u0073\u003a "+_ag ._be ;
-if _ag ._f !=""{_d +="\u0020\u004d\u0065\u0073\u0073\u0061\u0067\u0065\u003a\u0020"+_ag ._f ;};if _ag ._bg !=nil {_d +="\u002e\u0020"+_ag ._bg .Error ();};return _d ;};type processError struct{_b string ;_be string ;_f string ;_bg error ;};func _bf (_fg ,_fc string )*processError {return &processError {_b :"\u005b\u0055\u006e\u0069\u0050\u0044\u0046\u005d",_f :_fg ,_be :_fc };
-};func Wrapf (err error ,processName ,message string ,arguments ...interface{})error {if _ec ,_fcd :=err .(*processError );_fcd {_ec ._b ="";};_fd :=_bf (_e .Sprintf (message ,arguments ...),processName );_fd ._bg =err ;return _fd ;};func Wrap (err error ,processName ,message string )error {if _de ,_af :=err .(*processError );
-_af {_de ._b ="";};_bb :=_bf (message ,processName );_bb ._bg =err ;return _bb ;};
+package errors ;import (_g "fmt";_c "golang.org/x/xerrors";);func Errorf (processName ,message string ,arguments ...interface{})error {return _gc (_g .Sprintf (message ,arguments ...),processName );};func (_cg *processError )Unwrap ()error {return _cg ._ee };
+func Error (processName ,message string )error {return _gc (message ,processName )};func _gc (_gf ,_d string )*processError {return &processError {_fb :"\u005b\u0055\u006e\u0069\u0050\u0044\u0046\u005d",_ac :_gf ,_a :_d };};type processError struct{_fb string ;
+_a string ;_ac string ;_ee error ;};func Wrap (err error ,processName ,message string )error {if _ad ,_fe :=err .(*processError );_fe {_ad ._fb ="";};_ae :=_gc (message ,processName );_ae ._ee =err ;return _ae ;};var _ _c .Wrapper =(*processError )(nil );
+func (_fbc *processError )Error ()string {var _fg string ;if _fbc ._fb !=""{_fg =_fbc ._fb ;};_fg +="\u0050r\u006f\u0063\u0065\u0073\u0073\u003a "+_fbc ._a ;if _fbc ._ac !=""{_fg +="\u0020\u004d\u0065\u0073\u0073\u0061\u0067\u0065\u003a\u0020"+_fbc ._ac ;
+};if _fbc ._ee !=nil {_fg +="\u002e\u0020"+_fbc ._ee .Error ();};return _fg ;};func Wrapf (err error ,processName ,message string ,arguments ...interface{})error {if _ea ,_eg :=err .(*processError );_eg {_ea ._fb ="";};_aeb :=_gc (_g .Sprintf (message ,arguments ...),processName );
+_aeb ._ee =err ;return _aeb ;};
