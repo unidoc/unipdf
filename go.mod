@@ -9,6 +9,7 @@ require (
 	github.com/stretchr/testify v1.7.1
 	github.com/trimmer-io/go-xmp v1.0.0
 	github.com/unidoc/freetype v0.0.0-20220130190903-3efbeefd0c90
+	github.com/unidoc/garabic v0.0.0-20220702200334-8c7cb25baa11
 	github.com/unidoc/pkcs7 v0.1.0
 	github.com/unidoc/timestamp v0.0.0-20200412005513-91597fd3793a
 	github.com/unidoc/unichart v0.1.0
