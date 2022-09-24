@@ -10,8 +10,25 @@
 // terms that can be accessed at https://unidoc.io/eula/
 
 // Package xmputil provides abstraction used by the pdf document XMP Metadata.
-package xmputil ;import (_c "errors";_ec "fmt";_d "github.com/trimmer-io/go-xmp/models/pdf";_af "github.com/trimmer-io/go-xmp/models/xmp_mm";_fa "github.com/trimmer-io/go-xmp/xmp";_df "github.com/unidoc/unipdf/v3/core";_da "github.com/unidoc/unipdf/v3/internal/timeutils";
-_dd "github.com/unidoc/unipdf/v3/internal/uuid";_cf "github.com/unidoc/unipdf/v3/model/xmputil/pdfaextension";_aa "github.com/unidoc/unipdf/v3/model/xmputil/pdfaid";_e "strconv";_a "time";);
+package xmputil ;import (_ed "errors";_a "fmt";_e "github.com/trimmer-io/go-xmp/models/pdf";_g "github.com/trimmer-io/go-xmp/models/xmp_mm";_dg "github.com/trimmer-io/go-xmp/xmp";_b "github.com/unidoc/unipdf/v3/core";_gd "github.com/unidoc/unipdf/v3/internal/timeutils";
+_eec "github.com/unidoc/unipdf/v3/internal/uuid";_ef "github.com/unidoc/unipdf/v3/model/xmputil/pdfaextension";_ee "github.com/unidoc/unipdf/v3/model/xmputil/pdfaid";_db "strconv";_c "time";);
+
+// PdfInfoOptions are the options used for setting pdf info.
+type PdfInfoOptions struct{InfoDict _b .PdfObject ;PdfVersion string ;Copyright string ;Marked bool ;
+
+// Overwrite if set to true, overwrites all values found in the current pdf info xmp model to the ones provided.
+Overwrite bool ;};
+
+// Marshal the document into xml byte stream.
+func (_bg *Document )Marshal ()([]byte ,error ){if _bg ._gcc .IsDirty (){if _cf :=_bg ._gcc .SyncModels ();_cf !=nil {return nil ,_cf ;};};return _dg .Marshal (_bg ._gcc );};
+
+// SetMediaManagement sets up XMP media management metadata: namespace xmpMM.
+func (_fe *Document )SetMediaManagement (options *MediaManagementOptions )error {_fbd ,_bea :=_g .MakeModel (_fe ._gcc );if _bea !=nil {return _bea ;};if options ==nil {options =new (MediaManagementOptions );};_bb :=_g .ResourceRef {};if _fbd .OriginalDocumentID .IsZero (){if options .OriginalDocumentID !=""{_fbd .OriginalDocumentID =_dg .GUID (options .OriginalDocumentID );
+}else {_gdc ,_gdd :=_eec .NewUUID ();if _gdd !=nil {return _gdd ;};_fbd .OriginalDocumentID =_dg .GUID (_gdc .String ());};}else {_bb .OriginalDocumentID =_fbd .OriginalDocumentID ;};switch {case options .DocumentID !="":_fbd .DocumentID =_dg .GUID (options .DocumentID );
+case options .NewDocumentID ||_fbd .DocumentID .IsZero ():if !_fbd .DocumentID .IsZero (){_bb .DocumentID =_fbd .DocumentID ;};_ead ,_cfa :=_eec .NewUUID ();if _cfa !=nil {return _cfa ;};_fbd .DocumentID =_dg .GUID (_ead .String ());};if !_fbd .InstanceID .IsZero (){_bb .InstanceID =_fbd .InstanceID ;
+};_fbd .InstanceID =_dg .GUID (options .InstanceID );if _fbd .InstanceID ==""{_ba ,_aag :=_eec .NewUUID ();if _aag !=nil {return _aag ;};_fbd .InstanceID =_dg .GUID (_ba .String ());};if !_bb .IsZero (){_fbd .DerivedFrom =&_bb ;};_aaf :=options .VersionID ;
+if _fbd .VersionID !=""{_bec ,_ade :=_db .Atoi (_fbd .VersionID );if _ade !=nil {_aaf =_db .Itoa (len (_fbd .Versions )+1);}else {_aaf =_db .Itoa (_bec +1);};};if _aaf ==""{_aaf ="\u0031";};_fbd .VersionID =_aaf ;_da :=options .ModifyDate ;if _da .IsZero (){_da =_c .Now ();
+};if _bea =_fbd .SyncToXMP (_fe ._gcc );_bea !=nil {return _bea ;};return nil ;};
 
 // MediaManagementOptions are the options for the Media management xmp metadata.
 type MediaManagementOptions struct{
@@ -60,78 +77,24 @@ ModifyComment string ;
 
 // ModifyDate is a custom modification date for the versions.
 // By default, this would be set to time.Now().
-ModifyDate _a .Time ;
+ModifyDate _c .Time ;
 
 // Modifier is a person who did the modification.
 Modifier string ;};
 
-// GetMediaManagement gets the media management metadata from provided xmp document.
-func (_cb *Document )GetMediaManagement ()(*MediaManagement ,bool ){_ba :=_af .FindModel (_cb ._dad );if _ba ==nil {return nil ,false ;};_ee :=make ([]MediaManagementVersion ,len (_ba .Versions ));for _dfg ,_cg :=range _ba .Versions {_ee [_dfg ]=MediaManagementVersion {VersionID :_cg .Version ,ModifyDate :_cg .ModifyDate .Value (),Comments :_cg .Comments ,Modifier :_cg .Modifier };
-};_dbg :=&MediaManagement {OriginalDocumentID :GUID (_ba .OriginalDocumentID .Value ()),DocumentID :GUID (_ba .DocumentID .Value ()),InstanceID :GUID (_ba .InstanceID .Value ()),VersionID :_ba .VersionID ,Versions :_ee };if _ba .DerivedFrom !=nil {_dbg .DerivedFrom =&MediaManagementDerivedFrom {OriginalDocumentID :GUID (_ba .DerivedFrom .OriginalDocumentID ),DocumentID :GUID (_ba .DerivedFrom .DocumentID ),InstanceID :GUID (_ba .DerivedFrom .InstanceID ),VersionID :_ba .DerivedFrom .VersionID };
-};return _dbg ,true ;};
-
-// PdfAID is the result of the XMP pdfaid metadata.
-type PdfAID struct{Part int ;Conformance string ;};
-
-// LoadDocument loads up the xmp document from provided input stream.
-func LoadDocument (stream []byte )(*Document ,error ){_eg :=_fa .NewDocument ();if _ddc :=_fa .Unmarshal (stream ,_eg );_ddc !=nil {return nil ,_ddc ;};return &Document {_dad :_eg },nil ;};
-
-// SetPdfAID sets up pdfaid xmp metadata.
-// In example: Part: '1' Conformance: 'B' states for PDF/A 1B.
-func (_dgg *Document )SetPdfAID (part int ,conformance string )error {_ef ,_ffb :=_aa .MakeModel (_dgg ._dad );if _ffb !=nil {return _ffb ;};_ef .Part =part ;_ef .Conformance =conformance ;if _ded :=_ef .SyncToXMP (_dgg ._dad );_ded !=nil {return _ded ;
-};return nil ;};
-
-// PdfInfoOptions are the options used for setting pdf info.
-type PdfInfoOptions struct{InfoDict _df .PdfObject ;PdfVersion string ;Copyright string ;Marked bool ;
-
-// Overwrite if set to true, overwrites all values found in the current pdf info xmp model to the ones provided.
-Overwrite bool ;};
-
 // MarshalIndent the document into xml byte stream with predefined prefix and indent.
-func (_db *Document )MarshalIndent (prefix ,indent string )([]byte ,error ){if _db ._dad .IsDirty (){if _ff :=_db ._dad .SyncModels ();_ff !=nil {return nil ,_ff ;};};return _fa .MarshalIndent (_db ._dad ,prefix ,indent );};
-
-// MediaManagementDerivedFrom is a structure that contains references of identifiers and versions
-// from which given document was derived.
-type MediaManagementDerivedFrom struct{OriginalDocumentID GUID ;DocumentID GUID ;InstanceID GUID ;VersionID string ;};
-
-// SetPdfAExtension sets the pdfaExtension XMP metadata.
-func (_dc *Document )SetPdfAExtension ()error {_b ,_fb :=_cf .MakeModel (_dc ._dad );if _fb !=nil {return _fb ;};if _fb =_cf .FillModel (_dc ._dad ,_b );_fb !=nil {return _fb ;};if _fb =_b .SyncToXMP (_dc ._dad );_fb !=nil {return _fb ;};return nil ;};
-
-
-// GetPdfInfo gets the document pdf info.
-func (_acd *Document )GetPdfInfo ()(*PdfInfo ,bool ){_cc ,_gf :=_acd ._dad .FindModel (_d .NsPDF ).(*_d .PDFInfo );if !_gf {return nil ,false ;};_de :=PdfInfo {};var _gg *_df .PdfObjectDictionary ;_de .Copyright =_cc .Copyright ;_de .PdfVersion =_cc .PDFVersion ;
-_de .Marked =bool (_cc .Marked );_eba :=func (_gfc string ,_fc _df .PdfObject ){if _gg ==nil {_gg =_df .MakeDict ();};_gg .Set (_df .PdfObjectName (_gfc ),_fc );};if len (_cc .Title )> 0{_eba ("\u0054\u0069\u0074l\u0065",_df .MakeString (_cc .Title .Default ()));
-};if len (_cc .Author )> 0{_eba ("\u0041\u0075\u0074\u0068\u006f\u0072",_df .MakeString (_cc .Author [0]));};if _cc .Keywords !=""{_eba ("\u004b\u0065\u0079\u0077\u006f\u0072\u0064\u0073",_df .MakeString (_cc .Keywords ));};if len (_cc .Subject )> 0{_eba ("\u0053u\u0062\u006a\u0065\u0063\u0074",_df .MakeString (_cc .Subject .Default ()));
-};if _cc .Creator !=""{_eba ("\u0043r\u0065\u0061\u0074\u006f\u0072",_df .MakeString (string (_cc .Creator )));};if _cc .Producer !=""{_eba ("\u0050\u0072\u006f\u0064\u0075\u0063\u0065\u0072",_df .MakeString (string (_cc .Producer )));};if _cc .Trapped {_eba ("\u0054r\u0061\u0070\u0070\u0065\u0064",_df .MakeName ("\u0054\u0072\u0075\u0065"));
-};if !_cc .CreationDate .IsZero (){_eba ("\u0043\u0072\u0065a\u0074\u0069\u006f\u006e\u0044\u0061\u0074\u0065",_df .MakeString (_da .FormatPdfTime (_cc .CreationDate .Value ())));};if !_cc .ModifyDate .IsZero (){_eba ("\u004do\u0064\u0044\u0061\u0074\u0065",_df .MakeString (_da .FormatPdfTime (_cc .ModifyDate .Value ())));
-};_de .InfoDict =_gg ;return &_de ,true ;};
+func (_f *Document )MarshalIndent (prefix ,indent string )([]byte ,error ){if _f ._gcc .IsDirty (){if _eecb :=_f ._gcc .SyncModels ();_eecb !=nil {return nil ,_eecb ;};};return _dg .MarshalIndent (_f ._gcc ,prefix ,indent );};
 
 // GUID is a string representing a globally unique identifier.
 type GUID string ;
 
-// GetPdfaExtensionSchemas gets a pdfa extension schemas.
-func (_fd *Document )GetPdfaExtensionSchemas ()([]_cf .Schema ,error ){_dfa :=_fd ._dad .FindModel (_cf .Namespace );if _dfa ==nil {return nil ,nil ;};_dac ,_ae :=_dfa .(*_cf .Model );if !_ae {return nil ,_ec .Errorf ("\u0069\u006eva\u006c\u0069\u0064 \u006d\u006f\u0064\u0065l f\u006fr \u0070\u0064\u0066\u0061\u0045\u0078\u0074en\u0073\u0069\u006f\u006e\u0073\u003a\u0020%\u0054",_dfa );
-};return _dac .Schemas ,nil ;};
-
-// Document is an implementation of the xmp document.
-// It is a wrapper over go-xmp/xmp.Document that provides some Pdf predefined functionality.
-type Document struct{_dad *_fa .Document };
-
-// SetPdfInfo sets the pdf info into selected document.
-func (_cd *Document )SetPdfInfo (options *PdfInfoOptions )error {if options ==nil {return _c .New ("\u006ei\u006c\u0020\u0070\u0064\u0066\u0020\u006f\u0070\u0074\u0069\u006fn\u0073\u0020\u0070\u0072\u006f\u0076\u0069\u0064\u0065\u0064");};_egb ,_aaa :=_d .MakeModel (_cd ._dad );
-if _aaa !=nil {return _aaa ;};if options .Overwrite {*_egb =_d .PDFInfo {};};if options .InfoDict !=nil {_gc ,_fe :=_df .GetDict (options .InfoDict );if !_fe {return _ec .Errorf ("i\u006e\u0076\u0061\u006c\u0069\u0064 \u0070\u0064\u0066\u0020\u006f\u0062\u006a\u0065\u0063t\u0020\u0074\u0079p\u0065:\u0020\u0025\u0054",options .InfoDict );
-};var _fbf *_df .PdfObjectString ;for _ ,_dcf :=range _gc .Keys (){switch _dcf {case "\u0054\u0069\u0074l\u0065":_fbf ,_fe =_df .GetString (_gc .Get ("\u0054\u0069\u0074l\u0065"));if _fe {_egb .Title =_fa .NewAltString (_fbf );};case "\u0041\u0075\u0074\u0068\u006f\u0072":_fbf ,_fe =_df .GetString (_gc .Get ("\u0041\u0075\u0074\u0068\u006f\u0072"));
-if _fe {_egb .Author =_fa .NewStringList (_fbf .String ());};case "\u004b\u0065\u0079\u0077\u006f\u0072\u0064\u0073":_fbf ,_fe =_df .GetString (_gc .Get ("\u004b\u0065\u0079\u0077\u006f\u0072\u0064\u0073"));if _fe {_egb .Keywords =_fbf .String ();};case "\u0043r\u0065\u0061\u0074\u006f\u0072":_fbf ,_fe =_df .GetString (_gc .Get ("\u0043r\u0065\u0061\u0074\u006f\u0072"));
-if _fe {_egb .Creator =_fa .AgentName (_fbf .String ());};case "\u0053u\u0062\u006a\u0065\u0063\u0074":_fbf ,_fe =_df .GetString (_gc .Get ("\u0053u\u0062\u006a\u0065\u0063\u0074"));if _fe {_egb .Subject =_fa .NewAltString (_fbf .String ());};case "\u0050\u0072\u006f\u0064\u0075\u0063\u0065\u0072":_fbf ,_fe =_df .GetString (_gc .Get ("\u0050\u0072\u006f\u0064\u0075\u0063\u0065\u0072"));
-if _fe {_egb .Producer =_fa .AgentName (_fbf .String ());};case "\u0054r\u0061\u0070\u0070\u0065\u0064":_abd ,_ad :=_df .GetName (_gc .Get ("\u0054r\u0061\u0070\u0070\u0065\u0064"));if _ad {switch _abd .String (){case "\u0054\u0072\u0075\u0065":_egb .Trapped =true ;
-case "\u0046\u0061\u006cs\u0065":_egb .Trapped =false ;default:_egb .Trapped =true ;};};case "\u0043\u0072\u0065a\u0074\u0069\u006f\u006e\u0044\u0061\u0074\u0065":if _acb ,_ca :=_df .GetString (_gc .Get ("\u0043\u0072\u0065a\u0074\u0069\u006f\u006e\u0044\u0061\u0074\u0065"));
-_ca &&_acb .String ()!=""{_dbb ,_cdb :=_da .ParsePdfTime (_acb .String ());if _cdb !=nil {return _ec .Errorf ("\u0069\u006e\u0076\u0061\u006c\u0069\u0064\u0020\u0043\u0072e\u0061\u0074\u0069\u006f\u006e\u0044\u0061t\u0065\u0020\u0066\u0069\u0065\u006c\u0064\u003a\u0020\u0025\u0077",_cdb );
-};_egb .CreationDate =_fa .NewDate (_dbb );};case "\u004do\u0064\u0044\u0061\u0074\u0065":if _ag ,_eb :=_df .GetString (_gc .Get ("\u004do\u0064\u0044\u0061\u0074\u0065"));_eb &&_ag .String ()!=""{_afg ,_dg :=_da .ParsePdfTime (_ag .String ());if _dg !=nil {return _ec .Errorf ("\u0069n\u0076\u0061\u006c\u0069d\u0020\u004d\u006f\u0064\u0044a\u0074e\u0020f\u0069\u0065\u006c\u0064\u003a\u0020\u0025w",_dg );
-};_egb .ModifyDate =_fa .NewDate (_afg );};};};};if options .PdfVersion !=""{_egb .PDFVersion =options .PdfVersion ;};if options .Marked {_egb .Marked =_fa .Bool (options .Marked );};if options .Copyright !=""{_egb .Copyright =options .Copyright ;};if _aaa =_egb .SyncToXMP (_cd ._dad );
-_aaa !=nil {return _aaa ;};return nil ;};
-
-// Marshal the document into xml byte stream.
-func (_dfc *Document )Marshal ()([]byte ,error ){if _dfc ._dad .IsDirty (){if _cfd :=_dfc ._dad .SyncModels ();_cfd !=nil {return nil ,_cfd ;};};return _fa .Marshal (_dfc ._dad );};
+// GetPdfInfo gets the document pdf info.
+func (_gba *Document )GetPdfInfo ()(*PdfInfo ,bool ){_be ,_deb :=_gba ._gcc .FindModel (_e .NsPDF ).(*_e .PDFInfo );if !_deb {return nil ,false ;};_fb :=PdfInfo {};var _dbd *_b .PdfObjectDictionary ;_fb .Copyright =_be .Copyright ;_fb .PdfVersion =_be .PDFVersion ;
+_fb .Marked =bool (_be .Marked );_dbf :=func (_beg string ,_fg _b .PdfObject ){if _dbd ==nil {_dbd =_b .MakeDict ();};_dbd .Set (_b .PdfObjectName (_beg ),_fg );};if len (_be .Title )> 0{_dbf ("\u0054\u0069\u0074l\u0065",_b .MakeString (_be .Title .Default ()));
+};if len (_be .Author )> 0{_dbf ("\u0041\u0075\u0074\u0068\u006f\u0072",_b .MakeString (_be .Author [0]));};if _be .Keywords !=""{_dbf ("\u004b\u0065\u0079\u0077\u006f\u0072\u0064\u0073",_b .MakeString (_be .Keywords ));};if len (_be .Subject )> 0{_dbf ("\u0053u\u0062\u006a\u0065\u0063\u0074",_b .MakeString (_be .Subject .Default ()));
+};if _be .Creator !=""{_dbf ("\u0043r\u0065\u0061\u0074\u006f\u0072",_b .MakeString (string (_be .Creator )));};if _be .Producer !=""{_dbf ("\u0050\u0072\u006f\u0064\u0075\u0063\u0065\u0072",_b .MakeString (string (_be .Producer )));};if _be .Trapped {_dbf ("\u0054r\u0061\u0070\u0070\u0065\u0064",_b .MakeName ("\u0054\u0072\u0075\u0065"));
+};if !_be .CreationDate .IsZero (){_dbf ("\u0043\u0072\u0065a\u0074\u0069\u006f\u006e\u0044\u0061\u0074\u0065",_b .MakeString (_gd .FormatPdfTime (_be .CreationDate .Value ())));};if !_be .ModifyDate .IsZero (){_dbf ("\u004do\u0064\u0044\u0061\u0074\u0065",_b .MakeString (_gd .FormatPdfTime (_be .ModifyDate .Value ())));
+};_fb .InfoDict =_dbd ;return &_fb ,true ;};
 
 // MediaManagement are the values from the document media management metadata.
 type MediaManagement struct{
@@ -168,26 +131,63 @@ VersionID string ;
 // Versions is the history of the document versions along with the comments, timestamps and issuers.
 Versions []MediaManagementVersion ;};
 
-// SetMediaManagement sets up XMP media management metadata: namespace xmpMM.
-func (_ggg *Document )SetMediaManagement (options *MediaManagementOptions )error {_ed ,_fbg :=_af .MakeModel (_ggg ._dad );if _fbg !=nil {return _fbg ;};if options ==nil {options =new (MediaManagementOptions );};_gff :=_af .ResourceRef {};if _ed .OriginalDocumentID .IsZero (){if options .OriginalDocumentID !=""{_ed .OriginalDocumentID =_fa .GUID (options .OriginalDocumentID );
-}else {_cdc ,_ccc :=_dd .NewUUID ();if _ccc !=nil {return _ccc ;};_ed .OriginalDocumentID =_fa .GUID (_cdc .String ());};}else {_gff .OriginalDocumentID =_ed .OriginalDocumentID ;};switch {case options .DocumentID !="":_ed .DocumentID =_fa .GUID (options .DocumentID );
-case options .NewDocumentID ||_ed .DocumentID .IsZero ():if !_ed .DocumentID .IsZero (){_gff .DocumentID =_ed .DocumentID ;};_cccb ,_fba :=_dd .NewUUID ();if _fba !=nil {return _fba ;};_ed .DocumentID =_fa .GUID (_cccb .String ());};if !_ed .InstanceID .IsZero (){_gff .InstanceID =_ed .InstanceID ;
-};_ed .InstanceID =_fa .GUID (options .InstanceID );if _ed .InstanceID ==""{_aec ,_gd :=_dd .NewUUID ();if _gd !=nil {return _gd ;};_ed .InstanceID =_fa .GUID (_aec .String ());};if !_gff .IsZero (){_ed .DerivedFrom =&_gff ;};_gffe :=options .VersionID ;
-if _ed .VersionID !=""{_dee ,_eda :=_e .Atoi (_ed .VersionID );if _eda !=nil {_gffe =_e .Itoa (len (_ed .Versions )+1);}else {_gffe =_e .Itoa (_dee +1);};};if _gffe ==""{_gffe ="\u0031";};_ed .VersionID =_gffe ;_dbd :=options .ModifyDate ;if _dbd .IsZero (){_dbd =_a .Now ();
-};if _fbg =_ed .SyncToXMP (_ggg ._dad );_fbg !=nil {return _fbg ;};return nil ;};
-
-// NewDocument creates a new document without any previous xmp information.
-func NewDocument ()*Document {_ac :=_fa .NewDocument ();return &Document {_dad :_ac }};
-
-// MediaManagementVersion is the version of the media management xmp metadata.
-type MediaManagementVersion struct{VersionID string ;ModifyDate _a .Time ;Comments string ;Modifier string ;};
+// GetPdfaExtensionSchemas gets a pdfa extension schemas.
+func (_ad *Document )GetPdfaExtensionSchemas ()([]_ef .Schema ,error ){_gg :=_ad ._gcc .FindModel (_ef .Namespace );if _gg ==nil {return nil ,nil ;};_cc ,_gce :=_gg .(*_ef .Model );if !_gce {return nil ,_a .Errorf ("\u0069\u006eva\u006c\u0069\u0064 \u006d\u006f\u0064\u0065l f\u006fr \u0070\u0064\u0066\u0061\u0045\u0078\u0074en\u0073\u0069\u006f\u006e\u0073\u003a\u0020%\u0054",_gg );
+};return _cc .Schemas ,nil ;};
 
 // PdfInfo is the xmp document pdf info.
-type PdfInfo struct{InfoDict _df .PdfObject ;PdfVersion string ;Copyright string ;Marked bool ;};
+type PdfInfo struct{InfoDict _b .PdfObject ;PdfVersion string ;Copyright string ;Marked bool ;};
+
+// SetPdfAID sets up pdfaid xmp metadata.
+// In example: Part: '1' Conformance: 'B' states for PDF/A 1B.
+func (_ab *Document )SetPdfAID (part int ,conformance string )error {_ccd ,_cea :=_ee .MakeModel (_ab ._gcc );if _cea !=nil {return _cea ;};_ccd .Part =part ;_ccd .Conformance =conformance ;if _ceg :=_ccd .SyncToXMP (_ab ._gcc );_ceg !=nil {return _ceg ;
+};return nil ;};
+
+// SetPdfAExtension sets the pdfaExtension XMP metadata.
+func (_fd *Document )SetPdfAExtension ()error {_aa ,_fa :=_ef .MakeModel (_fd ._gcc );if _fa !=nil {return _fa ;};if _fa =_ef .FillModel (_fd ._gcc ,_aa );_fa !=nil {return _fa ;};if _fa =_aa .SyncToXMP (_fd ._gcc );_fa !=nil {return _fa ;};return nil ;
+};
+
+// NewDocument creates a new document without any previous xmp information.
+func NewDocument ()*Document {_dgg :=_dg .NewDocument ();return &Document {_gcc :_dgg }};
+
+// LoadDocument loads up the xmp document from provided input stream.
+func LoadDocument (stream []byte )(*Document ,error ){_gb :=_dg .NewDocument ();if _gc :=_dg .Unmarshal (stream ,_gb );_gc !=nil {return nil ,_gc ;};return &Document {_gcc :_gb },nil ;};
+
+// PdfAID is the result of the XMP pdfaid metadata.
+type PdfAID struct{Part int ;Conformance string ;};
+
+// GetMediaManagement gets the media management metadata from provided xmp document.
+func (_cef *Document )GetMediaManagement ()(*MediaManagement ,bool ){_eee :=_g .FindModel (_cef ._gcc );if _eee ==nil {return nil ,false ;};_feb :=make ([]MediaManagementVersion ,len (_eee .Versions ));for _fgc ,_bgg :=range _eee .Versions {_feb [_fgc ]=MediaManagementVersion {VersionID :_bgg .Version ,ModifyDate :_bgg .ModifyDate .Value (),Comments :_bgg .Comments ,Modifier :_bgg .Modifier };
+};_bd :=&MediaManagement {OriginalDocumentID :GUID (_eee .OriginalDocumentID .Value ()),DocumentID :GUID (_eee .DocumentID .Value ()),InstanceID :GUID (_eee .InstanceID .Value ()),VersionID :_eee .VersionID ,Versions :_feb };if _eee .DerivedFrom !=nil {_bd .DerivedFrom =&MediaManagementDerivedFrom {OriginalDocumentID :GUID (_eee .DerivedFrom .OriginalDocumentID ),DocumentID :GUID (_eee .DerivedFrom .DocumentID ),InstanceID :GUID (_eee .DerivedFrom .InstanceID ),VersionID :_eee .DerivedFrom .VersionID };
+};return _bd ,true ;};
+
+// SetPdfInfo sets the pdf info into selected document.
+func (_gda *Document )SetPdfInfo (options *PdfInfoOptions )error {if options ==nil {return _ed .New ("\u006ei\u006c\u0020\u0070\u0064\u0066\u0020\u006f\u0070\u0074\u0069\u006fn\u0073\u0020\u0070\u0072\u006f\u0076\u0069\u0064\u0065\u0064");};_eed ,_eff :=_e .MakeModel (_gda ._gcc );
+if _eff !=nil {return _eff ;};if options .Overwrite {*_eed =_e .PDFInfo {};};if options .InfoDict !=nil {_ff ,_ec :=_b .GetDict (options .InfoDict );if !_ec {return _a .Errorf ("i\u006e\u0076\u0061\u006c\u0069\u0064 \u0070\u0064\u0066\u0020\u006f\u0062\u006a\u0065\u0063t\u0020\u0074\u0079p\u0065:\u0020\u0025\u0054",options .InfoDict );
+};var _dgb *_b .PdfObjectString ;for _ ,_ae :=range _ff .Keys (){switch _ae {case "\u0054\u0069\u0074l\u0065":_dgb ,_ec =_b .GetString (_ff .Get ("\u0054\u0069\u0074l\u0065"));if _ec {_eed .Title =_dg .NewAltString (_dgb );};case "\u0041\u0075\u0074\u0068\u006f\u0072":_dgb ,_ec =_b .GetString (_ff .Get ("\u0041\u0075\u0074\u0068\u006f\u0072"));
+if _ec {_eed .Author =_dg .NewStringList (_dgb .String ());};case "\u004b\u0065\u0079\u0077\u006f\u0072\u0064\u0073":_dgb ,_ec =_b .GetString (_ff .Get ("\u004b\u0065\u0079\u0077\u006f\u0072\u0064\u0073"));if _ec {_eed .Keywords =_dgb .String ();};case "\u0043r\u0065\u0061\u0074\u006f\u0072":_dgb ,_ec =_b .GetString (_ff .Get ("\u0043r\u0065\u0061\u0074\u006f\u0072"));
+if _ec {_eed .Creator =_dg .AgentName (_dgb .String ());};case "\u0053u\u0062\u006a\u0065\u0063\u0074":_dgb ,_ec =_b .GetString (_ff .Get ("\u0053u\u0062\u006a\u0065\u0063\u0074"));if _ec {_eed .Subject =_dg .NewAltString (_dgb .String ());};case "\u0050\u0072\u006f\u0064\u0075\u0063\u0065\u0072":_dgb ,_ec =_b .GetString (_ff .Get ("\u0050\u0072\u006f\u0064\u0075\u0063\u0065\u0072"));
+if _ec {_eed .Producer =_dg .AgentName (_dgb .String ());};case "\u0054r\u0061\u0070\u0070\u0065\u0064":_dc ,_eae :=_b .GetName (_ff .Get ("\u0054r\u0061\u0070\u0070\u0065\u0064"));if _eae {switch _dc .String (){case "\u0054\u0072\u0075\u0065":_eed .Trapped =true ;
+case "\u0046\u0061\u006cs\u0065":_eed .Trapped =false ;default:_eed .Trapped =true ;};};case "\u0043\u0072\u0065a\u0074\u0069\u006f\u006e\u0044\u0061\u0074\u0065":if _fde ,_df :=_b .GetString (_ff .Get ("\u0043\u0072\u0065a\u0074\u0069\u006f\u006e\u0044\u0061\u0074\u0065"));
+_df &&_fde .String ()!=""{_ffb ,_ecf :=_gd .ParsePdfTime (_fde .String ());if _ecf !=nil {return _a .Errorf ("\u0069\u006e\u0076\u0061\u006c\u0069\u0064\u0020\u0043\u0072e\u0061\u0074\u0069\u006f\u006e\u0044\u0061t\u0065\u0020\u0066\u0069\u0065\u006c\u0064\u003a\u0020\u0025\u0077",_ecf );
+};_eed .CreationDate =_dg .NewDate (_ffb );};case "\u004do\u0064\u0044\u0061\u0074\u0065":if _ffd ,_de :=_b .GetString (_ff .Get ("\u004do\u0064\u0044\u0061\u0074\u0065"));_de &&_ffd .String ()!=""{_bf ,_fae :=_gd .ParsePdfTime (_ffd .String ());if _fae !=nil {return _a .Errorf ("\u0069n\u0076\u0061\u006c\u0069d\u0020\u004d\u006f\u0064\u0044a\u0074e\u0020f\u0069\u0065\u006c\u0064\u003a\u0020\u0025w",_fae );
+};_eed .ModifyDate =_dg .NewDate (_bf );};};};};if options .PdfVersion !=""{_eed .PDFVersion =options .PdfVersion ;};if options .Marked {_eed .Marked =_dg .Bool (options .Marked );};if options .Copyright !=""{_eed .Copyright =options .Copyright ;};if _eff =_eed .SyncToXMP (_gda ._gcc );
+_eff !=nil {return _eff ;};return nil ;};
 
 // GetPdfAID gets the pdfaid xmp metadata model.
-func (_cbg *Document )GetPdfAID ()(*PdfAID ,bool ){_fcc ,_afb :=_cbg ._dad .FindModel (_aa .Namespace ).(*_aa .Model );if !_afb {return nil ,false ;};return &PdfAID {Part :_fcc .Part ,Conformance :_fcc .Conformance },true ;};
+func (_fc *Document )GetPdfAID ()(*PdfAID ,bool ){_eca ,_fca :=_fc ._gcc .FindModel (_ee .Namespace ).(*_ee .Model );if !_fca {return nil ,false ;};return &PdfAID {Part :_eca .Part ,Conformance :_eca .Conformance },true ;};
+
+// Document is an implementation of the xmp document.
+// It is a wrapper over go-xmp/xmp.Document that provides some Pdf predefined functionality.
+type Document struct{_gcc *_dg .Document };
+
+// MediaManagementDerivedFrom is a structure that contains references of identifiers and versions
+// from which given document was derived.
+type MediaManagementDerivedFrom struct{OriginalDocumentID GUID ;DocumentID GUID ;InstanceID GUID ;VersionID string ;};
+
+// MediaManagementVersion is the version of the media management xmp metadata.
+type MediaManagementVersion struct{VersionID string ;ModifyDate _c .Time ;Comments string ;Modifier string ;};
 
 // GetGoXmpDocument gets direct access to the go-xmp.Document.
 // All changes done to specified document would result in change of this document 'd'.
-func (_g *Document )GetGoXmpDocument ()*_fa .Document {return _g ._dad };
+func (_ce *Document )GetGoXmpDocument ()*_dg .Document {return _ce ._gcc };
