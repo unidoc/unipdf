@@ -14,348 +14,696 @@
 // It is built on top of the model package to provide access to the most common
 // operations such as creating text and image reports and manipulating existing pages.
 //
-package creator ;import (_fe "bytes";_a "encoding/xml";_d "errors";_agd "fmt";_bc "github.com/gorilla/i18n/linebreak";_ef "github.com/unidoc/unichart/render";_cf "github.com/unidoc/unipdf/v3/common";_cd "github.com/unidoc/unipdf/v3/contentstream";_g "github.com/unidoc/unipdf/v3/contentstream/draw";
-_acb "github.com/unidoc/unipdf/v3/core";_bga "github.com/unidoc/unipdf/v3/internal/graphic2d/svg";_ac "github.com/unidoc/unipdf/v3/internal/integrations/unichart";_fgb "github.com/unidoc/unipdf/v3/internal/license";_fg "github.com/unidoc/unipdf/v3/internal/transform";
-_gf "github.com/unidoc/unipdf/v3/model";_ca "golang.org/x/text/unicode/bidi";_e "image";_ag "io";_ee "math";_bg "os";_c "regexp";_aa "sort";_egd "strconv";_eg "strings";_f "text/template";_dc "unicode";);
+package creator ;import (_c "bytes";_e "encoding/xml";_d "errors";_fb "fmt";_g "github.com/gorilla/i18n/linebreak";_ef "github.com/unidoc/unichart/render";_da "github.com/unidoc/unipdf/v3/common";_ebc "github.com/unidoc/unipdf/v3/contentstream";_bg "github.com/unidoc/unipdf/v3/contentstream/draw";
+_dd "github.com/unidoc/unipdf/v3/core";_aeb "github.com/unidoc/unipdf/v3/internal/graphic2d/svg";_aad "github.com/unidoc/unipdf/v3/internal/integrations/unichart";_ga "github.com/unidoc/unipdf/v3/internal/license";_bc "github.com/unidoc/unipdf/v3/internal/transform";
+_fee "github.com/unidoc/unipdf/v3/model";_aa "golang.org/x/text/unicode/bidi";_a "image";_fg "io";_fa "math";_fd "os";_ae "regexp";_b "sort";_fe "strconv";_cf "strings";_ff "text/template";_eb "unicode";);
 
-// GetMargins returns the margins of the graphic svg (left, right, top, bottom).
-func (_edgf *GraphicSVG )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _edgf ._aafd .Left ,_edgf ._aafd .Right ,_edgf ._aafd .Top ,_edgf ._aafd .Bottom ;};
-
-// SetHorizontalAlignment sets the horizontal alignment of the image.
-func (_fgfg *Image )SetHorizontalAlignment (alignment HorizontalAlignment ){_fgfg ._fddg =alignment };func (_fffc *Line )computeCoords (_acga DrawContext )(_decad ,_ffde ,_bfbe ,_bdgf float64 ){_decad =_acga .X ;_bfbe =_decad +_fffc ._badg -_fffc ._aecg ;
-_cdbe :=_fffc ._decc ;if _fffc ._aecg ==_fffc ._badg {_cdbe /=2;};if _fffc ._cdbf < _fffc ._acba {_ffde =_acga .PageHeight -_acga .Y -_cdbe ;_bdgf =_ffde -_fffc ._acba +_fffc ._cdbf ;}else {_bdgf =_acga .PageHeight -_acga .Y -_cdbe ;_ffde =_bdgf -_fffc ._cdbf +_fffc ._acba ;
-};switch _fffc ._gagda {case FitModeFillWidth :_bfbe =_decad +_acga .Width ;};return _decad ,_ffde ,_bfbe ,_bdgf ;};func (_bcaf *templateProcessor )parseTableCell (_afgc *templateNode )(interface{},error ){if _afgc ._edcee ==nil {_cf .Log .Error ("\u0054\u0061\u0062\u006c\u0065\u0020\u0063\u0065\u006c\u006c\u0020\u0070\u0061\u0072\u0065n\u0074 \u0063\u0061\u006e\u006e\u006f\u0074\u0020\u0062\u0065\u0020\u006e\u0069\u006c\u002e");
-return nil ,_gbcf ;};_cffge ,_bdabe :=_afgc ._edcee ._aeeaa .(*Table );if !_bdabe {_cf .Log .Error ("\u0054\u0061\u0062\u006c\u0065\u0020\u0063\u0065\u006c\u006c\u0020\u0070\u0061\u0072\u0065\u006e\u0074\u0020\u0028\u0025\u0054\u0029\u0020\u0069s\u0020\u006e\u006f\u0074\u0020a\u0020\u0074a\u0062\u006c\u0065\u002e",_afgc ._edcee ._aeeaa );
-return nil ,_gbcf ;};var _gacae ,_gfcf int64 ;for _ ,_gfbc :=range _afgc ._feaff .Attr {_gdbe :=_gfbc .Value ;switch _aafca :=_gfbc .Name .Local ;_aafca {case "\u0063o\u006c\u0073\u0070\u0061\u006e":_gacae =_bcaf .parseInt64Attr (_aafca ,_gdbe );case "\u0072o\u0077\u0073\u0070\u0061\u006e":_gfcf =_bcaf .parseInt64Attr (_aafca ,_gdbe );
-};};if _gacae <=0{_gacae =1;};if _gfcf <=0{_gfcf =1;};_cdfg :=_cffge .MultiCell (int (_gfcf ),int (_gacae ));for _ ,_adebd :=range _afgc ._feaff .Attr {_cfdf :=_adebd .Value ;switch _ggaf :=_adebd .Name .Local ;_ggaf {case "\u0069\u006e\u0064\u0065\u006e\u0074":_cdfg .SetIndent (_bcaf .parseFloatAttr (_ggaf ,_cfdf ));
-case "\u0061\u006c\u0069g\u006e":_cdfg .SetHorizontalAlignment (_bcaf .parseCellAlignmentAttr (_ggaf ,_cfdf ));case "\u0076\u0065\u0072\u0074\u0069\u0063\u0061\u006c\u002da\u006c\u0069\u0067\u006e":_cdfg .SetVerticalAlignment (_bcaf .parseCellVerticalAlignmentAttr (_ggaf ,_cfdf ));
-case "\u0062\u006f\u0072d\u0065\u0072\u002d\u0073\u0074\u0079\u006c\u0065":_cdfg .SetSideBorderStyle (CellBorderSideAll ,_bcaf .parseCellBorderStyleAttr (_ggaf ,_cfdf ));case "\u0062\u006fr\u0064\u0065\u0072-\u0073\u0074\u0079\u006c\u0065\u002d\u0074\u006f\u0070":_cdfg .SetSideBorderStyle (CellBorderSideTop ,_bcaf .parseCellBorderStyleAttr (_ggaf ,_cfdf ));
-case "\u0062\u006f\u0072\u0064er\u002d\u0073\u0074\u0079\u006c\u0065\u002d\u0062\u006f\u0074\u0074\u006f\u006d":_cdfg .SetSideBorderStyle (CellBorderSideBottom ,_bcaf .parseCellBorderStyleAttr (_ggaf ,_cfdf ));case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u0073\u0074\u0079\u006c\u0065-\u006c\u0065\u0066\u0074":_cdfg .SetSideBorderStyle (CellBorderSideLeft ,_bcaf .parseCellBorderStyleAttr (_ggaf ,_cfdf ));
-case "\u0062o\u0072d\u0065\u0072\u002d\u0073\u0074y\u006c\u0065-\u0072\u0069\u0067\u0068\u0074":_cdfg .SetSideBorderStyle (CellBorderSideRight ,_bcaf .parseCellBorderStyleAttr (_ggaf ,_cfdf ));case "\u0062\u006f\u0072d\u0065\u0072\u002d\u0077\u0069\u0064\u0074\u0068":_cdfg .SetSideBorderWidth (CellBorderSideAll ,_bcaf .parseFloatAttr (_ggaf ,_cfdf ));
-case "\u0062\u006fr\u0064\u0065\u0072-\u0077\u0069\u0064\u0074\u0068\u002d\u0074\u006f\u0070":_cdfg .SetSideBorderWidth (CellBorderSideTop ,_bcaf .parseFloatAttr (_ggaf ,_cfdf ));case "\u0062\u006f\u0072\u0064er\u002d\u0077\u0069\u0064\u0074\u0068\u002d\u0062\u006f\u0074\u0074\u006f\u006d":_cdfg .SetSideBorderWidth (CellBorderSideBottom ,_bcaf .parseFloatAttr (_ggaf ,_cfdf ));
-case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u0077\u0069\u0064\u0074\u0068-\u006c\u0065\u0066\u0074":_cdfg .SetSideBorderWidth (CellBorderSideLeft ,_bcaf .parseFloatAttr (_ggaf ,_cfdf ));case "\u0062o\u0072d\u0065\u0072\u002d\u0077\u0069d\u0074\u0068-\u0072\u0069\u0067\u0068\u0074":_cdfg .SetSideBorderWidth (CellBorderSideRight ,_bcaf .parseFloatAttr (_ggaf ,_cfdf ));
-case "\u0062\u006f\u0072d\u0065\u0072\u002d\u0063\u006f\u006c\u006f\u0072":_cdfg .SetSideBorderColor (CellBorderSideAll ,_bcaf .parseColorAttr (_ggaf ,_cfdf ));case "\u0062\u006fr\u0064\u0065\u0072-\u0063\u006f\u006c\u006f\u0072\u002d\u0074\u006f\u0070":_cdfg .SetSideBorderColor (CellBorderSideTop ,_bcaf .parseColorAttr (_ggaf ,_cfdf ));
-case "\u0062\u006f\u0072\u0064er\u002d\u0063\u006f\u006c\u006f\u0072\u002d\u0062\u006f\u0074\u0074\u006f\u006d":_cdfg .SetSideBorderColor (CellBorderSideBottom ,_bcaf .parseColorAttr (_ggaf ,_cfdf ));case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u0063\u006f\u006c\u006f\u0072-\u006c\u0065\u0066\u0074":_cdfg .SetSideBorderColor (CellBorderSideLeft ,_bcaf .parseColorAttr (_ggaf ,_cfdf ));
-case "\u0062o\u0072d\u0065\u0072\u002d\u0063\u006fl\u006f\u0072-\u0072\u0069\u0067\u0068\u0074":_cdfg .SetSideBorderColor (CellBorderSideRight ,_bcaf .parseColorAttr (_ggaf ,_cfdf ));case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u006c\u0069\u006e\u0065\u002ds\u0074\u0079\u006c\u0065":_cdfg .SetBorderLineStyle (_bcaf .parseLineStyleAttr (_ggaf ,_cfdf ));
-case "\u0062\u0061c\u006b\u0067\u0072o\u0075\u006e\u0064\u002d\u0063\u006f\u006c\u006f\u0072":_cdfg .SetBackgroundColor (_bcaf .parseColorAttr (_ggaf ,_cfdf ));case "\u0063o\u006c\u0073\u0070\u0061\u006e","\u0072o\u0077\u0073\u0070\u0061\u006e":break ;
-default:_cf .Log .Debug ("\u0055\u006e\u0073\u0075\u0070\u0070o\u0072\u0074\u0065\u0064\u0020\u0074\u0061\u0062\u006c\u0065\u0020\u0063\u0065\u006c\u006c\u0020\u0061\u0074\u0074\u0072i\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073\u0060\u002e\u0020\u0053\u006bi\u0070p\u0069\u006e\u0067\u002e",_ggaf );
-};};return _cdfg ,nil ;};
-
-// SetAngle sets the rotation angle of the text.
-func (_dbbe *Paragraph )SetAngle (angle float64 ){_dbbe ._cegag =angle };
-
-// CurvePolygon represents a curve polygon shape.
+// Polygon represents a polygon shape.
 // Implements the Drawable interface and can be drawn on PDF using the Creator.
-type CurvePolygon struct{_dadd *_g .CurvePolygon ;_ffcg float64 ;_bced float64 ;_caac Color ;};
+type Polygon struct{_ebdcd *_bg .Polygon ;_aacf float64 ;_ecbgf float64 ;_ecad Color ;};
 
-// EnableFontSubsetting enables font subsetting for `font` when the creator output is written to file.
-// Embeds only the subset of the runes/glyphs that are actually used to display the file.
-// Subsetting can reduce the size of fonts significantly.
-func (_aaag *Creator )EnableFontSubsetting (font *_gf .PdfFont ){_aaag ._bgcg =append (_aaag ._bgcg ,font );};func (_aabd *templateProcessor )parseRadialGradientAttr (creator *Creator ,_efbb string )Color {_cgda :=ColorBlack ;if _efbb ==""{return _cgda ;
-};var (_ggab error ;_baeec =0.0;_ffcc =0.0;_cdccg =-1.0;_bcba =_eg .Split (_efbb [16:len (_efbb )-1],"\u002c"););_fdggf :=_eg .Fields (_bcba [0]);if len (_fdggf )==2&&_eg .TrimSpace (_fdggf [0])[0]!='#'{_baeec ,_ggab =_egd .ParseFloat (_fdggf [0],64);if _ggab !=nil {_cf .Log .Debug ("\u0046a\u0069\u006ce\u0064\u0020\u0070a\u0072\u0073\u0069\u006e\u0067\u0020\u0072a\u0064\u0069\u0061\u006c\u0020\u0067r\u0061\u0064\u0069\u0065\u006e\u0074\u0020\u0058\u0020\u0070\u006fs\u0069\u0074\u0069\u006f\u006e\u003a\u0020\u0025\u0076",_ggab );
-};_ffcc ,_ggab =_egd .ParseFloat (_fdggf [1],64);if _ggab !=nil {_cf .Log .Debug ("\u0046a\u0069\u006ce\u0064\u0020\u0070a\u0072\u0073\u0069\u006e\u0067\u0020\u0072a\u0064\u0069\u0061\u006c\u0020\u0067r\u0061\u0064\u0069\u0065\u006e\u0074\u0020\u0059\u0020\u0070\u006fs\u0069\u0074\u0069\u006f\u006e\u003a\u0020\u0025\u0076",_ggab );
-};_bcba =_bcba [1:];};_gefge :=_eg .TrimSpace (_bcba [0]);if _gefge [0]!='#'{_cdccg ,_ggab =_egd .ParseFloat (_gefge ,64);if _ggab !=nil {_cf .Log .Debug ("\u0046\u0061\u0069\u006c\u0065\u0064\u0020\u0070\u0061\u0072\u0073\u0069\u006eg\u0020\u0072\u0061\u0064\u0069\u0061l\u0020\u0067\u0072\u0061\u0064\u0069\u0065\u006e\u0074\u0020\u0073\u0069\u007ae\u003a\u0020\u0025\u0076",_ggab );
-};_bcba =_bcba [1:];};_bdabg ,_bgfgbg :=_aabd .processGradientColorPair (_bcba );if _bdabg ==nil ||_bgfgbg ==nil {return _cgda ;};_dbaaf :=creator .NewRadialGradientColor (_baeec ,_ffcc ,0,_cdccg ,[]*ColorPoint {});for _bfba :=0;_bfba < len (_bdabg );_bfba ++{_dbaaf .AddColorStop (_bdabg [_bfba ],_bgfgbg [_bfba ]);
-};return _dbaaf ;};
+// SetBackgroundColor set background color of the shading area.
+//
+// By default the background color is set to white.
+func (_bgaad *RadialShading )SetBackgroundColor (backgroundColor Color ){_bgaad ._ecef .SetBackgroundColor (backgroundColor );};func (_cfg *Block )duplicate ()*Block {_ec :=&Block {};*_ec =*_cfg ;_dae :=_ebc .ContentStreamOperations {};_dae =append (_dae ,*_cfg ._db ...);
+_ec ._db =&_dae ;return _ec ;};
 
-// SetPos sets the position of the chart to the specified coordinates.
-// This method sets the chart to use absolute positioning.
-func (_agc *Chart )SetPos (x ,y float64 ){_agc ._dddc =PositionAbsolute ;_agc ._adcaa =x ;_agc ._fdd =y ;};
+// SetShowLinks sets visibility of links for the TOC lines.
+func (_abbbg *TOC )SetShowLinks (showLinks bool ){_abbbg ._ffag =showLinks };
 
-// IsAbsolute checks if the positioning is absolute.
-func (_ddba Positioning )IsAbsolute ()bool {return _ddba ==PositionAbsolute };
-
-// SetBuyerAddress sets the buyer address of the invoice.
-func (_dfcg *Invoice )SetBuyerAddress (address *InvoiceAddress ){_dfcg ._bcdc =address };
-
-// Text sets the text content of the Paragraph.
-func (_eccc *Paragraph )Text ()string {return _eccc ._ccaac };
-
-// Lines returns all the lines the table of contents has.
-func (_befae *TOC )Lines ()[]*TOCLine {return _befae ._baabb };func (_deb *Creator )initContext (){_deb ._fagd .X =_deb ._fegd .Left ;_deb ._fagd .Y =_deb ._fegd .Top ;_deb ._fagd .Width =_deb ._bfda -_deb ._fegd .Right -_deb ._fegd .Left ;_deb ._fagd .Height =_deb ._fbe -_deb ._fegd .Bottom -_deb ._fegd .Top ;
-_deb ._fagd .PageHeight =_deb ._fbe ;_deb ._fagd .PageWidth =_deb ._bfda ;_deb ._fagd .Margins =_deb ._fegd ;_deb ._fagd ._aegb =_deb .UnsupportedCharacterReplacement ;};
-
-// SkipOver skips over a specified number of rows and cols.
-func (_gggac *Table )SkipOver (rows ,cols int ){_eaeg :=rows *_gggac ._eeecb +cols -1;if _eaeg < 0{_cf .Log .Debug ("\u0054\u0061\u0062\u006c\u0065:\u0020\u0063\u0061\u006e\u006e\u006f\u0074\u0020\u0073\u006b\u0069\u0070\u0020b\u0061\u0063\u006b\u0020\u0074\u006f\u0020\u0070\u0072\u0065\u0076\u0069\u006f\u0075\u0073\u0020\u0063\u0065\u006c\u006c\u0073");
-return ;};_gggac ._gfcae +=_eaeg ;};
-
-// NewPolygon creates a new polygon.
-func (_ggceb *Creator )NewPolygon (points [][]_g .Point )*Polygon {return _bgcfe (points )};
-
-// SetLineHeight sets the line height (1.0 default).
-func (_fggc *Paragraph )SetLineHeight (lineheight float64 ){_fggc ._dbdc =lineheight };
-
-// Horizontal returns total horizontal (left + right) margin.
-func (_cgfg *Margins )Horizontal ()float64 {return _cgfg .Left +_cgfg .Right };
-
-// Link returns link information for this line.
-func (_fgga *TOCLine )Link ()(_afcc int64 ,_ffee ,_ffbgd float64 ){return _fgga ._gdfbf ,_fgga ._ffcfg ,_fgga ._fcae ;};
-
-// FitMode returns the fit mode of the image.
-func (_fcdg *Image )FitMode ()FitMode {return _fcdg ._ggcg };
+// CellVerticalAlignment defines the table cell's vertical alignment.
+type CellVerticalAlignment int ;
 
 // SetBorderOpacity sets the border opacity.
-func (_ccbg *CurvePolygon )SetBorderOpacity (opacity float64 ){_ccbg ._bced =opacity };func _bfeeg (_edacb ,_bgbd ,_dgfe ,_eeef float64 )*Rectangle {return &Rectangle {_fgfd :_edacb ,_aedgf :_bgbd ,_adeb :_dgfe ,_dffef :_eeef ,_bcgca :PositionAbsolute ,_acea :1.0,_fbdc :ColorBlack ,_eacf :1.0,_eeee :1.0};
-};
+func (_cbff *Polygon )SetBorderOpacity (opacity float64 ){_cbff ._ecbgf =opacity };
 
-// CreateTableOfContents sets a function to generate table of contents.
-func (_cabg *Creator )CreateTableOfContents (genTOCFunc func (_bbab *TOC )error ){_cabg ._dec =genTOCFunc ;};func _aeea ()*PageBreak {return &PageBreak {}};
+// NewTable create a new Table with a specified number of columns.
+func (_ffgg *Creator )NewTable (cols int )*Table {return _agegf (cols )};
+
+// AppendColumn appends a column to the line items table.
+func (_gecbf *Invoice )AppendColumn (description string )*InvoiceCell {_badga :=_gecbf .NewColumn (description );_gecbf ._eaafb =append (_gecbf ._eaafb ,_badga );return _badga ;};
+
+// SetAntiAlias enables anti alias config.
+//
+// Anti alias is disabled by default.
+func (_dbdd *RadialShading )SetAntiAlias (enable bool ){_dbdd ._ecef .SetAntiAlias (enable )};
+
+// Notes returns the notes section of the invoice as a title-content pair.
+func (_dfgg *Invoice )Notes ()(string ,string ){return _dfgg ._egdda [0],_dfgg ._egdda [1]};func (_afgf *Invoice )generateHeaderBlocks (_agad DrawContext )([]*Block ,DrawContext ,error ){_adfb :=_dccc (_afgf ._effe );_adfb .SetEnableWrap (true );_adfb .Append (_afgf ._faea );
+_bdeb :=_agegf (2);if _afgf ._gaffd !=nil {_bbfd :=_bdeb .NewCell ();_bbfd .SetHorizontalAlignment (CellHorizontalAlignmentLeft );_bbfd .SetVerticalAlignment (CellVerticalAlignmentMiddle );_bbfd .SetIndent (0);_bbfd .SetContent (_afgf ._gaffd );_afgf ._gaffd .ScaleToHeight (_adfb .Height ()+20);
+}else {_bdeb .SkipCells (1);};_gdff :=_bdeb .NewCell ();_gdff .SetHorizontalAlignment (CellHorizontalAlignmentRight );_gdff .SetVerticalAlignment (CellVerticalAlignmentMiddle );_gdff .SetContent (_adfb );return _bdeb .GeneratePageBlocks (_agad );};
+
+// SetMargins sets the margins of the rectangle.
+// NOTE: rectangle margins are only applied if relative positioning is used.
+func (_gdag *Rectangle )SetMargins (left ,right ,top ,bottom float64 ){_gdag ._gcag .Left =left ;_gdag ._gcag .Right =right ;_gdag ._gcag .Top =top ;_gdag ._gcag .Bottom =bottom ;};
+
+// Padding returns the padding of the component.
+func (_aafc *Division )Padding ()(_edba ,_cgdc ,_dfdb ,_fbgab float64 ){return _aafc ._deca .Left ,_aafc ._deca .Right ,_aafc ._deca .Top ,_aafc ._deca .Bottom ;};
+
+// GraphicSVG represents a drawable graphic SVG.
+// It is used to render the graphic SVG components using a creator instance.
+type GraphicSVG struct{_cfff *_aeb .GraphicSVG ;_ebgcc Positioning ;_cad float64 ;_debcc float64 ;_dadde Margins ;};
+
+// SetText sets the text content of the Paragraph.
+func (_baga *Paragraph )SetText (text string ){_baga ._fagf =text };
 
 // SetDashPattern sets the dash pattern of the line.
 // NOTE: the dash pattern is taken into account only if the style of the
 // line is set to dashed.
-func (_bcfg *Line )SetDashPattern (dashArray []int64 ,dashPhase int64 ){_bcfg ._deaff =dashArray ;_bcfg ._gdcae =dashPhase ;};
+func (_acag *Line )SetDashPattern (dashArray []int64 ,dashPhase int64 ){_acag ._fafa =dashArray ;_acag ._ccgd =dashPhase ;};
 
-// SetBorderWidth sets the border width.
-func (_agdd *CurvePolygon )SetBorderWidth (borderWidth float64 ){_agdd ._dadd .BorderWidth =borderWidth };
+// StyledParagraph represents text drawn with a specified font and can wrap across lines and pages.
+// By default occupies the available width in the drawing context.
+type StyledParagraph struct{_adeb []*TextChunk ;_cefc TextStyle ;_fecf TextStyle ;_fdge TextAlignment ;_cfebc TextVerticalAlignment ;_gbbd float64 ;_egge bool ;_cdba float64 ;_dffeg bool ;_cbbga bool ;_ebbd TextOverflow ;_bbfc float64 ;_eebag Margins ;
+_eege Positioning ;_fggg float64 ;_gaba float64 ;_cega float64 ;_gdcf float64 ;_cfcf [][]*TextChunk ;_dbff func (_bcfcb *StyledParagraph ,_dbca DrawContext );};func _ceefe (_ecgebb *_fee .PdfAnnotationLink )*_fee .PdfAnnotationLink {if _ecgebb ==nil {return nil ;
+};_ffbef :=_fee .NewPdfAnnotationLink ();_ffbef .BS =_ecgebb .BS ;_ffbef .A =_ecgebb .A ;if _cebbe ,_dfaa :=_ecgebb .GetAction ();_dfaa ==nil &&_cebbe !=nil {_ffbef .SetAction (_cebbe );};if _begdc ,_fgeg :=_ecgebb .Dest .(*_dd .PdfObjectArray );_fgeg {_ffbef .Dest =_dd .MakeArray (_begdc .Elements ()...);
+};return _ffbef ;};
 
-// SetBorderOpacity sets the border opacity of the ellipse.
-func (_cgaf *Ellipse )SetBorderOpacity (opacity float64 ){_cgaf ._deaa =opacity };
+// EnableWordWrap sets the paragraph word wrap flag.
+func (_bfdda *StyledParagraph )EnableWordWrap (val bool ){_bfdda ._dffeg =val };
+
+// List represents a list of items.
+// The representation of a list item is as follows:
+//       [marker] [content]
+// e.g.:        • This is the content of the item.
+// The supported components to add content to list items are:
+// - Paragraph
+// - StyledParagraph
+// - List
+type List struct{_fegg []*listItem ;_bffg Margins ;_dabcb TextChunk ;_cfffc float64 ;_ggeg bool ;_aaab Positioning ;_bdbe TextStyle ;};
+
+// Width returns the width of the Paragraph.
+func (_agga *StyledParagraph )Width ()float64 {if _agga ._egge &&int (_agga ._cdba )> 0{return _agga ._cdba ;};return _agga .getTextWidth ()/1000.0;};var PPI float64 =72;
+
+// AnchorPoint defines anchor point where the center position of the radial gradient would be calculated.
+type AnchorPoint int ;
+
+// InsertColumn inserts a column in the line items table at the specified index.
+func (_agdd *Invoice )InsertColumn (index uint ,description string )*InvoiceCell {_ggfc :=uint (len (_agdd ._eaafb ));if index > _ggfc {index =_ggfc ;};_aecc :=_agdd .NewColumn (description );_agdd ._eaafb =append (_agdd ._eaafb [:index ],append ([]*InvoiceCell {_aecc },_agdd ._eaafb [index :]...)...);
+return _aecc ;};
 
 // SetFillColor sets the fill color.
-func (_adec *CurvePolygon )SetFillColor (color Color ){_adec ._caac =color ;_adec ._dadd .FillColor =_dca (color );};
+func (_cbgb *CurvePolygon )SetFillColor (color Color ){_cbgb ._agf =color ;_cbgb ._aaee .FillColor =_cfd (color );};
 
-// GetMargins returns the margins of the line: left, right, top, bottom.
-func (_gcgg *Line )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _gcgg ._eadb .Left ,_gcgg ._eadb .Right ,_gcgg ._eadb .Top ,_gcgg ._eadb .Bottom ;};
+// SetPos sets the position of the graphic svg to the specified coordinates.
+// This method sets the graphic svg to use absolute positioning.
+func (_bbgcb *GraphicSVG )SetPos (x ,y float64 ){_bbgcb ._ebgcc =PositionAbsolute ;_bbgcb ._cad =x ;_bbgcb ._debcc =y ;};
 
-// Rectangle defines a rectangle with upper left corner at (x,y) and a specified width and height.  The rectangle
-// can have a colored fill and/or border with a specified width.
-// Implements the Drawable interface and can be drawn on PDF using the Creator.
-type Rectangle struct{_fgfd float64 ;_aedgf float64 ;_adeb float64 ;_dffef float64 ;_bcgca Positioning ;_cdfdf Color ;_acea float64 ;_fbdc Color ;_eacf float64 ;_eeee float64 ;_bdcg float64 ;_eged float64 ;_dbfc float64 ;_abca float64 ;_geacg Margins ;
-_debg FitMode ;};func _adf (_fge *_cd .ContentStreamOperations ,_ffa *_gf .PdfPageResources ,_dbd *_cd .ContentStreamOperations ,_afb *_gf .PdfPageResources )error {_bfg :=map[_acb .PdfObjectName ]_acb .PdfObjectName {};_fee :=map[_acb .PdfObjectName ]_acb .PdfObjectName {};
-_fde :=map[_acb .PdfObjectName ]_acb .PdfObjectName {};_fbc :=map[_acb .PdfObjectName ]_acb .PdfObjectName {};_gba :=map[_acb .PdfObjectName ]_acb .PdfObjectName {};_dagd :=map[_acb .PdfObjectName ]_acb .PdfObjectName {};for _ ,_dea :=range *_dbd {switch _dea .Operand {case "\u0044\u006f":if len (_dea .Params )==1{if _adfd ,_cdd :=_dea .Params [0].(*_acb .PdfObjectName );
-_cdd {if _ ,_abge :=_bfg [*_adfd ];!_abge {var _age _acb .PdfObjectName ;_fc ,_ :=_afb .GetXObjectByName (*_adfd );if _fc !=nil {_age =*_adfd ;for {_febe ,_ :=_ffa .GetXObjectByName (_age );if _febe ==nil ||_febe ==_fc {break ;};_age =*_acb .MakeName (_egac (_age .String ()));
-};};_ffa .SetXObjectByName (_age ,_fc );_bfg [*_adfd ]=_age ;};_fa :=_bfg [*_adfd ];_dea .Params [0]=&_fa ;};};case "\u0054\u0066":if len (_dea .Params )==2{if _deg ,_ffca :=_dea .Params [0].(*_acb .PdfObjectName );_ffca {if _ ,_gfg :=_fee [*_deg ];!_gfg {_cad ,_ecd :=_afb .GetFontByName (*_deg );
-_fgbf :=*_deg ;if _ecd &&_cad !=nil {_fgbf =_bgfg (_deg .String (),_cad ,_ffa );};_ffa .SetFontByName (_fgbf ,_cad );_fee [*_deg ]=_fgbf ;};_aeb :=_fee [*_deg ];_dea .Params [0]=&_aeb ;};};case "\u0043\u0053","\u0063\u0073":if len (_dea .Params )==1{if _bcb ,_gc :=_dea .Params [0].(*_acb .PdfObjectName );
-_gc {if _ ,_gca :=_fde [*_bcb ];!_gca {var _ageb _acb .PdfObjectName ;_adcb ,_cb :=_afb .GetColorspaceByName (*_bcb );if _cb {_ageb =*_bcb ;for {_cfff ,_gea :=_ffa .GetColorspaceByName (_ageb );if !_gea ||_adcb ==_cfff {break ;};_ageb =*_acb .MakeName (_egac (_ageb .String ()));
-};_ffa .SetColorspaceByName (_ageb ,_adcb );_fde [*_bcb ]=_ageb ;}else {_cf .Log .Debug ("C\u006fl\u006f\u0072\u0073\u0070\u0061\u0063\u0065\u0020n\u006f\u0074\u0020\u0066ou\u006e\u0064");};};if _faa ,_geee :=_fde [*_bcb ];_geee {_dea .Params [0]=&_faa ;
-}else {_cf .Log .Debug ("\u0045\u0072\u0072\u006f\u0072\u003a\u0020\u0043\u006f\u006co\u0072\u0073\u0070\u0061\u0063\u0065\u0020%\u0073\u0020\u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064",*_bcb );};};};case "\u0053\u0043\u004e","\u0073\u0063\u006e":if len (_dea .Params )==1{if _ceff ,_dagb :=_dea .Params [0].(*_acb .PdfObjectName );
-_dagb {if _ ,_ega :=_fbc [*_ceff ];!_ega {var _gbe _acb .PdfObjectName ;_dbe ,_ddb :=_afb .GetPatternByName (*_ceff );if _ddb {_gbe =*_ceff ;for {_dff ,_afbe :=_ffa .GetPatternByName (_gbe );if !_afbe ||_dff ==_dbe {break ;};_gbe =*_acb .MakeName (_egac (_gbe .String ()));
-};_aaae :=_ffa .SetPatternByName (_gbe ,_dbe .ToPdfObject ());if _aaae !=nil {return _aaae ;};_fbc [*_ceff ]=_gbe ;};};if _gae ,_efc :=_fbc [*_ceff ];_efc {_dea .Params [0]=&_gae ;};};};case "\u0073\u0068":if len (_dea .Params )==1{if _dge ,_gfa :=_dea .Params [0].(*_acb .PdfObjectName );
-_gfa {if _ ,_gge :=_gba [*_dge ];!_gge {var _cfga _acb .PdfObjectName ;_ebb ,_gag :=_afb .GetShadingByName (*_dge );if _gag {_cfga =*_dge ;for {_ccba ,_dfce :=_ffa .GetShadingByName (_cfga );if !_dfce ||_ebb ==_ccba {break ;};_cfga =*_acb .MakeName (_egac (_cfga .String ()));
-};_bfe :=_ffa .SetShadingByName (_cfga ,_ebb .ToPdfObject ());if _bfe !=nil {_cf .Log .Debug ("E\u0052\u0052\u004f\u0052 S\u0065t\u0020\u0073\u0068\u0061\u0064i\u006e\u0067\u003a\u0020\u0025\u0076",_bfe );return _bfe ;};_gba [*_dge ]=_cfga ;}else {_cf .Log .Debug ("\u0053\u0068\u0061\u0064\u0069\u006e\u0067\u0020\u006e\u006f\u0074\u0020f\u006f\u0075\u006e\u0064");
-};};if _eba ,_egfe :=_gba [*_dge ];_egfe {_dea .Params [0]=&_eba ;}else {_cf .Log .Debug ("E\u0072\u0072\u006f\u0072\u003a\u0020S\u0068\u0061\u0064\u0069\u006e\u0067\u0020\u0025\u0073 \u006e\u006f\u0074 \u0066o\u0075\u006e\u0064",*_dge );};};};case "\u0067\u0073":if len (_dea .Params )==1{if _cdc ,_fdce :=_dea .Params [0].(*_acb .PdfObjectName );
-_fdce {if _ ,_acg :=_dagd [*_cdc ];!_acg {var _cfgab _acb .PdfObjectName ;_egfb ,_ccf :=_afb .GetExtGState (*_cdc );if _ccf {_cfgab =*_cdc ;for {_bad ,_egcd :=_ffa .GetExtGState (_cfgab );if !_egcd ||_egfb ==_bad {break ;};_cfgab =*_acb .MakeName (_egac (_cfgab .String ()));
-};};_ffa .AddExtGState (_cfgab ,_egfb );_dagd [*_cdc ]=_cfgab ;};_dcb :=_dagd [*_cdc ];_dea .Params [0]=&_dcb ;};};};*_fge =append (*_fge ,_dea );};return nil ;};
+// SetFontSize sets the font size in document units (points).
+func (_bccgg *Paragraph )SetFontSize (fontSize float64 ){_bccgg ._bgef =fontSize };
+
+// Lines returns all the lines the table of contents has.
+func (_fdcde *TOC )Lines ()[]*TOCLine {return _fdcde ._bbfe };
 
 // AddLine adds a new line with the provided style to the table of contents.
-func (_edgd *TOC )AddLine (line *TOCLine )*TOCLine {if line ==nil {return nil ;};_edgd ._baabb =append (_edgd ._baabb ,line );return line ;};
+func (_egbd *TOC )AddLine (line *TOCLine )*TOCLine {if line ==nil {return nil ;};_egbd ._bbfe =append (_egbd ._bbfe ,line );return line ;};
 
-// Padding returns the padding of the component.
-func (_aaec *Division )Padding ()(_ggfa ,_gcada ,_ege ,_aaad float64 ){return _aaec ._acbg .Left ,_aaec ._acbg .Right ,_aaec ._acbg .Top ,_aaec ._acbg .Bottom ;};
+// Columns returns all the columns in the invoice line items table.
+func (_bebgb *Invoice )Columns ()[]*InvoiceCell {return _bebgb ._eaafb };
+
+// Height returns the height of the division, assuming all components are
+// stacked on top of each other.
+func (_cdeb *Division )Height ()float64 {var _bea float64 ;for _ ,_gacd :=range _cdeb ._aegg {switch _gffd :=_gacd .(type ){case marginDrawable :_ ,_ ,_gedf ,_agba :=_gffd .GetMargins ();_bea +=_gffd .Height ()+_gedf +_agba ;default:_bea +=_gffd .Height ();
+};};return _bea ;};
 
 // Style returns the style of the line.
-func (_cfdb *Line )Style ()_g .LineStyle {return _cfdb ._fggb };func (_dcdg *pageTransformations )transformPage (_dgd *_gf .PdfPage )error {if _fdfa :=_dcdg .applyFlip (_dgd );_fdfa !=nil {return _fdfa ;};return nil ;};func _dgefb (_bddg Color ,_bgfgba float64 )*ColorPoint {return &ColorPoint {_bebab :_bddg ,_bdbeg :_bgfgba };
-};
+func (_dabf *Line )Style ()_bg .LineStyle {return _dabf ._gffb };func (_faac *pageTransformations )transformPage (_fdg *_fee .PdfPage )error {if _dfda :=_faac .applyFlip (_fdg );_dfda !=nil {return _dfda ;};return nil ;};
 
-// AddColorStop add color stop info for rendering gradient color.
-func (_agge *RadialShading )AddColorStop (color Color ,point float64 ){_agge ._acce .AddColorStop (color ,point );};func (_dgdg *LinearShading )shadingModel ()*_gf .PdfShadingType2 {_bdbec :=_g .NewPoint (_dgdg ._cbba .Llx +_dgdg ._cbba .Width ()/2,_dgdg ._cbba .Lly +_dgdg ._cbba .Height ()/2);
-_gege :=_g .NewPoint (_dgdg ._cbba .Llx ,_dgdg ._cbba .Lly +_dgdg ._cbba .Height ()/2).Add (-_bdbec .X ,-_bdbec .Y ).Rotate (_dgdg ._cfbdg ).Add (_bdbec .X ,_bdbec .Y );_gege =_g .NewPoint (_ee .Max (_ee .Min (_gege .X ,_dgdg ._cbba .Urx ),_dgdg ._cbba .Llx ),_ee .Max (_ee .Min (_gege .Y ,_dgdg ._cbba .Ury ),_dgdg ._cbba .Lly ));
-_fgdb :=_g .NewPoint (_dgdg ._cbba .Urx ,_dgdg ._cbba .Lly +_dgdg ._cbba .Height ()/2).Add (-_bdbec .X ,-_bdbec .Y ).Rotate (_dgdg ._cfbdg ).Add (_bdbec .X ,_bdbec .Y );_fgdb =_g .NewPoint (_ee .Min (_ee .Max (_fgdb .X ,_dgdg ._cbba .Llx ),_dgdg ._cbba .Urx ),_ee .Min (_ee .Max (_fgdb .Y ,_dgdg ._cbba .Lly ),_dgdg ._cbba .Ury ));
-_ceec :=_gf .NewPdfShadingType2 ();_ceec .PdfShading .ShadingType =_acb .MakeInteger (2);_ceec .PdfShading .ColorSpace =_gf .NewPdfColorspaceDeviceRGB ();_ceec .PdfShading .AntiAlias =_acb .MakeBool (_dgdg ._adbg ._dgdf );_ceec .Coords =_acb .MakeArrayFromFloats ([]float64 {_gege .X ,_gege .Y ,_fgdb .X ,_fgdb .Y });
-_ceec .Extend =_acb .MakeArray (_acb .MakeBool (_dgdg ._adbg ._gfaae [0]),_acb .MakeBool (_dgdg ._adbg ._gfaae [1]));_ceec .Function =_dgdg ._adbg .generatePdfFunctions ();return _ceec ;};
+// NewTOC creates a new table of contents.
+func (_dfac *Creator )NewTOC (title string )*TOC {_aegc :=_dfac .NewTextStyle ();_aegc .Font =_dfac ._gbad ;return _cged (title ,_dfac .NewTextStyle (),_aegc );};
+
+// Add adds a new line with the default style to the table of contents.
+func (_egagc *TOC )Add (number ,title ,page string ,level uint )*TOCLine {_feefa :=_egagc .AddLine (_bege (TextChunk {Text :number ,Style :_egagc ._bbda },TextChunk {Text :title ,Style :_egagc ._gaebe },TextChunk {Text :page ,Style :_egagc ._ddege },level ,_egagc ._dcdcg ));
+if _feefa ==nil {return nil ;};_eecdf :=&_egagc ._fdgc ;_feefa .SetMargins (_eecdf .Left ,_eecdf .Right ,_eecdf .Top ,_eecdf .Bottom );_feefa .SetLevelOffset (_egagc ._gfdfe );_feefa .Separator .Text =_egagc ._gabb ;_feefa .Separator .Style =_egagc ._ffedc ;
+return _feefa ;};func (_bdcbg *templateProcessor )addNodeText (_ggfea *templateNode ,_beded string )error {_fdgef :=_ggfea ._bdced ;if _fdgef ==nil {return nil ;};switch _ccde :=_fdgef .(type ){case *TextChunk :_ccde .Text =_beded ;case *Paragraph :switch _ggfea ._bdbga .Name .Local {case "\u0063h\u0061p\u0074\u0065\u0072\u002d\u0068\u0065\u0061\u0064\u0069\u006e\u0067":if _ggfea ._bdgb !=nil {if _geebg ,_gdcdf :=_ggfea ._bdgb ._bdced .(*Chapter );
+_gdcdf {_geebg ._cdb =_beded ;_ccde .SetText (_geebg .headingText ());};};default:_ccde .SetText (_beded );};};return nil ;};
+
+// FillOpacity returns the fill opacity of the ellipse (0-1).
+func (_bgec *Ellipse )FillOpacity ()float64 {return _bgec ._eeec };
+
+// GeneratePageBlocks draws the curve onto page blocks.
+func (_ddcb *Curve )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_fbcg :=NewBlock (ctx .PageWidth ,ctx .PageHeight );_agde :=_ebc .NewContentCreator ();_agde .Add_q ().Add_w (_ddcb ._cgfc ).SetStrokingColor (_cfd (_ddcb ._gabg )).Add_m (_ddcb ._dggg ,ctx .PageHeight -_ddcb ._cea ).Add_v (_ddcb ._beg ,ctx .PageHeight -_ddcb ._febag ,_ddcb ._bda ,ctx .PageHeight -_ddcb ._ccbc ).Add_S ().Add_Q ();
+_effa :=_fbcg .addContentsByString (_agde .String ());if _effa !=nil {return nil ,ctx ,_effa ;};return []*Block {_fbcg },ctx ,nil ;};
+
+// SetDueDate sets the due date of the invoice.
+func (_cbfg *Invoice )SetDueDate (dueDate string )(*InvoiceCell ,*InvoiceCell ){_cbfg ._edgf [1].Value =dueDate ;return _cbfg ._edgf [0],_cbfg ._edgf [1];};func (_deff rgbColor )ToRGB ()(float64 ,float64 ,float64 ){return _deff ._ade ,_deff ._fcc ,_deff ._fbe };
+
+
+// Width is not used. The list component is designed to fill into the available
+// width depending on the context. Returns 0.
+func (_gfaff *List )Width ()float64 {return 0};
+
+// Scale block by specified factors in the x and y directions.
+func (_fbac *Block )Scale (sx ,sy float64 ){_ecg :=_ebc .NewContentCreator ().Scale (sx ,sy ).Operations ();*_fbac ._db =append (*_ecg ,*_fbac ._db ...);_fbac ._db .WrapIfNeeded ();_fbac ._bab *=sx ;_fbac ._egb *=sy ;};
+
+// SetPositioning sets the positioning of the rectangle (absolute or relative).
+func (_egee *Rectangle )SetPositioning (position Positioning ){_egee ._fgaa =position };
 
 // ColorRGBFrom8bit creates a Color from 8-bit (0-255) r,g,b values.
 // Example:
 //   red := ColorRGBFrom8Bit(255, 0, 0)
-func ColorRGBFrom8bit (r ,g ,b byte )Color {return rgbColor {_bef :float64 (r )/255.0,_gdcb :float64 (g )/255.0,_dbf :float64 (b )/255.0};};
+func ColorRGBFrom8bit (r ,g ,b byte )Color {return rgbColor {_ade :float64 (r )/255.0,_fcc :float64 (g )/255.0,_fbe :float64 (b )/255.0};};func _dee (_dadb ,_agd *_fee .PdfPageResources )error {_ccb ,_ :=_dadb .GetColorspaces ();if _ccb !=nil &&len (_ccb .Colorspaces )> 0{for _bff ,_gad :=range _ccb .Colorspaces {_eeaa :=*_dd .MakeName (_bff );
+if _agd .HasColorspaceByName (_eeaa ){continue ;};_gdb :=_agd .SetColorspaceByName (_eeaa ,_gad );if _gdb !=nil {return _gdb ;};};};return nil ;};
 
-// NewCurvePolygon creates a new curve polygon.
-func (_abdb *Creator )NewCurvePolygon (rings [][]_g .CubicBezierCurve )*CurvePolygon {return _fbbge (rings );};
-
-// NewTextStyle creates a new text style object which can be used to style
-// chunks of text.
-// Default attributes:
-// Font: Helvetica
-// Font size: 10
-// Encoding: WinAnsiEncoding
-// Text color: black
-func (_ddbg *Creator )NewTextStyle ()TextStyle {return _daad (_ddbg ._bbd )};func (_abef *StyledParagraph )wrapText ()error {return _abef .wrapChunks (true )};func _daca (_edgg *_bga .GraphicSVG )(*GraphicSVG ,error ){return &GraphicSVG {_febb :_edgg ,_aabb :PositionRelative ,_aafd :Margins {Top :10,Bottom :10}},nil ;
+// SetIncludeInTOC sets a flag to indicate whether or not to include in tOC.
+func (_adbc *Chapter )SetIncludeInTOC (includeInTOC bool ){_adbc ._bge =includeInTOC };func _bbcf (_aafcf ,_faba ,_addfe ,_bagc float64 )*Line {return &Line {_bcgf :_aafcf ,_fgba :_faba ,_ecec :_addfe ,_daac :_bagc ,_bec :ColorBlack ,_dcfe :1.0,_bdfc :1.0,_fafa :[]int64 {1,1},_aede :PositionAbsolute };
 };
 
-// Width returns the cell's width based on the input draw context.
-func (_gaadb *TableCell )Width (ctx DrawContext )float64 {_gbdf :=float64 (0.0);for _bcfeb :=0;_bcfeb < _gaadb ._adcd ;_bcfeb ++{_gbdf +=_gaadb ._bbcg ._cdgf [_gaadb ._bgege +_bcfeb -1];};_beff :=ctx .Width *_gbdf ;return _beff ;};
+// NewBlockFromPage creates a Block from a PDF Page.  Useful for loading template pages as blocks
+// from a PDF document and additional content with the creator.
+func NewBlockFromPage (page *_fee .PdfPage )(*Block ,error ){_bga :=&Block {};_ge ,_aae :=page .GetAllContentStreams ();if _aae !=nil {return nil ,_aae ;};_gfa :=_ebc .NewContentStreamParser (_ge );_dab ,_aae :=_gfa .Parse ();if _aae !=nil {return nil ,_aae ;
+};_dab .WrapIfNeeded ();_bga ._db =_dab ;if page .Resources !=nil {_bga ._gf =page .Resources ;}else {_bga ._gf =_fee .NewPdfPageResources ();};_cfe ,_aae :=page .GetMediaBox ();if _aae !=nil {return nil ,_aae ;};if _cfe .Llx !=0||_cfe .Lly !=0{_bga .translate (-_cfe .Llx ,_cfe .Lly );
+};_bga ._bab =_cfe .Urx -_cfe .Llx ;_bga ._egb =_cfe .Ury -_cfe .Lly ;if page .Rotate !=nil {_bga ._gc =-float64 (*page .Rotate );};return _bga ,nil ;};func _eca (_bgbf *Chapter ,_dgcae *TOC ,_gdaf *_fee .Outline ,_ddbb string ,_fgca int ,_cag TextStyle )*Chapter {var _cfgd uint =1;
+if _bgbf !=nil {_cfgd =_bgbf ._gfacd +1;};_adce :=&Chapter {_feba :_fgca ,_cdb :_ddbb ,_dadd :true ,_bge :true ,_deea :_bgbf ,_ede :_dgcae ,_ecga :_gdaf ,_cbf :[]Drawable {},_gfacd :_cfgd };_cbfa :=_beeg (_adce .headingText (),_cag );_cbfa .SetFont (_cag .Font );
+_cbfa .SetFontSize (_cag .FontSize );_adce ._ddc =_cbfa ;return _adce ;};
 
-// SetAngle would set the angle at which the gradient is rendered.
-//
-// The default angle would be 0 where the gradient would be rendered from left to right side.
-func (_cabbc *LinearShading )SetAngle (angle float64 ){_cabbc ._cfbdg =angle };
+// IsRelative checks if the positioning is relative.
+func (_aaf Positioning )IsRelative ()bool {return _aaf ==PositionRelative };
 
-// SetStyleRight sets border style for right side.
-func (_gbeg *border )SetStyleRight (style CellBorderStyle ){_gbeg ._bceb =style };
+// SetTitle sets the title of the invoice.
+func (_eeadd *Invoice )SetTitle (title string ){_eeadd ._faea =title };
 
-// GeneratePageBlocks draws the line on a new block representing the page.
-// Implements the Drawable interface.
-func (_gegd *Line )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){var (_bged []*Block ;_dedb =NewBlock (ctx .PageWidth ,ctx .PageHeight );_eade =ctx ;_gaac ,_gdcd =_gegd ._aecg ,ctx .PageHeight -_gegd ._cdbf ;_edac ,_agfbe =_gegd ._badg ,ctx .PageHeight -_gegd ._acba ;
-);_ffef :=_gegd ._fadc .IsRelative ();if _ffef {ctx .X +=_gegd ._eadb .Left ;ctx .Y +=_gegd ._eadb .Top ;ctx .Width -=_gegd ._eadb .Left +_gegd ._eadb .Right ;ctx .Height -=_gegd ._eadb .Top +_gegd ._eadb .Bottom ;_gaac ,_gdcd ,_edac ,_agfbe =_gegd .computeCoords (ctx );
-if _gegd .Height ()> ctx .Height {_bged =append (_bged ,_dedb );_dedb =NewBlock (ctx .PageWidth ,ctx .PageHeight );ctx .Page ++;_dbbge :=ctx ;_dbbge .Y =ctx .Margins .Top +_gegd ._eadb .Top ;_dbbge .X =ctx .Margins .Left +_gegd ._eadb .Left ;_dbbge .Height =ctx .PageHeight -ctx .Margins .Top -ctx .Margins .Bottom -_gegd ._eadb .Top -_gegd ._eadb .Bottom ;
-_dbbge .Width =ctx .PageWidth -ctx .Margins .Left -ctx .Margins .Right -_gegd ._eadb .Left -_gegd ._eadb .Right ;ctx =_dbbge ;_gaac ,_gdcd ,_edac ,_agfbe =_gegd .computeCoords (ctx );};};_cdgdg :=_g .BasicLine {X1 :_gaac ,Y1 :_gdcd ,X2 :_edac ,Y2 :_agfbe ,LineColor :_dca (_gegd ._ebce ),Opacity :_gegd ._cabc ,LineWidth :_gegd ._decc ,LineStyle :_gegd ._fggb ,DashArray :_gegd ._deaff ,DashPhase :_gegd ._gdcae };
-_bdge ,_aedd :=_dedb .setOpacity (1.0,_gegd ._cabc );if _aedd !=nil {return nil ,ctx ,_aedd ;};_eggaf ,_ ,_aedd :=_cdgdg .Draw (_bdge );if _aedd !=nil {return nil ,ctx ,_aedd ;};if _aedd =_dedb .addContentsByString (string (_eggaf ));_aedd !=nil {return nil ,ctx ,_aedd ;
-};if _ffef {ctx .X =_eade .X ;ctx .Width =_eade .Width ;_gfff :=_gegd .Height ();ctx .Y +=_gfff +_gegd ._eadb .Bottom ;ctx .Height -=_gfff ;}else {ctx =_eade ;};_bged =append (_bged ,_dedb );return _bged ,ctx ,nil ;};
+// GetMargins returns the Paragraph's margins: left, right, top, bottom.
+func (_efdd *Paragraph )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _efdd ._efbg .Left ,_efdd ._efbg .Right ,_efdd ._efbg .Top ,_efdd ._efbg .Bottom ;};func (_acdd *templateProcessor )parseFitModeAttr (_bggf ,_aeaaa string )FitMode {_da .Log .Debug ("\u0050\u0061\u0072\u0073\u0069\u006e\u0067\u0020\u0066\u0069\u0074\u0020\u006do\u0064\u0065\u0020\u0061\u0074\u0074r\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0028\u0060\u0025\u0073\u0060\u002c \u0025\u0073\u0029\u002e",_bggf ,_aeaaa );
+_abded :=map[string ]FitMode {"\u006e\u006f\u006e\u0065":FitModeNone ,"\u0066\u0069\u006c\u006c\u002d\u0077\u0069\u0064\u0074\u0068":FitModeFillWidth }[_aeaaa ];return _abded ;};const (HorizontalAlignmentLeft HorizontalAlignment =iota ;HorizontalAlignmentCenter ;
+HorizontalAlignmentRight ;);
 
-// SetColor sets the color of the Paragraph text.
-//
-// Example:
-//
-//  1. p := NewParagraph("Red paragraph")
-//     // Set to red color with a hex code:
-//     p.SetColor(creator.ColorRGBFromHex("#ff0000"))
-//
-//  2. Make Paragraph green with 8-bit rgb values (0-255 each component)
-//     p.SetColor(creator.ColorRGBFrom8bit(0, 255, 0)
-//
-//  3. Make Paragraph blue with arithmetic (0-1) rgb components.
-//     p.SetColor(creator.ColorRGBFromArithmetic(0, 0, 1.0)
-func (_eede *Paragraph )SetColor (col Color ){_eede ._efefb =col };
+// AddInternalLink adds a new internal link to the paragraph.
+// The text parameter represents the text that is displayed.
+// The user is taken to the specified page, at the specified x and y
+// coordinates. Position 0, 0 is at the top left of the page.
+// The zoom of the destination page is controlled with the zoom
+// parameter. Pass in 0 to keep the current zoom value.
+func (_eccd *StyledParagraph )AddInternalLink (text string ,page int64 ,x ,y ,zoom float64 )*TextChunk {_ddga :=NewTextChunk (text ,_eccd ._fecf );_ddga ._beebgd =_gabgca (page -1,x ,y ,zoom );return _eccd .appendChunk (_ddga );};
+
+// SetEnableWrap sets the line wrapping enabled flag.
+func (_ebff *Paragraph )SetEnableWrap (enableWrap bool ){_ebff ._ccee =enableWrap ;_ebff ._ecfa =false };func _eefb (_cbgaf ,_egcab ,_fgdg ,_fbfe float64 )*Rectangle {return &Rectangle {_cfbab :_cbgaf ,_cffbf :_egcab ,_bfddd :_fgdg ,_abfd :_fbfe ,_fgaa :PositionAbsolute ,_ffdfg :1.0,_eggbc :ColorBlack ,_egde :1.0,_cgbf :1.0};
+};
+
+// Height returns the height of the Paragraph. The height is calculated based on the input text and how it is wrapped
+// within the container. Does not include Margins.
+func (_fdcd *StyledParagraph )Height ()float64 {_fdcd .wrapText ();var _cabcg float64 ;for _ ,_ddeb :=range _fdcd ._cfcf {var _fdbc float64 ;for _ ,_gdfaf :=range _ddeb {_fgcbd :=_fdcd ._gbbd *_gdfaf .Style .FontSize ;if _fgcbd > _fdbc {_fdbc =_fgcbd ;
+};};_cabcg +=_fdbc ;};return _cabcg ;};
 
 // NewCell makes a new cell and inserts it into the table at the current position.
-func (_agga *Table )NewCell ()*TableCell {return _agga .MultiCell (1,1)};func _efefe (_abgcd *Creator ,_ggbfe _ag .Reader ,_dfag interface{},_cdgcg *TemplateOptions ,_cacdg componentRenderer )error {if _abgcd ==nil {_cf .Log .Error ("\u0043\u0072\u0065a\u0074\u006f\u0072\u0020i\u006e\u0073\u0074\u0061\u006e\u0063\u0065 \u0063\u0061\u006e\u006e\u006f\u0074\u0020\u0062\u0065\u0020\u006e\u0069\u006c\u002e");
-return _fgadg ;};_bcag :=_fe .NewBuffer (nil );if _ ,_bcgeb :=_ag .Copy (_bcag ,_ggbfe );_bcgeb !=nil {return _bcgeb ;};_cffb :=_f .FuncMap {"\u0064\u0069\u0063\u0074":_ggbee };if _cdgcg !=nil &&_cdgcg .HelperFuncMap !=nil {for _eabdb ,_afbea :=range _cdgcg .HelperFuncMap {if _ ,_bdfd :=_cffb [_eabdb ];
-_bdfd {_cf .Log .Debug ("\u0043\u0061\u006e\u006e\u006f\u0074 \u006f\u0076\u0065r\u0072\u0069\u0064e\u0020\u0062\u0075\u0069\u006c\u0074\u002d\u0069\u006e\u0020`\u0025\u0073\u0060\u0020\u0068el\u0070\u0065\u0072\u0020\u0066\u0075\u006e\u0063\u0074\u0069\u006f\u006e\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069\u006e\u0067\u002e",_eabdb );
-continue ;};_cffb [_eabdb ]=_afbea ;};};_dacc ,_fgaa :=_f .New ("").Funcs (_cffb ).Parse (_bcag .String ());if _fgaa !=nil {return _fgaa ;};if _cdgcg !=nil &&_cdgcg .SubtemplateMap !=nil {for _agcee ,_cacfb :=range _cdgcg .SubtemplateMap {if _agcee ==""{_cf .Log .Debug ("\u0053\u0075\u0062\u0074\u0065\u006d\u0070\u006c\u0061\u0074\u0065\u0020\u006e\u0061\u006d\u0065\u0020\u0063\u0061\u006en\u006f\u0074\u0020\u0062\u0065\u0020\u0065\u006d\u0070\u0074\u0079\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069\u006e\u0067.\u0020\u004f\u0075\u0074\u0070\u0075\u0074\u0020\u006d\u0061\u0079\u0020\u0062\u0065 \u0069\u006e\u0063o\u0072\u0072\u0065\u0063\u0074\u002e");
-continue ;};if _cacfb ==nil {_cf .Log .Debug ("S\u0075\u0062t\u0065\u006d\u0070\u006c\u0061\u0074\u0065\u0020\u0063\u006f\u006e\u0074\u0065\u006e\u0074\u0020\u0063\u0061\u006e\u006eo\u0074\u0020\u0062\u0065\u0020\u006e\u0069\u006c\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069n\u0067\u002e\u0020\u004f\u0075\u0074\u0070\u0075\u0074\u0020\u006d\u0061\u0079 \u0062\u0065\u0020\u0069\u006e\u0063\u006f\u0072\u0072\u0065\u0063t\u002e");
-continue ;};_dace :=_fe .NewBuffer (nil );if _ ,_fccd :=_ag .Copy (_dace ,_cacfb );_fccd !=nil {return _fccd ;};if _ ,_gcf :=_dacc .New (_agcee ).Parse (_dace .String ());_gcf !=nil {return _gcf ;};};};_bcag .Reset ();if _gecgf :=_dacc .Execute (_bcag ,_dfag );
-_gecgf !=nil {return _gecgf ;};return _bdaac (_abgcd ,_bcag .Bytes (),_cdgcg ,_cacdg ).run ();};func (_caf *pageTransformations )applyFlip (_ceed *_gf .PdfPage )error {_cdcd ,_eaaga :=_caf ._abfg ,_caf ._dgbe ;if !_cdcd &&!_eaaga {return nil ;};if _ceed ==nil {return _d .New ("\u006e\u006f\u0020\u0070\u0061\u0067\u0065\u0020\u0061c\u0074\u0069\u0076\u0065");
-};_abaa ,_gdcc :=_ceed .GetMediaBox ();if _gdcc !=nil {return _gdcc ;};_ecdg ,_gaab :=_abaa .Width (),_abaa .Height ();_bgfd ,_gdcc :=_ceed .GetRotate ();if _gdcc !=nil {_cf .Log .Debug ("\u0045\u0052R\u004f\u0052\u003a\u0020\u0025\u0073\u0020\u002d\u0020\u0069\u0067\u006e\u006f\u0072\u0069\u006e\u0067\u0020\u0061\u006e\u0064\u0020\u0061\u0073\u0073\u0075\u006d\u0069\u006e\u0067\u0020\u006e\u006f\u0020\u0072\u006f\u0074\u0061\u0074\u0069\u006f\u006e\u000a",_gdcc .Error ());
-};if _cdgc :=_bgfd %360!=0&&_bgfd %90==0;_cdgc {if _dfd :=(360+_bgfd %360)%360;_dfd ==90||_dfd ==270{_cdcd ,_eaaga =_eaaga ,_cdcd ;};};_aggd ,_beeg :=1.0,0.0;if _cdcd {_aggd ,_beeg =-1.0,-_ecdg ;};_ccgg ,_daa :=1.0,0.0;if _eaaga {_ccgg ,_daa =-1.0,-_gaab ;
-};_dfbd :=_cd .NewContentCreator ().Scale (_aggd ,_ccgg ).Translate (_beeg ,_daa );_cedg ,_gdcc :=_acb .MakeStream (_dfbd .Bytes (),_acb .NewFlateEncoder ());if _gdcc !=nil {return _gdcc ;};_bea :=_acb .MakeArray (_cedg );_bea .Append (_ceed .GetContentStreamObjs ()...);
-_ceed .Contents =_bea ;return nil ;};
+func (_cfbacb *Table )NewCell ()*TableCell {return _cfbacb .MultiCell (1,1)};
 
-// Notes returns the notes section of the invoice as a title-content pair.
-func (_aecf *Invoice )Notes ()(string ,string ){return _aecf ._gedg [0],_aecf ._gedg [1]};func _aadc (_cfffa *_gf .PdfRectangle ,_cbdb _fg .Matrix )*_gf .PdfRectangle {var _gbbfd _gf .PdfRectangle ;_gbbfd .Llx ,_gbbfd .Lly =_cbdb .Transform (_cfffa .Llx ,_cfffa .Lly );
-_gbbfd .Urx ,_gbbfd .Ury =_cbdb .Transform (_cfffa .Urx ,_cfffa .Ury );_gbbfd .Normalize ();return &_gbbfd ;};
+// SetTextAlignment sets the horizontal alignment of the text within the space provided.
+func (_aacb *Paragraph )SetTextAlignment (align TextAlignment ){_aacb ._afcfe =align };
 
-// FillOpacity returns the fill opacity of the ellipse (0-1).
-func (_faae *Ellipse )FillOpacity ()float64 {return _faae ._acf };
+// Scale scales the ellipse dimensions by the specified factors.
+func (_cbcb *Ellipse )Scale (xFactor ,yFactor float64 ){_cbcb ._baeg =xFactor *_cbcb ._baeg ;_cbcb ._afaf =yFactor *_cbcb ._afaf ;};
 
-// CreateFrontPage sets a function to generate a front Page.
-func (_cgfd *Creator )CreateFrontPage (genFrontPageFunc func (_afee FrontpageFunctionArgs )){_cgfd ._dfg =genFrontPageFunc ;};
+// CreateTableOfContents sets a function to generate table of contents.
+func (_gfada *Creator )CreateTableOfContents (genTOCFunc func (_gacf *TOC )error ){_gfada ._cdfg =genTOCFunc ;};
 
-// GeneratePageBlocks generates the page blocks.  Multiple blocks are generated if the contents wrap
-// over multiple pages. Implements the Drawable interface.
-func (_eefb *Paragraph )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_ebdb :=ctx ;var _ffgb []*Block ;_egcg :=NewBlock (ctx .PageWidth ,ctx .PageHeight );if _eefb ._dced .IsRelative (){ctx .X +=_eefb ._eddc .Left ;ctx .Y +=_eefb ._eddc .Top ;
-ctx .Width -=_eefb ._eddc .Left +_eefb ._eddc .Right ;ctx .Height -=_eefb ._eddc .Top ;_eefb .SetWidth (ctx .Width );if _eefb .Height ()> ctx .Height {_ffgb =append (_ffgb ,_egcg );_egcg =NewBlock (ctx .PageWidth ,ctx .PageHeight );ctx .Page ++;_deab :=ctx ;
-_deab .Y =ctx .Margins .Top ;_deab .X =ctx .Margins .Left +_eefb ._eddc .Left ;_deab .Height =ctx .PageHeight -ctx .Margins .Top -ctx .Margins .Bottom ;_deab .Width =ctx .PageWidth -ctx .Margins .Left -ctx .Margins .Right -_eefb ._eddc .Left -_eefb ._eddc .Right ;
-ctx =_deab ;};}else {if int (_eefb ._bdcb )<=0{_eefb .SetWidth (_eefb .getTextWidth ());};ctx .X =_eefb ._fgfe ;ctx .Y =_eefb ._cfcdd ;};ctx ,_ebcc :=_ggdce (_egcg ,_eefb ,ctx );if _ebcc !=nil {_cf .Log .Debug ("\u0045R\u0052\u004f\u0052\u003a\u0020\u0025v",_ebcc );
-return nil ,ctx ,_ebcc ;};_ffgb =append (_ffgb ,_egcg );if _eefb ._dced .IsRelative (){ctx .Y +=_eefb ._eddc .Bottom ;ctx .Height -=_eefb ._eddc .Bottom ;if !ctx .Inline {ctx .X =_ebdb .X ;ctx .Width =_ebdb .Width ;};return _ffgb ,ctx ,nil ;};return _ffgb ,_ebdb ,nil ;
+// PageBreak represents a page break for a chapter.
+type PageBreak struct{};
+
+// Height returns the height of the Paragraph. The height is calculated based on the input text and
+// how it is wrapped within the container. Does not include Margins.
+func (_eebc *Paragraph )Height ()float64 {_eebc .wrapText ();return float64 (len (_eebc ._fcda ))*_eebc ._adgg *_eebc ._bgef ;};
+
+// MoveY moves the drawing context to absolute position y.
+func (_aceda *Creator )MoveY (y float64 ){_aceda ._ddd .Y =y };
+
+// String implements error interface.
+func (_fdba UnsupportedRuneError )Error ()string {return _fdba .Message };
+
+// Height returns the height of the line.
+func (_adbd *Line )Height ()float64 {_bece :=_adbd ._bdfc ;if _adbd ._bcgf ==_adbd ._ecec {_bece /=2;};return _fa .Abs (_adbd ._daac -_adbd ._fgba )+_bece ;};
+
+// CurRow returns the currently active cell's row number.
+func (_bedab *Table )CurRow ()int {_degage :=(_bedab ._gacbf -1)/_bedab ._fcfd +1;return _degage };
+
+// SetAddressHeadingStyle sets the style properties used to render the
+// heading of the invoice address sections.
+func (_gfcde *Invoice )SetAddressHeadingStyle (style TextStyle ){_gfcde ._dbbf =style };
+
+// Curve represents a cubic Bezier curve with a control point.
+type Curve struct{_dggg float64 ;_cea float64 ;_beg float64 ;_febag float64 ;_bda float64 ;_ccbc float64 ;_gabg Color ;_cgfc float64 ;};func (_bagcd *StyledParagraph )getMaxLineWidth ()float64 {if _bagcd ._cfcf ==nil ||len (_bagcd ._cfcf )==0{_bagcd .wrapText ();
+};var _ggcfg float64 ;for _ ,_bbge :=range _bagcd ._cfcf {_acagd :=_bagcd .getTextLineWidth (_bbge );if _acagd > _ggcfg {_ggcfg =_acagd ;};};return _ggcfg ;};const (DefaultHorizontalScaling =100;);
+
+// Draw processes the specified Drawable widget and generates blocks that can
+// be rendered to the output document. The generated blocks can span over one
+// or more pages. Additional pages are added if the contents go over the current
+// page. Each generated block is assigned to the creator page it will be
+// rendered to. In order to render the generated blocks to the creator pages,
+// call Finalize, Write or WriteToFile.
+func (_aage *Creator )Draw (d Drawable )error {if _aage .getActivePage ()==nil {_aage .NewPage ();};_gcgc ,_affb ,_fgec :=d .GeneratePageBlocks (_aage ._ddd );if _fgec !=nil {return _fgec ;};if len (_affb ._ggce )> 0{_aage .Errors =append (_aage .Errors ,_affb ._ggce ...);
+};for _bfdg ,_cabe :=range _gcgc {if _bfdg > 0{_aage .NewPage ();};_fgbe :=_aage .getActivePage ();if _gdfbc ,_efc :=_aage ._adcea [_fgbe ];_efc {if _ebda :=_gdfbc .mergeBlocks (_cabe );_ebda !=nil {return _ebda ;};if _dbaa :=_dee (_cabe ._gf ,_gdfbc ._gf );
+_dbaa !=nil {return _dbaa ;};}else {_aage ._adcea [_fgbe ]=_cabe ;};};_aage ._ddd .X =_affb .X ;_aage ._ddd .Y =_affb .Y ;_aage ._ddd .Height =_affb .PageHeight -_affb .Y -_affb .Margins .Bottom ;return nil ;};
+
+// NewCurve returns new instance of Curve between points (x1,y1) and (x2, y2) with control point (cx,cy).
+func (_dcd *Creator )NewCurve (x1 ,y1 ,cx ,cy ,x2 ,y2 float64 )*Curve {return _acac (x1 ,y1 ,cx ,cy ,x2 ,y2 );};func _gccg (_ddbf *_fee .Image )(*Image ,error ){_afac :=float64 (_ddbf .Width );_ecdg :=float64 (_ddbf .Height );return &Image {_dgaec :_ddbf ,_bfdf :_afac ,_eaaa :_ecdg ,_edda :_afac ,_eega :_ecdg ,_dbbd :0,_edcd :1.0,_agagd :PositionRelative },nil ;
 };
 
-// SetMargins sets the Table's left, right, top, bottom margins.
-func (_bbfc *Table )SetMargins (left ,right ,top ,bottom float64 ){_bbfc ._bbfa .Left =left ;_bbfc ._bbfa .Right =right ;_bbfc ._bbfa .Top =top ;_bbfc ._bbfa .Bottom =bottom ;};
+// SetBackgroundColor set background color of the shading area.
+//
+// By default the background color is set to white.
+func (_eddfc *LinearShading )SetBackgroundColor (backgroundColor Color ){_eddfc ._adece .SetBackgroundColor (backgroundColor );};
 
-// Width is not used as the division component is designed to fill all the
-// available space, depending on the context. Returns 0.
-func (_afdc *Division )Width ()float64 {return 0};
+// SellerAddress returns the seller address used in the invoice template.
+func (_cfdc *Invoice )SellerAddress ()*InvoiceAddress {return _cfdc ._dfbd };func _ceaf (_bagg *Block ,_egfb *Image ,_debg DrawContext )(DrawContext ,error ){_bfebg :=_debg ;_gbff :=1;_gegb :=_dd .PdfObjectName (_fb .Sprintf ("\u0049\u006d\u0067%\u0064",_gbff ));
+for _bagg ._gf .HasXObjectByName (_gegb ){_gbff ++;_gegb =_dd .PdfObjectName (_fb .Sprintf ("\u0049\u006d\u0067%\u0064",_gbff ));};_fddde :=_bagg ._gf .SetXObjectImageByName (_gegb ,_egfb ._aaae );if _fddde !=nil {return _debg ,_fddde ;};_degc :=0;_cbd :=_dd .PdfObjectName (_fb .Sprintf ("\u0047\u0053\u0025\u0064",_degc ));
+for _bagg ._gf .HasExtGState (_cbd ){_degc ++;_cbd =_dd .PdfObjectName (_fb .Sprintf ("\u0047\u0053\u0025\u0064",_degc ));};_debaf :=_dd .MakeDict ();_debaf .Set ("\u0042\u004d",_dd .MakeName ("\u004e\u006f\u0072\u006d\u0061\u006c"));if _egfb ._edcd < 1.0{_debaf .Set ("\u0043\u0041",_dd .MakeFloat (_egfb ._edcd ));
+_debaf .Set ("\u0063\u0061",_dd .MakeFloat (_egfb ._edcd ));};_fddde =_bagg ._gf .AddExtGState (_cbd ,_dd .MakeIndirectObject (_debaf ));if _fddde !=nil {return _debg ,_fddde ;};_dcfc :=_egfb .Width ();_bcdb :=_egfb .Height ();_ ,_cfcc :=_egfb .rotatedSize ();
+_gbcg :=_debg .X ;_cdde :=_debg .PageHeight -_debg .Y -_bcdb ;if _egfb ._agagd .IsRelative (){_cdde -=(_cfcc -_bcdb )/2;switch _egfb ._eeef {case HorizontalAlignmentCenter :_gbcg +=(_debg .Width -_dcfc )/2;case HorizontalAlignmentRight :_gbcg =_debg .PageWidth -_debg .Margins .Right -_egfb ._dgb .Right -_dcfc ;
+};};_dddg :=_egfb ._dbbd ;_gbec :=_ebc .NewContentCreator ();_gbec .Add_gs (_cbd );_gbec .Translate (_gbcg ,_cdde );if _dddg !=0{_gbec .Translate (_dcfc /2,_bcdb /2);_gbec .RotateDeg (_dddg );_gbec .Translate (-_dcfc /2,-_bcdb /2);};_gbec .Scale (_dcfc ,_bcdb ).Add_Do (_gegb );
+_afcf :=_gbec .Operations ();_afcf .WrapIfNeeded ();_bagg .addContents (_afcf );if _egfb ._agagd .IsRelative (){_debg .Y +=_cfcc ;_debg .Height -=_cfcc ;return _debg ,nil ;};return _bfebg ,nil ;};const (TextVerticalAlignmentBaseline TextVerticalAlignment =iota ;
+TextVerticalAlignmentCenter ;TextVerticalAlignmentBottom ;TextVerticalAlignmentTop ;);
 
-// SetFitMode sets the fit mode of the line.
-// NOTE: The fit mode is only applied if relative positioning is used.
-func (_ccedc *Line )SetFitMode (fitMode FitMode ){_ccedc ._gagda =fitMode };
+// SetSellerAddress sets the seller address of the invoice.
+func (_beedcc *Invoice )SetSellerAddress (address *InvoiceAddress ){_beedcc ._dfbd =address };
 
-// NewGraphicSVGFromFile creates a graphic SVG from a file.
-func NewGraphicSVGFromFile (path string )(*GraphicSVG ,error ){return _bbabe (path )};
+// AddPatternResource adds pattern dictionary inside the resources dictionary.
+func (_addb *LinearShading )AddPatternResource (block *Block )(_cfcce _dd .PdfObjectName ,_adae error ){_ffbb :=1;_gdgge :=_dd .PdfObjectName ("\u0050"+_fe .Itoa (_ffbb ));for block ._gf .HasPatternByName (_gdgge ){_ffbb ++;_gdgge =_dd .PdfObjectName ("\u0050"+_fe .Itoa (_ffbb ));
+};if _deeaa :=block ._gf .SetPatternByName (_gdgge ,_addb .ToPdfShadingPattern ().ToPdfObject ());_deeaa !=nil {return "",_deeaa ;};return _gdgge ,nil ;};func _bcgdb (_ggca string ,_cefe bool )string {_eacc :=_ggca ;if _eacc ==""{return "";};_gfca :=_aa .Paragraph {};
+_ ,_dafdg :=_gfca .SetString (_ggca );if _dafdg !=nil {return _eacc ;};_cccgc ,_dafdg :=_gfca .Order ();if _dafdg !=nil {return _eacc ;};_bbffe :=_cccgc .NumRuns ();_dgaag :=make ([]string ,_bbffe );for _bgccg :=0;_bgccg < _cccgc .NumRuns ();_bgccg ++{_abgaf :=_cccgc .Run (_bgccg );
+_cgfba :=_abgaf .String ();if _abgaf .Direction ()==_aa .RightToLeft {_cgfba =_aa .ReverseString (_cgfba );};if _cefe {_dgaag [_bgccg ]=_cgfba ;}else {_dgaag [_bbffe -1]=_cgfba ;};_bbffe --;};if len (_dgaag )!=_cccgc .NumRuns (){return _ggca ;};_eacc =_cf .Join (_dgaag ,"");
+return _eacc ;};
 
-// MoveTo moves the drawing context to absolute coordinates (x, y).
-func (_bbdf *Creator )MoveTo (x ,y float64 ){_bbdf ._fagd .X =x ;_bbdf ._fagd .Y =y };
+// GeneratePageBlocks draws the block contents on a template Page block.
+// Implements the Drawable interface.
+func (_fbg *Block )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_ee :=_ebc .NewContentCreator ();_bad ,_eba :=_fbg .Width (),_fbg .Height ();if _fbg ._eg .IsRelative (){_ee .Translate (ctx .X ,ctx .PageHeight -ctx .Y -_eba );}else {_ee .Translate (_fbg ._ba ,ctx .PageHeight -_fbg ._cd -_eba );
+};_aaa :=_eba ;if _fbg ._gc !=0{_ee .Translate (_bad /2,_eba /2);_ee .RotateDeg (_fbg ._gc );_ee .Translate (-_bad /2,-_eba /2);_ ,_aaa =_fbg .RotatedSize ();};if _fbg ._eg .IsRelative (){ctx .Y +=_aaa ;};_ca :=_fbg .duplicate ();_bbb :=append (*_ee .Operations (),*_ca ._db ...);
+_bbb .WrapIfNeeded ();_ca ._db =&_bbb ;return []*Block {_ca },ctx ,nil ;};
 
-// SetCoords sets the center coordinates of the ellipse.
-func (_acad *Ellipse )SetCoords (xc ,yc float64 ){_acad ._gecd =xc ;_acad ._abbb =yc };
+// SetMargins sets the margins of the ellipse.
+// NOTE: ellipse margins are only applied if relative positioning is used.
+func (_bag *Ellipse )SetMargins (left ,right ,top ,bottom float64 ){_bag ._fbed .Left =left ;_bag ._fbed .Right =right ;_bag ._fbed .Top =top ;_bag ._fbed .Bottom =bottom ;};
 
-// SetMargins sets the margins of the line.
-// NOTE: line margins are only applied if relative positioning is used.
-func (_efafe *Line )SetMargins (left ,right ,top ,bottom float64 ){_efafe ._eadb .Left =left ;_efafe ._eadb .Right =right ;_efafe ._eadb .Top =top ;_efafe ._eadb .Bottom =bottom ;};
+// AddSubtable copies the cells of the subtable in the table, starting with the
+// specified position. The table row and column indices are 1-based, which
+// makes the position of the first cell of the first row of the table 1,1.
+// The table is automatically extended if the subtable exceeds its columns.
+// This can happen when the subtable has more columns than the table or when
+// one or more columns of the subtable starting from the specified position
+// exceed the last column of the table.
+func (_daba *Table )AddSubtable (row ,col int ,subtable *Table ){for _ ,_eadb :=range subtable ._afbaa {_beefe :=&TableCell {};*_beefe =*_eadb ;_beefe ._fagfd =_daba ;_beefe ._faga +=col -1;if _eefcea :=_daba ._fcfd -(_beefe ._faga -1);_eefcea < _beefe ._cdefg {_daba ._fcfd +=_beefe ._cdefg -_eefcea ;
+_daba .resetColumnWidths ();_da .Log .Debug ("\u0054a\u0062l\u0065\u003a\u0020\u0073\u0075\u0062\u0074\u0061\u0062\u006c\u0065 \u0065\u0078\u0063\u0065e\u0064\u0073\u0020\u0064\u0065s\u0074\u0069\u006e\u0061\u0074\u0069\u006f\u006e\u0020\u0074\u0061\u0062\u006c\u0065\u002e\u0020\u0045\u0078\u0070\u0061\u006e\u0064\u0069\u006e\u0067\u0020\u0074\u0061\u0062\u006c\u0065 \u0074\u006f\u0020\u0025\u0064\u0020\u0063\u006fl\u0075\u006d\u006e\u0073\u002e",_daba ._fcfd );
+};_beefe ._eeadc +=row -1;_fccad :=subtable ._agda [_eadb ._eeadc -1];if _beefe ._eeadc > _daba ._edde {for _beefe ._eeadc > _daba ._edde {_daba ._edde ++;_daba ._agda =append (_daba ._agda ,_daba ._gbbe );};_daba ._agda [_beefe ._eeadc -1]=_fccad ;}else {_daba ._agda [_beefe ._eeadc -1]=_fa .Max (_daba ._agda [_beefe ._eeadc -1],_fccad );
+};_daba ._afbaa =append (_daba ._afbaa ,_beefe );};_b .Slice (_daba ._afbaa ,func (_fcbc ,_dbcaa int )bool {_eece :=_daba ._afbaa [_fcbc ]._eeadc ;_fcad :=_daba ._afbaa [_dbcaa ]._eeadc ;if _eece < _fcad {return true ;};if _eece > _fcad {return false ;
+};return _daba ._afbaa [_fcbc ]._faga < _daba ._afbaa [_dbcaa ]._faga ;});};
 
-// GeneratePageBlocks draws the filled curve on page blocks.
-func (_acbfa *FilledCurve )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_geeed :=NewBlock (ctx .PageWidth ,ctx .PageHeight );_ffb ,_ ,_agbb :=_acbfa .draw (_geeed ,"");if _agbb !=nil {return nil ,ctx ,_agbb ;};_agbb =_geeed .addContentsByString (string (_ffb ));
-if _agbb !=nil {return nil ,ctx ,_agbb ;};return []*Block {_geeed },ctx ,nil ;};
+// SetCoords sets the upper left corner coordinates of the rectangle.
+func (_agbgb *Rectangle )SetCoords (x ,y float64 ){_agbgb ._cfbab =x ;_agbgb ._cffbf =y };
 
-// SetSideBorderColor sets the cell's side border color.
-func (_deeg *TableCell )SetSideBorderColor (side CellBorderSide ,col Color ){switch side {case CellBorderSideAll :_deeg ._dffad =col ;_deeg ._feeb =col ;_deeg ._effe =col ;_deeg ._afgf =col ;case CellBorderSideTop :_deeg ._dffad =col ;case CellBorderSideBottom :_deeg ._feeb =col ;
-case CellBorderSideLeft :_deeg ._effe =col ;case CellBorderSideRight :_deeg ._afgf =col ;};};const (FitModeNone FitMode =iota ;FitModeFillWidth ;);
+// SetBorderColor sets the border color for the path.
+func (_dfec *FilledCurve )SetBorderColor (color Color ){_dfec ._afdae =color };
 
-// AddAnnotation adds an annotation to the current block.
-// The annotation will be added to the page the block will be rendered on.
-func (_cae *Block )AddAnnotation (annotation *_gf .PdfAnnotation ){for _ ,_ebe :=range _cae ._egb {if _ebe ==annotation {return ;};};_cae ._egb =append (_cae ._egb ,annotation );};
+// SetTitleStyle sets the style properties of the invoice title.
+func (_fdaf *Invoice )SetTitleStyle (style TextStyle ){_fdaf ._effe =style };
 
-// AddLine appends a new line to the invoice line items table.
-func (_ebea *Invoice )AddLine (values ...string )[]*InvoiceCell {_cbaa :=len (_ebea ._bacc );var _adeg []*InvoiceCell ;for _dgde ,_gbbg :=range values {_cebc :=_ebea .newCell (_gbbg ,_ebea ._aed );if _dgde < _cbaa {_cebc .Alignment =_ebea ._bacc [_dgde ].Alignment ;
-};_adeg =append (_adeg ,_cebc );};_ebea ._ebcg =append (_ebea ._ebcg ,_adeg );return _adeg ;};
+// SetWidth sets the the Paragraph width. This is essentially the wrapping width, i.e. the width the
+// text can extend to prior to wrapping over to next line.
+func (_gcfe *Paragraph )SetWidth (width float64 ){_gcfe ._bgdg =width ;_gcfe .wrapText ()};func _beeg (_gafaa string ,_fbbb TextStyle )*Paragraph {_cffb :=&Paragraph {_fagf :_gafaa ,_gbdaa :_fbbb .Font ,_bgef :_fbbb .FontSize ,_adgg :1.0,_ccee :true ,_ecfa :true ,_afcfe :TextAlignmentLeft ,_abgcb :0,_fbaa :1,_egag :1,_fgecf :PositionRelative };
+_cffb .SetColor (_fbbb .Color );return _cffb ;};
 
-// GeneratePageBlocks generates the page blocks for the Division component.
-// Multiple blocks are generated if the contents wrap over multiple pages.
-func (_daag *Division )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){var (_baad []*Block ;_dcgag bool ;_ebef error ;_aggg =_daag ._dfdd .IsRelative ();_ecc =_daag ._dcbe .Top ;);if _aggg &&!_daag ._befa &&!_daag ._bgbcc {_aab :=_daag .ctxHeight (ctx .Width );
-if _aab > ctx .Height -_daag ._dcbe .Top &&_aab <=ctx .PageHeight -ctx .Margins .Top -ctx .Margins .Bottom {if _baad ,ctx ,_ebef =_aeea ().GeneratePageBlocks (ctx );_ebef !=nil {return nil ,ctx ,_ebef ;};_dcgag =true ;_ecc =0;};};_gfgc :=ctx ;_cfde :=ctx ;
-if _aggg {ctx .X +=_daag ._dcbe .Left ;ctx .Y +=_ecc ;ctx .Width -=_daag ._dcbe .Left +_daag ._dcbe .Right ;ctx .Height -=_ecc ;_cfde =ctx ;ctx .X +=_daag ._acbg .Left ;ctx .Y +=_daag ._acbg .Top ;ctx .Width -=_daag ._acbg .Left +_daag ._acbg .Right ;ctx .Height -=_daag ._acbg .Top ;
-ctx .Margins .Top +=_daag ._acbg .Top ;ctx .Margins .Bottom +=_daag ._acbg .Bottom ;ctx .Margins .Left +=_daag ._dcbe .Left +_daag ._acbg .Left ;ctx .Margins .Right +=_daag ._dcbe .Right +_daag ._acbg .Right ;};ctx .Inline =_daag ._bgbcc ;_gdcce :=ctx ;
-_eabd :=ctx ;var _cgag float64 ;for _ ,_bbegf :=range _daag ._ebd {if ctx .Inline {if (ctx .X -_gdcce .X )+_bbegf .Width ()<=ctx .Width {ctx .Y =_eabd .Y ;ctx .Height =_eabd .Height ;}else {ctx .X =_gdcce .X ;ctx .Width =_gdcce .Width ;_eabd .Y +=_cgag ;
-_eabd .Height -=_cgag ;_cgag =0;};};_fbgg ,_afag ,_aee :=_bbegf .GeneratePageBlocks (ctx );if _aee !=nil {_cf .Log .Debug ("\u0045\u0072\u0072\u006f\u0072\u0020\u0067\u0065\u006e\u0065\u0072\u0061\u0074\u0069\u006eg\u0020p\u0061\u0067\u0065\u0020\u0062\u006c\u006f\u0063\u006b\u0073\u003a\u0020\u0025\u0076",_aee );
-return nil ,ctx ,_aee ;};if len (_fbgg )< 1{continue ;};if len (_baad )> 0{_baad [len (_baad )-1].mergeBlocks (_fbgg [0]);_baad =append (_baad ,_fbgg [1:]...);}else {if _cfca :=_fbgg [0]._egf ;_cfca ==nil ||len (*_cfca )==0{_dcgag =true ;};_baad =append (_baad ,_fbgg [0:]...);
-};if ctx .Inline {if ctx .Page !=_afag .Page {_gdcce .Y =ctx .Margins .Top ;_gdcce .Height =ctx .PageHeight -ctx .Margins .Top ;_eabd .Y =_gdcce .Y ;_eabd .Height =_gdcce .Height ;_cgag =_afag .Height -_gdcce .Height ;}else {if _efbd :=ctx .Height -_afag .Height ;
-_efbd > _cgag {_cgag =_efbd ;};};}else {_afag .X =ctx .X ;};ctx =_afag ;};ctx .Inline =_gfgc .Inline ;ctx .Margins =_gfgc .Margins ;if _aggg {ctx .X =_gfgc .X ;ctx .Width =_gfgc .Width ;ctx .Y +=_daag ._acbg .Bottom ;ctx .Height -=_daag ._acbg .Bottom ;
-};if _daag ._dfea !=nil {_baad ,_ebef =_daag .drawBackground (_baad ,_cfde ,ctx ,_dcgag );if _ebef !=nil {return nil ,ctx ,_ebef ;};};if _daag ._dfdd .IsAbsolute (){return _baad ,_gfgc ,nil ;};ctx .Y +=_daag ._dcbe .Bottom ;ctx .Height -=_daag ._dcbe .Bottom ;
-return _baad ,ctx ,nil ;};
+// SetAngle sets the rotation angle of the text.
+func (_ceaa *StyledParagraph )SetAngle (angle float64 ){_ceaa ._bbfc =angle };func (_bgd *InvoiceAddress )fmtLine (_ccaa ,_eac string ,_gadf bool )string {if _gadf {_eac ="";};return _fb .Sprintf ("\u0025\u0073\u0025s\u000a",_eac ,_ccaa );};
+
+// SetPadding sets the padding of the component. The padding represents
+// inner margins which are applied around the contents of the division.
+// The background of the component is not affected by its padding.
+func (_cdbe *Division )SetPadding (left ,right ,top ,bottom float64 ){_cdbe ._deca .Left =left ;_cdbe ._deca .Right =right ;_cdbe ._deca .Top =top ;_cdbe ._deca .Bottom =bottom ;};
 
 // NewChart creates a new creator drawable based on the provided
 // unichart chart component.
-func NewChart (chart _ef .ChartRenderable )*Chart {return _ggff (chart )};
+func NewChart (chart _ef .ChartRenderable )*Chart {return _agae (chart )};
 
-// ToRGB implements interface Color.
-// Note: It's not directly used since shading color works differently than regular color.
-func (_gdcbe *RadialShading )ToRGB ()(float64 ,float64 ,float64 ){return 0,0,0};
+// FooterFunctionArgs holds the input arguments to a footer drawing function.
+// It is designed as a struct, so additional parameters can be added in the future with backwards
+// compatibility.
+type FooterFunctionArgs struct{PageNum int ;TotalPages int ;};func (_cecgd *FilledCurve )draw (_ggfd *Block ,_cddg string )([]byte ,*_fee .PdfRectangle ,error ){_fbd :=_bg .NewCubicBezierPath ();for _ ,_ceeeb :=range _cecgd ._ddfce {_fbd =_fbd .AppendCurve (_ceeeb );
+};creator :=_ebc .NewContentCreator ();creator .Add_q ();if _cecgd .FillEnabled &&_cecgd ._efgf !=nil {_ccbe :=_cfd (_cecgd ._efgf );_aeca :=_aacgba (_ggfd ,_ccbe ,_cecgd ._efgf ,func ()Rectangle {_geg :=_bg .NewCubicBezierPath ();for _ ,_bgce :=range _cecgd ._ddfce {_geg =_geg .AppendCurve (_bgce );
+};_ageb :=_geg .GetBoundingBox ();if _cecgd .BorderEnabled {_ageb .Height +=_cecgd .BorderWidth ;_ageb .Width +=_cecgd .BorderWidth ;_ageb .X -=_cecgd .BorderWidth /2;_ageb .Y -=_cecgd .BorderWidth /2;};return Rectangle {_cfbab :_ageb .X ,_cffbf :_ageb .Y ,_bfddd :_ageb .Width ,_abfd :_ageb .Height };
+});if _aeca !=nil {return nil ,nil ,_aeca ;};creator .SetNonStrokingColor (_ccbe );};if _cecgd .BorderEnabled {if _cecgd ._afdae !=nil {creator .SetStrokingColor (_cfd (_cecgd ._afdae ));};creator .Add_w (_cecgd .BorderWidth );};if len (_cddg )> 1{creator .Add_gs (_dd .PdfObjectName (_cddg ));
+};_bg .DrawBezierPathWithCreator (_fbd ,creator );creator .Add_h ();if _cecgd .FillEnabled &&_cecgd .BorderEnabled {creator .Add_B ();}else if _cecgd .FillEnabled {creator .Add_f ();}else if _cecgd .BorderEnabled {creator .Add_S ();};creator .Add_Q ();
+_cgeb :=_fbd .GetBoundingBox ();if _cecgd .BorderEnabled {_cgeb .Height +=_cecgd .BorderWidth ;_cgeb .Width +=_cecgd .BorderWidth ;_cgeb .X -=_cecgd .BorderWidth /2;_cgeb .Y -=_cecgd .BorderWidth /2;};_daga :=&_fee .PdfRectangle {};_daga .Llx =_cgeb .X ;
+_daga .Lly =_cgeb .Y ;_daga .Urx =_cgeb .X +_cgeb .Width ;_daga .Ury =_cgeb .Y +_cgeb .Height ;return creator .Bytes (),_daga ,nil ;};
 
-// NewLinearGradientColor creates a linear gradient color that could act as a color in other components.
-func (_adb *Creator )NewLinearGradientColor (colorPoints []*ColorPoint )*LinearShading {return _eaaaa (colorPoints );};
+// Indent returns the left offset of the list when nested into another list.
+func (_aefe *List )Indent ()float64 {return _aefe ._cfffc };func (_fecda *templateProcessor )parseList (_afbab *templateNode )(interface{},error ){_gdegg :=_fecda .creator .NewList ();for _ ,_dgbf :=range _afbab ._bdbga .Attr {_daed :=_dgbf .Value ;switch _gcgd :=_dgbf .Name .Local ;
+_gcgd {case "\u0069\u006e\u0064\u0065\u006e\u0074":_gdegg .SetIndent (_fecda .parseFloatAttr (_gcgd ,_daed ));case "\u006d\u0061\u0072\u0067\u0069\u006e":_dcccd :=_fecda .parseMarginAttr (_gcgd ,_daed );_gdegg .SetMargins (_dcccd .Left ,_dcccd .Right ,_dcccd .Top ,_dcccd .Bottom );
+default:_da .Log .Debug ("\u0055\u006e\u0073\u0075\u0070\u0070\u006fr\u0074\u0065\u0064 \u006c\u0069\u0073\u0074 \u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073\u0060\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069\u006e\u0067\u002e",_gcgd );
+};};return _gdegg ,nil ;};
 
-// ScaleToHeight scales the Block to a specified height, maintaining the same aspect ratio.
-func (_bgf *Block )ScaleToHeight (h float64 ){_edb :=h /_bgf ._ce ;_bgf .Scale (_edb ,_edb )};
+// NewEllipse creates a new ellipse with the center at (`xc`, `yc`),
+// having the specified width and height.
+// NOTE: In relative positioning mode, `xc` and `yc` are calculated using the
+// current context. Furthermore, when the fit mode is set to fill the available
+// space, the ellipse is scaled so that it occupies the entire context width
+// while maintaining the original aspect ratio.
+func (_dec *Creator )NewEllipse (xc ,yc ,width ,height float64 )*Ellipse {return _acea (xc ,yc ,width ,height );};
 
-// SetIndent sets the cell's left indent.
-func (_dcgg *TableCell )SetIndent (indent float64 ){_dcgg ._bcgf =indent };
+// NewDivision returns a new Division container component.
+func (_aaef *Creator )NewDivision ()*Division {return _fgee ()};func (_acdg *templateProcessor )parseFloatAttr (_dgdag ,_cgaed string )float64 {_da .Log .Debug ("\u0050\u0061rs\u0069\u006e\u0067 \u0066\u006c\u006f\u0061t a\u0074tr\u0069\u0062\u0075\u0074\u0065\u003a\u0020(`\u0025\u0073\u0060\u002c\u0020\u0025\u0073)\u002e",_dgdag ,_cgaed );
+_bacb ,_ :=_fe .ParseFloat (_cgaed ,64);return _bacb ;};func (_cccb *templateProcessor )parseListItem (_fbbag *templateNode )(interface{},error ){if _fbbag ._bdgb ==nil {_da .Log .Error ("\u004c\u0069\u0073t\u0020\u0069\u0074\u0065m\u0020\u0070\u0061\u0072\u0065\u006e\u0074 \u0063\u0061\u006e\u006e\u006f\u0074\u0020\u0062\u0065\u0020\u006e\u0069\u006c\u002e");
+return nil ,_cedeg ;};_bffc ,_dece :=_fbbag ._bdgb ._bdced .(*List );if !_dece {_da .Log .Error ("\u004c\u0069s\u0074\u0020\u0069\u0074\u0065\u006d\u0020\u0070\u0061\u0072\u0065\u006e\u0074\u0020\u0069\u0073\u0020\u006e\u006f\u0074\u0020\u004cis\u0074\u002e");
+return nil ,_cedeg ;};_cfffb :=_fagg ();_cfffb ._aeaf =_bffc ._dabcb ;return _cfffb ,nil ;};type marginDrawable interface{VectorDrawable ;GetMargins ()(float64 ,float64 ,float64 ,float64 );};const (TextRenderingModeFill TextRenderingMode =iota ;TextRenderingModeStroke ;
+TextRenderingModeFillStroke ;TextRenderingModeInvisible ;TextRenderingModeFillClip ;TextRenderingModeStrokeClip ;TextRenderingModeFillStrokeClip ;TextRenderingModeClip ;);
+
+// CurCol returns the currently active cell's column number.
+func (_cdfad *Table )CurCol ()int {_fadgb :=(_cdfad ._gacbf -1)%(_cdfad ._fcfd )+1;return _fadgb };func (_cgba *StyledParagraph )getTextHeight ()float64 {var _cgca float64 ;for _ ,_bdce :=range _cgba ._adeb {_gaddc :=_bdce .Style .FontSize *_cgba ._gbbd ;
+if _gaddc > _cgca {_cgca =_gaddc ;};};return _cgca ;};func _dccc (_ccec TextStyle )*StyledParagraph {return &StyledParagraph {_adeb :[]*TextChunk {},_cefc :_ccec ,_fecf :_geed (_ccec .Font ),_gbbd :1.0,_fdge :TextAlignmentLeft ,_egge :true ,_cbbga :true ,_dffeg :false ,_bbfc :0,_cega :1,_gdcf :1,_eege :PositionRelative };
+};
+
+// SetFillColor sets the fill color for the path.
+func (_fae *FilledCurve )SetFillColor (color Color ){_fae ._efgf =color };func (_bbbbf *StyledParagraph )getLineMetrics (_beeae int )(_gfbda ,_bgag ,_ffegcc float64 ){if _bbbbf ._cfcf ==nil ||len (_bbbbf ._cfcf )==0{_bbbbf .wrapText ();};if _beeae < 0||_beeae > len (_bbbbf ._cfcf )-1{_da .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0069\u006e\u0076\u0061\u006c\u0069\u0064\u0020p\u0061\u0072\u0061\u0067\u0072\u0061\u0070\u0068\u0020\u006c\u0069\u006e\u0065 \u0069\u006e\u0064\u0065\u0078\u0020\u0025\u0064\u002e\u0020\u0052\u0065tu\u0072\u006e\u0069\u006e\u0067\u0020\u0030\u002c\u0020\u0030",_beeae );
+return 0,0,0;};_cffcc :=_bbbbf ._cfcf [_beeae ];for _ ,_fdgbe :=range _cffcc {_aaea :=_eccgb (_fdgbe .Style .Font ,_fdgbe .Style .FontSize );if _aaea ._fdae > _gfbda {_gfbda =_aaea ._fdae ;};if _aaea ._ebggb < _ffegcc {_ffegcc =_aaea ._ebggb ;};if _fgdce :=_fdgbe .Style .FontSize ;
+_fgdce > _bgag {_bgag =_fgdce ;};};return _gfbda ,_bgag ,_ffegcc ;};func (_cdge *templateProcessor )loadImageFromSrc (_dgeebab string )(*Image ,error ){if _dgeebab ==""{_da .Log .Error ("\u0049\u006d\u0061\u0067\u0065\u0020\u0060\u0073\u0072\u0063\u0060\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u0020\u0063\u0061n\u006e\u006f\u0074\u0020\u0062e\u0020\u0065m\u0070\u0074\u0079\u002e");
+return nil ,_gaeg ;};_beff :=_cf .Split (_dgeebab ,"\u002c");for _ ,_bedac :=range _beff {_bedac =_cf .TrimSpace (_bedac );if _bedac ==""{continue ;};_efea ,_gdfga :=_cdge ._deag .ImageMap [_bedac ];if _gdfga {return _gccg (_efea );};if _debf :=_cdge .parseAttrPropList (_bedac );
+len (_debf )> 0{if _acgcfg ,_fabef :=_debf ["\u0070\u0061\u0074\u0068"];_fabef {if _adggcd ,_fcbde :=_edae (_acgcfg );_fcbde !=nil {_da .Log .Debug ("\u0043\u006f\u0075\u006c\u0064\u0020\u006e\u006f\u0074\u0020l\u006f\u0061\u0064\u0020\u0069\u006d\u0061g\u0065\u0020\u0060\u0025\u0073\u0060\u003a\u0020\u0025\u0076\u002e",_acgcfg ,_fcbde );
+}else {return _adggcd ,nil ;};};};};_da .Log .Error ("\u0043\u006ful\u0064\u0020\u006eo\u0074\u0020\u0066\u0069nd \u0069ma\u0067\u0065\u0020\u0072\u0065\u0073\u006fur\u0063\u0065\u003a\u0020\u0060\u0025\u0073`\u002e",_dgeebab );return nil ,_gaeg ;};
+
+// NewStyledTOCLine creates a new table of contents line with the provided style.
+func (_ffb *Creator )NewStyledTOCLine (number ,title ,page TextChunk ,level uint ,style TextStyle )*TOCLine {return _bege (number ,title ,page ,level ,style );};
+
+// GetMargins returns the margins of the graphic svg (left, right, top, bottom).
+func (_ggdb *GraphicSVG )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _ggdb ._dadde .Left ,_ggdb ._dadde .Right ,_ggdb ._dadde .Top ,_ggdb ._dadde .Bottom ;};
+
+// DrawFooter sets a function to draw a footer on created output pages.
+func (_feea *Creator )DrawFooter (drawFooterFunc func (_fdgb *Block ,_cfdff FooterFunctionArgs )){_feea ._fdf =drawFooterFunc ;};
+
+// SetColor sets the line color. Use ColorRGBFromHex, ColorRGBFrom8bit or
+// ColorRGBFromArithmetic to create the color object.
+func (_dbcg *Line )SetColor (color Color ){_dbcg ._bec =color };
+
+// GetCoords returns the center coordinates of ellipse (`xc`, `yc`).
+func (_caad *Ellipse )GetCoords ()(float64 ,float64 ){return _caad ._gbd ,_caad ._efd };func (_ebffc *templateProcessor )parseStyledParagraph (_gfde *templateNode )(interface{},error ){_fafag :=_ebffc .creator .NewStyledParagraph ();for _ ,_feadc :=range _gfde ._bdbga .Attr {_adaga :=_feadc .Value ;
+switch _gfbg :=_feadc .Name .Local ;_gfbg {case "\u0074\u0065\u0078\u0074\u002d\u0061\u006c\u0069\u0067\u006e":_fafag .SetTextAlignment (_ebffc .parseTextAlignmentAttr (_gfbg ,_adaga ));case "\u0076\u0065\u0072\u0074ic\u0061\u006c\u002d\u0074\u0065\u0078\u0074\u002d\u0061\u006c\u0069\u0067\u006e":_fafag .SetTextVerticalAlignment (_ebffc .parseTextVerticalAlignmentAttr (_gfbg ,_adaga ));
+case "l\u0069\u006e\u0065\u002d\u0068\u0065\u0069\u0067\u0068\u0074":_fafag .SetLineHeight (_ebffc .parseFloatAttr (_gfbg ,_adaga ));case "\u006d\u0061\u0072\u0067\u0069\u006e":_agade :=_ebffc .parseMarginAttr (_gfbg ,_adaga );_fafag .SetMargins (_agade .Left ,_agade .Right ,_agade .Top ,_agade .Bottom );
+case "e\u006e\u0061\u0062\u006c\u0065\u002d\u0077\u0072\u0061\u0070":_fafag .SetEnableWrap (_ebffc .parseBoolAttr (_gfbg ,_adaga ));case "\u0065\u006ea\u0062\u006c\u0065-\u0077\u006f\u0072\u0064\u002d\u0077\u0072\u0061\u0070":_fafag .EnableWordWrap (_ebffc .parseBoolAttr (_gfbg ,_adaga ));
+case "\u0074\u0065\u0078\u0074\u002d\u006f\u0076\u0065\u0072\u0066\u006c\u006f\u0077":_fafag .SetTextOverflow (_ebffc .parseTextOverflowAttr (_gfbg ,_adaga ));case "\u0078":_fafag .SetPos (_ebffc .parseFloatAttr (_gfbg ,_adaga ),_fafag ._gaba );case "\u0079":_fafag .SetPos (_fafag ._fggg ,_ebffc .parseFloatAttr (_gfbg ,_adaga ));
+case "\u0061\u006e\u0067l\u0065":_fafag .SetAngle (_ebffc .parseFloatAttr (_gfbg ,_adaga ));default:_da .Log .Debug ("\u0055\u006e\u0073\u0075\u0070\u0070\u006fr\u0074\u0065\u0064 \u0073\u0074\u0079l\u0065\u0064 \u0070\u0061\u0072\u0061\u0067\u0072a\u0070h \u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073\u0060\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069\u006e\u0067\u002e",_gfbg );
+};};return _fafag ,nil ;};func _cfd (_cdcg Color )_fee .PdfColor {if _cdcg ==nil {_cdcg =ColorBlack ;};switch _gdeb :=_cdcg .(type ){case cmykColor :return _fee .NewPdfColorDeviceCMYK (_gdeb ._bcc ,_gdeb ._gdg ,_gdeb ._fbba ,_gdeb ._dgdaf );case *LinearShading :return _fee .NewPdfColorPatternType2 ();
+case *RadialShading :return _fee .NewPdfColorPatternType3 ();};return _fee .NewPdfColorDeviceRGB (_cdcg .ToRGB ());};func _fcff (_gcefd *_fee .PdfFont )TextStyle {return TextStyle {Color :ColorRGBFrom8bit (0,0,0),Font :_gcefd ,FontSize :10,OutlineSize :1,HorizontalScaling :DefaultHorizontalScaling ,UnderlineStyle :TextDecorationLineStyle {Offset :1,Thickness :1}};
+};func (_ddecb *Division )split (_eaaf DrawContext )(_egecf ,_bgca *Division ){var (_agca float64 ;_dgfc ,_dfef []VectorDrawable ;);_faaa :=_eaaf .Width -_ddecb ._ceeba .Left -_ddecb ._ceeba .Right -_ddecb ._deca .Left -_ddecb ._deca .Right ;for _dbac ,_dfgc :=range _ddecb ._aegg {_agca +=_gfedb (_dfgc ,_faaa );
+if _agca < _eaaf .Height {_dgfc =append (_dgfc ,_dfgc );}else {_dfef =_ddecb ._aegg [_dbac :];break ;};};if len (_dgfc )> 0{_egecf =_fgee ();*_egecf =*_ddecb ;_egecf ._aegg =_dgfc ;if _ddecb ._dgce !=nil {_egecf ._dgce =&Background {};*_egecf ._dgce =*_ddecb ._dgce ;
+};};if len (_dfef )> 0{_bgca =_fgee ();*_bgca =*_ddecb ;_bgca ._aegg =_dfef ;if _ddecb ._dgce !=nil {_bgca ._dgce =&Background {};*_bgca ._dgce =*_ddecb ._dgce ;};};return _egecf ,_bgca ;};
+
+// NewSubchapter creates a new child chapter with the specified title.
+func (_fbcb *Chapter )NewSubchapter (title string )*Chapter {_dabc :=_fcff (_fbcb ._ddc ._gbdaa );_dabc .FontSize =14;_fbcb ._aff ++;_bdf :=_eca (_fbcb ,_fbcb ._ede ,_fbcb ._ecga ,title ,_fbcb ._aff ,_dabc );_fbcb .Add (_bdf );return _bdf ;};
+
+// BorderWidth returns the border width of the ellipse.
+func (_agbg *Ellipse )BorderWidth ()float64 {return _agbg ._bedef };
+
+// SetPageMargins sets the page margins: left, right, top, bottom.
+// The default page margins are 10% of document width.
+func (_eff *Creator )SetPageMargins (left ,right ,top ,bottom float64 ){_eff ._bbdf .Left =left ;_eff ._bbdf .Right =right ;_eff ._bbdf .Top =top ;_eff ._bbdf .Bottom =bottom ;};
+
+// SetBorderOpacity sets the border opacity.
+func (_addc *CurvePolygon )SetBorderOpacity (opacity float64 ){_addc ._efeb =opacity };
+
+// EnablePageWrap controls whether the table is wrapped across pages.
+// If disabled, the table is moved in its entirety on a new page, if it
+// does not fit in the available height. By default, page wrapping is enabled.
+// If the height of the table is larger than an entire page, wrapping is
+// enabled automatically in order to avoid unwanted behavior.
+func (_cfcff *Table )EnablePageWrap (enable bool ){_cfcff ._edcc =enable };
+
+// SetIndent sets the left offset of the list when nested into another list.
+func (_adfbc *List )SetIndent (indent float64 ){_adfbc ._cfffc =indent ;_adfbc ._ggeg =false };
+
+// GeneratePageBlocks generate the Page blocks. Multiple blocks are generated
+// if the contents wrap over multiple pages.
+func (_aaed *List )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){var _fbdg float64 ;var _eabc []*StyledParagraph ;for _ ,_cafd :=range _aaed ._fegg {_ccgca :=_dccc (_aaed ._bdbe );_ccgca .SetEnableWrap (false );_ccgca .SetTextAlignment (TextAlignmentRight );
+_ccgca .Append (_cafd ._aeaf .Text ).Style =_cafd ._aeaf .Style ;_abeg :=_ccgca .getTextWidth ()/1000.0/ctx .Width ;if _fbdg < _abeg {_fbdg =_abeg ;};_eabc =append (_eabc ,_ccgca );};_egac :=_agegf (2);_egac .SetColumnWidths (_fbdg ,1-_fbdg );_egac .SetMargins (_aaed ._bffg .Left +_aaed ._cfffc ,_aaed ._bffg .Right ,_aaed ._bffg .Top ,_aaed ._bffg .Bottom );
+_egac .EnableRowWrap (true );for _bbaf ,_cdaf :=range _aaed ._fegg {_fedf :=_egac .NewCell ();_fedf .SetIndent (0);_fedf .SetContent (_eabc [_bbaf ]);_fedf =_egac .NewCell ();_fedf .SetIndent (0);_fedf .SetContent (_cdaf ._eaca );};return _egac .GeneratePageBlocks (ctx );
+};
+
+// SetNoteHeadingStyle sets the style properties used to render the heading
+// of the invoice note sections.
+func (_ffcg *Invoice )SetNoteHeadingStyle (style TextStyle ){_ffcg ._fadg =style };
+
+// NewRectangle creates a new rectangle with the left corner at (`x`, `y`),
+// having the specified width and height.
+// NOTE: In relative positioning mode, `x` and `y` are calculated using the
+// current context. Furthermore, when the fit mode is set to fill the available
+// space, the rectangle is scaled so that it occupies the entire context width
+// while maintaining the original aspect ratio.
+func (_aaeg *Creator )NewRectangle (x ,y ,width ,height float64 )*Rectangle {return _eefb (x ,y ,width ,height );};
+
+// GeneratePageBlocks generate the Page blocks. Multiple blocks are generated
+// if the contents wrap over multiple pages.
+func (_bccge *TOC )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_faacbc :=ctx ;_cbbdc ,ctx ,_aacde :=_bccge ._bfaa .GeneratePageBlocks (ctx );if _aacde !=nil {return _cbbdc ,ctx ,_aacde ;};for _ ,_adggg :=range _bccge ._bbfe {_dgabb :=_adggg ._edbf ;
+if !_bccge ._ffag {_adggg ._edbf =0;};_cgddb ,_cbgec ,_ggef :=_adggg .GeneratePageBlocks (ctx );_adggg ._edbf =_dgabb ;if _ggef !=nil {return _cbbdc ,ctx ,_ggef ;};if len (_cgddb )< 1{continue ;};_cbbdc [len (_cbbdc )-1].mergeBlocks (_cgddb [0]);_cbbdc =append (_cbbdc ,_cgddb [1:]...);
+ctx =_cbgec ;};if _bccge ._eebf .IsRelative (){ctx .X =_faacbc .X ;};if _bccge ._eebf .IsAbsolute (){return _cbbdc ,_faacbc ,nil ;};return _cbbdc ,ctx ,nil ;};func (_ecbcg *Table )moveToNextAvailableCell ()int {_gcfc :=(_ecbcg ._gacbf -1)%(_ecbcg ._fcfd )+1;
+for {if _gcfc -1>=len (_ecbcg ._gbdga ){if _ecbcg ._gbdga [0]==0{return _gcfc ;};_gcfc =1;}else if _ecbcg ._gbdga [_gcfc -1]==0{return _gcfc ;};_ecbcg ._gacbf ++;_ecbcg ._gbdga [_gcfc -1]--;_gcfc ++;};};func (_dfgdd *templateProcessor )parseTable (_adaf *templateNode )(interface{},error ){var _eefgb int64 ;
+for _ ,_dagbg :=range _adaf ._bdbga .Attr {_ecbe :=_dagbg .Value ;switch _gcdce :=_dagbg .Name .Local ;_gcdce {case "\u0063o\u006c\u0075\u006d\u006e\u0073":_eefgb =_dfgdd .parseInt64Attr (_gcdce ,_ecbe );};};if _eefgb <=0{_da .Log .Debug ("\u0049\u006e\u0076\u0061\u006c\u0069\u0064\u0020\u006eu\u006d\u0062e\u0072\u0020\u006f\u0066\u0020\u0074\u0061\u0062\u006ce\u0020\u0063\u006f\u006cu\u006d\u006e\u0073\u003a\u0020\u0025\u0064\u002e\u0020\u0053\u0065\u0074\u0074\u0069\u006e\u0067\u0020\u0074\u006f\u0020\u0031\u002e\u0020\u004f\u0075\u0074\u0070\u0075\u0074\u0020m\u0061\u0079\u0020b\u0065\u0020\u0069\u006e\u0063\u006f\u0072\u0072\u0065\u0063\u0074\u002e",_eefgb );
+_eefgb =1;};_dacac :=_dfgdd .creator .NewTable (int (_eefgb ));for _ ,_dcff :=range _adaf ._bdbga .Attr {_afbf :=_dcff .Value ;switch _gddb :=_dcff .Name .Local ;_gddb {case "\u0063\u006f\u006c\u0075\u006d\u006e\u002d\u0077\u0069\u0064\u0074\u0068\u0073":_dacac .SetColumnWidths (_dfgdd .parseFloatArray (_gddb ,_afbf )...);
+case "\u006d\u0061\u0072\u0067\u0069\u006e":_cbafg :=_dfgdd .parseMarginAttr (_gddb ,_afbf );_dacac .SetMargins (_cbafg .Left ,_cbafg .Right ,_cbafg .Top ,_cbafg .Bottom );case "\u0078":_dacac .SetPos (_dfgdd .parseFloatAttr (_gddb ,_afbf ),_dacac ._fedc );
+case "\u0079":_dacac .SetPos (_dacac ._bccdf ,_dfgdd .parseFloatAttr (_gddb ,_afbf ));case "\u0068\u0065a\u0064\u0065\u0072-\u0073\u0074\u0061\u0072\u0074\u002d\u0072\u006f\u0077":_dacac ._cfcgb =int (_dfgdd .parseInt64Attr (_gddb ,_afbf ));case "\u0068\u0065\u0061\u0064\u0065\u0072\u002d\u0065\u006ed\u002d\u0072\u006f\u0077":_dacac ._bgda =int (_dfgdd .parseInt64Attr (_gddb ,_afbf ));
+case "\u0065n\u0061b\u006c\u0065\u002d\u0072\u006f\u0077\u002d\u0077\u0072\u0061\u0070":_dacac .EnableRowWrap (_dfgdd .parseBoolAttr (_gddb ,_afbf ));case "\u0065\u006ea\u0062\u006c\u0065-\u0070\u0061\u0067\u0065\u002d\u0077\u0072\u0061\u0070":_dacac .EnablePageWrap (_dfgdd .parseBoolAttr (_gddb ,_afbf ));
+case "\u0063o\u006c\u0075\u006d\u006e\u0073":break ;default:_da .Log .Debug ("\u0055n\u0073\u0075p\u0070\u006f\u0072\u0074e\u0064\u0020\u0074a\u0062\u006c\u0065\u0020\u0061\u0074\u0074\u0072\u0069bu\u0074\u0065\u003a \u0060\u0025s\u0060\u002e\u0020\u0053\u006b\u0069p\u0070\u0069n\u0067\u002e",_gddb );
+};};if _dacac ._cfcgb !=0&&_dacac ._bgda !=0{_eaec :=_dacac .SetHeaderRows (_dacac ._cfcgb ,_dacac ._bgda );if _eaec !=nil {_da .Log .Debug ("\u0043\u006ful\u0064\u0020\u006eo\u0074\u0020\u0073\u0065t t\u0061bl\u0065\u0020\u0068\u0065\u0061\u0064\u0065r \u0072\u006f\u0077\u0073\u003a\u0020\u0025v\u002e",_eaec );
+};}else {_dacac ._cfcgb =0;_dacac ._bgda =0;};return _dacac ,nil ;};func _gfedb (_cdaa VectorDrawable ,_aacgb float64 )float64 {switch _gdc :=_cdaa .(type ){case *Paragraph :if _gdc ._ccee {_gdc .SetWidth (_aacgb -_gdc ._efbg .Left -_gdc ._efbg .Right );
+};return _gdc .Height ()+_gdc ._efbg .Top +_gdc ._efbg .Bottom ;case *StyledParagraph :if _gdc ._egge {_gdc .SetWidth (_aacgb -_gdc ._eebag .Left -_gdc ._eebag .Right );};return _gdc .Height ()+_gdc ._eebag .Top +_gdc ._eebag .Bottom ;case *Image :_gdc .applyFitMode (_aacgb );
+return _gdc .Height ()+_gdc ._dgb .Top +_gdc ._dgb .Bottom ;case *Rectangle :_gdc .applyFitMode (_aacgb );return _gdc .Height ()+_gdc ._gcag .Top +_gdc ._gcag .Bottom +_gdc ._egde ;case *Ellipse :_gdc .applyFitMode (_aacgb );return _gdc .Height ()+_gdc ._fbed .Top +_gdc ._fbed .Bottom ;
+case *Division :return _gdc .ctxHeight (_aacgb )+_gdc ._ceeba .Top +_gdc ._ceeba .Bottom +_gdc ._deca .Top +_gdc ._deca .Bottom ;case *Table :_gdc .updateRowHeights (_aacgb -_gdc ._dceg .Left -_gdc ._dceg .Right );return _gdc .Height ()+_gdc ._dceg .Top +_gdc ._dceg .Bottom ;
+case *List :return _gdc .ctxHeight (_aacgb )+_gdc ._bffg .Top +_gdc ._bffg .Bottom ;case marginDrawable :_ ,_ ,_dffe ,_agdg :=_gdc .GetMargins ();return _gdc .Height ()+_dffe +_agdg ;default:return _gdc .Height ();};};
+
+// Positioning returns the type of positioning the line is set to use.
+func (_fddb *Line )Positioning ()Positioning {return _fddb ._aede };
+
+// AddressHeadingStyle returns the style properties used to render the
+// heading of the invoice address sections.
+func (_geeb *Invoice )AddressHeadingStyle ()TextStyle {return _geeb ._dbge };func _fagg ()*listItem {return &listItem {}};func (_ebbe *StyledParagraph )getTextWidth ()float64 {var _fgea float64 ;_gdcdc :=len (_ebbe ._adeb );for _edff ,_ebga :=range _ebbe ._adeb {_dgecg :=&_ebga .Style ;
+_becc :=len (_ebga .Text );for _gfda ,_fgeb :=range _ebga .Text {if _fgeb =='\u000A'{continue ;};_cgbc ,_cdag :=_dgecg .Font .GetRuneMetrics (_fgeb );if !_cdag {_da .Log .Debug ("\u0052\u0075\u006e\u0065\u0020\u0063\u0068\u0061\u0072\u0020\u006d\u0065\u0074\u0072\u0069c\u0073 \u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064\u0021\u0020\u0025\u0076\u000a",_fgeb );
+return -1;};_fgea +=_dgecg .FontSize *_cgbc .Wx *_dgecg .horizontalScale ();if _fgeb !=' '&&(_edff !=_gdcdc -1||_gfda !=_becc -1){_fgea +=_dgecg .CharSpacing *1000.0;};};};return _fgea ;};
+
+// ToPdfShadingPattern generates a new model.PdfShadingPatternType2 object.
+func (_bcfe *LinearShading )ToPdfShadingPattern ()*_fee .PdfShadingPatternType2 {_bgga ,_ggff ,_baea :=_bcfe ._adece ._bbcfd .ToRGB ();_ccaad :=_bcfe .shadingModel ();_ccaad .PdfShading .Background =_dd .MakeArrayFromFloats ([]float64 {_bgga ,_ggff ,_baea });
+_bbee :=_fee .NewPdfShadingPatternType2 ();_bbee .Shading =_ccaad ;return _bbee ;};var _bee =_ae .MustCompile ("\u005c\u0064\u002b");
+
+// Width returns the width of the specified text chunk.
+func (_aged *TextChunk )Width ()float64 {var (_geabc float64 ;_dabca =_aged .Style ;);for _ ,_aagfe :=range _aged .Text {_affea ,_eaecg :=_dabca .Font .GetRuneMetrics (_aagfe );if !_eaecg {_da .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0052\u0075\u006e\u0065\u0020\u0063\u0068\u0061\u0072\u0020\u006det\u0072i\u0063\u0073\u0020\u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064!\u0020\u0072\u0075\u006e\u0065\u003d\u0030\u0078\u0025\u0030\u0034\u0078\u003d\u0025\u0063\u0020\u0066o\u006e\u0074\u003d\u0025\u0073\u0020\u0025\u0023\u0071",_aagfe ,_aagfe ,_dabca .Font .BaseFont (),_dabca .Font .Subtype ());
+_da .Log .Trace ("\u0046o\u006e\u0074\u003a\u0020\u0025\u0023v",_dabca .Font );_da .Log .Trace ("\u0045\u006e\u0063o\u0064\u0065\u0072\u003a\u0020\u0025\u0023\u0076",_dabca .Font .Encoder ());};_dgdefc :=_dabca .FontSize *_affea .Wx ;_eded :=_dgdefc ;if _aagfe !=' '{_eded =_dgdefc +_dabca .CharSpacing *1000.0;
+};_geabc +=_eded ;};return _geabc /1000.0;};
+
+// GetCoords returns coordinates of border.
+func (_gcga *border )GetCoords ()(float64 ,float64 ){return _gcga ._bgg ,_gcga ._ebg };
+
+// SetBackgroundColor sets the cell's background color.
+func (_ebaea *TableCell )SetBackgroundColor (col Color ){_ebaea ._cafg =col };func (_fdd *Creator )newPage ()*_fee .PdfPage {_cgg :=_fee .NewPdfPage ();_fdfa :=_fdd ._gee [0];_dfca :=_fdd ._gee [1];_aacg :=_fee .PdfRectangle {Llx :0,Lly :0,Urx :_fdfa ,Ury :_dfca };
+_cgg .MediaBox =&_aacg ;_fdd ._aef =_fdfa ;_fdd ._cec =_dfca ;_fdd .initContext ();return _cgg ;};func (_be *Block )setOpacity (_bf float64 ,_bd float64 )(string ,error ){if (_bf < 0||_bf >=1.0)&&(_bd < 0||_bd >=1.0){return "",nil ;};_dg :=0;_de :=_fb .Sprintf ("\u0047\u0053\u0025\u0064",_dg );
+for _be ._gf .HasExtGState (_dd .PdfObjectName (_de )){_dg ++;_de =_fb .Sprintf ("\u0047\u0053\u0025\u0064",_dg );};_aac :=_dd .MakeDict ();if _bf >=0&&_bf < 1.0{_aac .Set ("\u0063\u0061",_dd .MakeFloat (_bf ));};if _bd >=0&&_bd < 1.0{_aac .Set ("\u0043\u0041",_dd .MakeFloat (_bd ));
+};_bgc :=_be ._gf .AddExtGState (_dd .PdfObjectName (_de ),_aac );if _bgc !=nil {return "",_bgc ;};return _de ,nil ;};
+
+// SetMargins sets the margins of the line.
+// NOTE: line margins are only applied if relative positioning is used.
+func (_dbdef *Line )SetMargins (left ,right ,top ,bottom float64 ){_dbdef ._cfdcg .Left =left ;_dbdef ._cfdcg .Right =right ;_dbdef ._cfdcg .Top =top ;_dbdef ._cfdcg .Bottom =bottom ;};func (_feef *Invoice )generateLineBlocks (_eebec DrawContext )([]*Block ,DrawContext ,error ){_fgfa :=_agegf (len (_feef ._eaafb ));
+_fgfa .SetMargins (0,0,25,0);for _ ,_gddg :=range _feef ._eaafb {_gafa :=_dccc (_gddg .TextStyle );_gafa .SetMargins (0,0,1,0);_gafa .Append (_gddg .Value );_gbda :=_fgfa .NewCell ();_gbda .SetHorizontalAlignment (_gddg .Alignment );_gbda .SetBackgroundColor (_gddg .BackgroundColor );
+_feef .setCellBorder (_gbda ,_gddg );_gbda .SetContent (_gafa );};for _ ,_fafc :=range _feef ._ccbed {for _ ,_dgfg :=range _fafc {_aaca :=_dccc (_dgfg .TextStyle );_aaca .SetMargins (0,0,3,2);_aaca .Append (_dgfg .Value );_ggdc :=_fgfa .NewCell ();_ggdc .SetHorizontalAlignment (_dgfg .Alignment );
+_ggdc .SetBackgroundColor (_dgfg .BackgroundColor );_feef .setCellBorder (_ggdc ,_dgfg );_ggdc .SetContent (_aaca );};};return _fgfa .GeneratePageBlocks (_eebec );};
+
+// Vertical returns total vertical (top + bottom) margin.
+func (_aada *Margins )Vertical ()float64 {return _aada .Bottom +_aada .Top };
+
+// SetWidth sets the the Paragraph width. This is essentially the wrapping width,
+// i.e. the width the text can extend to prior to wrapping over to next line.
+func (_dddfg *StyledParagraph )SetWidth (width float64 ){_dddfg ._cdba =width ;_dddfg .wrapText ()};func (_ebae *Invoice )drawInformation ()*Table {_acgb :=_agegf (2);_eceg :=append ([][2]*InvoiceCell {_ebae ._agebg ,_ebae ._gfbd ,_ebae ._edgf },_ebae ._dbbdg ...);
+for _ ,_dfbg :=range _eceg {_dbacg ,_fgbdd :=_dfbg [0],_dfbg [1];if _fgbdd .Value ==""{continue ;};_fdde :=_acgb .NewCell ();_fdde .SetBackgroundColor (_dbacg .BackgroundColor );_ebae .setCellBorder (_fdde ,_dbacg );_ecaf :=_dccc (_dbacg .TextStyle );_ecaf .Append (_dbacg .Value );
+_ecaf .SetMargins (0,0,2,1);_fdde .SetContent (_ecaf );_fdde =_acgb .NewCell ();_fdde .SetBackgroundColor (_fgbdd .BackgroundColor );_ebae .setCellBorder (_fdde ,_fgbdd );_ecaf =_dccc (_fgbdd .TextStyle );_ecaf .Append (_fgbdd .Value );_ecaf .SetMargins (0,0,2,1);
+_fdde .SetContent (_ecaf );};return _acgb ;};
+
+// CellHorizontalAlignment defines the table cell's horizontal alignment.
+type CellHorizontalAlignment int ;
+
+// NewFilledCurve returns a instance of filled curve.
+func (_ebdg *Creator )NewFilledCurve ()*FilledCurve {return _cdbf ()};
 
 // Total returns the invoice total description and value cells.
 // The returned values can be used to customize the styles of the cells.
-func (_gacac *Invoice )Total ()(*InvoiceCell ,*InvoiceCell ){return _gacac ._aefbg [0],_gacac ._aefbg [1];};
+func (_afae *Invoice )Total ()(*InvoiceCell ,*InvoiceCell ){return _afae ._abb [0],_afae ._abb [1]};
 
-// SetBorderOpacity sets the border opacity.
-func (_geccc *PolyBezierCurve )SetBorderOpacity (opacity float64 ){_geccc ._cbec =opacity };
+// Height returns the height of the ellipse.
+func (_fcfb *Ellipse )Height ()float64 {return _fcfb ._afaf };
 
-// RotatedSize returns the width and height of the rotated block.
-func (_aec *Block )RotatedSize ()(float64 ,float64 ){_ ,_ ,_aga ,_cef :=_decgd (_aec ._fgd ,_aec ._ce ,_aec ._eb );return _aga ,_cef ;};
+// SetDate sets the date of the invoice.
+func (_fdce *Invoice )SetDate (date string )(*InvoiceCell ,*InvoiceCell ){_fdce ._gfbd [1].Value =date ;return _fdce ._gfbd [0],_fdce ._gfbd [1];};
+
+// NewCell returns a new invoice table cell.
+func (_adccb *Invoice )NewCell (value string )*InvoiceCell {return _adccb .newCell (value ,_adccb .NewCellProps ());};
+
+// TableCell defines a table cell which can contain a Drawable as content.
+type TableCell struct{_cafg Color ;_gaeaa _bg .LineStyle ;_fgfda CellBorderStyle ;_gefeb Color ;_bcdfe float64 ;_gefeba CellBorderStyle ;_fcgg Color ;_fabe float64 ;_egea CellBorderStyle ;_fgdgg Color ;_bdga float64 ;_acdfc CellBorderStyle ;_gcac Color ;
+_cbcbcg float64 ;_eeadc ,_faga int ;_dbbfc int ;_cdefg int ;_cfdd VectorDrawable ;_cdfcd CellHorizontalAlignment ;_egfeb CellVerticalAlignment ;_bdff float64 ;_fagfd *Table ;};
+
+// UnsupportedRuneError is an error that occurs when there is unsupported glyph being used.
+type UnsupportedRuneError struct{Message string ;Rune rune ;};
+
+// SetBorderColor sets the border color.
+func (_aebg *Polygon )SetBorderColor (color Color ){_aebg ._ebdcd .BorderColor =_cfd (color )};
+
+// SetFillOpacity sets the fill opacity.
+func (_afcca *Polygon )SetFillOpacity (opacity float64 ){_afcca ._aacf =opacity };
+
+// Positioning returns the type of positioning the ellipse is set to use.
+func (_ecae *Ellipse )Positioning ()Positioning {return _ecae ._bbgc };
+
+// NewImageFromFile creates an Image from a file.
+func (_dff *Creator )NewImageFromFile (path string )(*Image ,error ){return _edae (path )};func _eeg (_afd string ,_ecc _dd .PdfObject ,_ddf *_fee .PdfPageResources )_dd .PdfObjectName {_dbedg :=_cf .TrimRightFunc (_cf .TrimSpace (_afd ),func (_dccf rune )bool {return _eb .IsNumber (_dccf )});
+if _dbedg ==""{_dbedg ="\u0046\u006f\u006e\u0074";};_eaf :=0;_eae :=_dd .PdfObjectName (_afd );for {_bac ,_bba :=_ddf .GetFontByName (_eae );if !_bba ||_bac ==_ecc {break ;};_eaf ++;_eae =_dd .PdfObjectName (_fb .Sprintf ("\u0025\u0073\u0025\u0064",_dbedg ,_eaf ));
+};return _eae ;};
+
+// FitMode returns the fit mode of the image.
+func (_dagb *Image )FitMode ()FitMode {return _dagb ._eged };
+
+// Width returns the width of the graphic svg.
+func (_ddca *GraphicSVG )Width ()float64 {return _ddca ._cfff .Width };
+
+// SetFillOpacity sets the fill opacity of the ellipse.
+func (_dabe *Ellipse )SetFillOpacity (opacity float64 ){_dabe ._eeec =opacity };
+
+// SetInline sets the inline mode of the division.
+func (_dafe *Division )SetInline (inline bool ){_dafe ._agag =inline };func (_daf *Block )mergeBlocks (_bca *Block )error {_gef :=_gcg (_daf ._db ,_daf ._gf ,_bca ._db ,_bca ._gf );if _gef !=nil {return _gef ;};for _ ,_gg :=range _bca ._aee {_daf .AddAnnotation (_gg );
+};return nil ;};func (_fdca *Invoice )generateNoteBlocks (_afgfa DrawContext )([]*Block ,DrawContext ,error ){_gggd :=_fgee ();_gaaf :=append ([][2]string {_fdca ._egdda ,_fdca ._bfda },_fdca ._eeda ...);for _ ,_fdfb :=range _gaaf {if _fdfb [1]!=""{_dccgb :=_fdca .drawSection (_fdfb [0],_fdfb [1]);
+for _ ,_bcceb :=range _dccgb {_gggd .Add (_bcceb );};_ecea :=_dccc (_fdca ._gbecb );_ecea .SetMargins (0,0,10,0);_gggd .Add (_ecea );};};return _gggd .GeneratePageBlocks (_afgfa );};func _eccgb (_fgacg *_fee .PdfFont ,_cgcbc float64 )*fontMetrics {_ccagf :=&fontMetrics {};
+if _fgacg ==nil {_da .Log .Debug ("\u0057\u0041\u0052\u004e\u003a\u0020\u0066\u006f\u006e\u0074\u0020\u0069s\u0020\u006e\u0069\u006c");return _ccagf ;};_adfba ,_beedg :=_fgacg .GetFontDescriptor ();if _beedg !=nil {_da .Log .Debug ("E\u0052\u0052\u004f\u0052\u003a\u0020\u0055\u006e\u0061\u0062\u006c\u0065\u0020\u0074\u006f\u0020\u0067\u0065t\u0020\u0066\u006f\u006e\u0074\u0020\u0064\u0065\u0073\u0063ri\u0070\u0074\u006fr\u003a \u0025\u0076",_beedg );
+return _ccagf ;};if _ccagf ._fdae ,_beedg =_adfba .GetCapHeight ();_beedg !=nil {_da .Log .Trace ("\u0057\u0041\u0052\u004e\u003a\u0020\u0055\u006e\u0061\u0062\u006c\u0065\u0020t\u006f\u0020\u0067\u0065\u0074\u0020f\u006f\u006e\u0074\u0020\u0063\u0061\u0070\u0020\u0068\u0065\u0069\u0067\u0068t\u003a\u0020\u0025\u0076",_beedg );
+};if int (_ccagf ._fdae )<=0{_da .Log .Trace ("\u0057\u0041\u0052\u004e\u003a\u0020\u0043\u0061p\u0020\u0048\u0065ig\u0068\u0074\u0020\u006e\u006f\u0074 \u0061\u0076\u0061\u0069\u006c\u0061\u0062\u006c\u0065\u0020\u002d\u0020\u0073\u0065\u0074t\u0069\u006e\u0067\u0020\u0074\u006f\u0020\u00310\u0030\u0030");
+_ccagf ._fdae =1000;};_ccagf ._fdae *=_cgcbc /1000.0;if _ccagf ._ffedb ,_beedg =_adfba .GetXHeight ();_beedg !=nil {_da .Log .Trace ("\u0057\u0041R\u004e\u003a\u0020\u0055n\u0061\u0062l\u0065\u0020\u0074\u006f\u0020\u0067\u0065\u0074 \u0066\u006f\u006e\u0074\u0020\u0078\u002d\u0068\u0065\u0069\u0067\u0068t\u003a\u0020\u0025\u0076",_beedg );
+};_ccagf ._ffedb *=_cgcbc /1000.0;if _ccagf ._aaefg ,_beedg =_adfba .GetAscent ();_beedg !=nil {_da .Log .Trace ("W\u0041\u0052\u004e\u003a\u0020\u0055n\u0061\u0062\u006c\u0065\u0020\u0074o\u0020\u0067\u0065\u0074\u0020\u0066\u006fn\u0074\u0020\u0061\u0073\u0063\u0065\u006e\u0074\u003a\u0020%\u0076",_beedg );
+};_ccagf ._aaefg *=_cgcbc /1000.0;if _ccagf ._ebggb ,_beedg =_adfba .GetDescent ();_beedg !=nil {_da .Log .Trace ("\u0057\u0041RN\u003a\u0020\u0055n\u0061\u0062\u006c\u0065 to\u0020ge\u0074\u0020\u0066\u006f\u006e\u0074\u0020de\u0073\u0063\u0065\u006e\u0074\u003a\u0020%\u0076",_beedg );
+};_ccagf ._ebggb *=_cgcbc /1000.0;return _ccagf ;};func (_dgaga *templateProcessor )parseTextRenderingModeAttr (_fcggb ,_dabbg string )TextRenderingMode {_da .Log .Debug ("\u0050\u0061\u0072\u0073\u0069\u006e\u0067\u0020\u0074\u0065\u0078\u0074\u0020\u0072\u0065\u006e\u0064\u0065r\u0069\u006e\u0067\u0020\u006d\u006f\u0064e\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a \u0028\u0060\u0025\u0073\u0060\u002c\u0020\u0025\u0073\u0029\u002e",_fcggb ,_dabbg );
+_ffda :=map[string ]TextRenderingMode {"\u0066\u0069\u006c\u006c":TextRenderingModeFill ,"\u0073\u0074\u0072\u006f\u006b\u0065":TextRenderingModeStroke ,"f\u0069\u006c\u006c\u002d\u0073\u0074\u0072\u006f\u006b\u0065":TextRenderingModeFillStroke ,"\u0069n\u0076\u0069\u0073\u0069\u0062\u006ce":TextRenderingModeInvisible ,"\u0066i\u006c\u006c\u002d\u0063\u006c\u0069p":TextRenderingModeFillClip ,"s\u0074\u0072\u006f\u006b\u0065\u002d\u0063\u006c\u0069\u0070":TextRenderingModeStrokeClip ,"\u0066\u0069l\u006c\u002d\u0073t\u0072\u006f\u006b\u0065\u002d\u0063\u006c\u0069\u0070":TextRenderingModeFillStrokeClip ,"\u0063\u006c\u0069\u0070":TextRenderingModeClip }[_dabbg ];
+return _ffda ;};
 
 // SetStyleLeft sets border style for left side.
-func (_cbf *border )SetStyleLeft (style CellBorderStyle ){_cbf ._ggd =style };
+func (_gfed *border )SetStyleLeft (style CellBorderStyle ){_gfed ._ece =style };
 
-// Creator is a wrapper around functionality for creating PDF reports and/or adding new
-// content onto imported PDF pages, etc.
-type Creator struct{
+// ScaleToHeight sets the graphic svg scaling factor with the given height.
+func (_cfec *GraphicSVG )ScaleToHeight (h float64 ){_fceae :=_cfec ._cfff .Width /_cfec ._cfff .Height ;_cfec ._cfff .Height =h ;_cfec ._cfff .Width =h *_fceae ;_cfec ._cfff .SetScaling (_fceae ,_fceae );};
 
-// Errors keeps error messages that should not interrupt pdf processing and to be checked later.
-Errors []error ;
+// Sections returns the custom content sections of the invoice as
+// title-content pairs.
+func (_bcad *Invoice )Sections ()[][2]string {return _bcad ._eeda };func (_abee *Ellipse )applyFitMode (_ceee float64 ){_ceee -=_abee ._fbed .Left +_abee ._fbed .Right ;switch _abee ._ffgf {case FitModeFillWidth :_abee .ScaleToWidth (_ceee );};};
 
-// UnsupportedCharacterReplacement is character that will be used to replace unsupported glyph.
-// The value will be passed to drawing context.
-UnsupportedCharacterReplacement rune ;_geac []*_gf .PdfPage ;_agf map[*_gf .PdfPage ]*Block ;_abf map[*_gf .PdfPage ]*pageTransformations ;_bgc *_gf .PdfPage ;_gcg PageSize ;_fagd DrawContext ;_fegd Margins ;_bfda ,_fbe float64 ;_cgad int ;_dfg func (_bcd FrontpageFunctionArgs );
-_dec func (_egga *TOC )error ;_baag func (_ccbd *Block ,_fdfe HeaderFunctionArgs );_gbc func (_bgb *Block ,_bab FooterFunctionArgs );_eefg func (_afgd PageFinalizeFunctionArgs )error ;_bfb func (_efd *_gf .PdfWriter )error ;_abd bool ;
+// IsAbsolute checks if the positioning is absolute.
+func (_edef Positioning )IsAbsolute ()bool {return _edef ==PositionAbsolute };
 
-// Controls whether a table of contents will be generated.
-AddTOC bool ;
+// Chapter is used to arrange multiple drawables (paragraphs, images, etc) into a single section.
+// The concept is the same as a book or a report chapter.
+type Chapter struct{_feba int ;_cdb string ;_ddc *Paragraph ;_cbf []Drawable ;_aff int ;_dadd bool ;_bge bool ;_cfeb Positioning ;_eecg ,_ebce float64 ;_bcbb Margins ;_deea *Chapter ;_ede *TOC ;_ecga *_fee .Outline ;_ddfg *_fee .OutlineItem ;_gfacd uint ;
+};
 
-// CustomTOC specifies if the TOC is rendered by the user.
-// When the `CustomTOC` field is set to `true`, the default TOC component is not rendered.
-// Instead the TOC is drawn by the user, in the callback provided to
-// the `Creator.CreateTableOfContents` method.
-// If `CustomTOC` is set to `false`, the callback provided to
-// `Creator.CreateTableOfContents` customizes the style of the automatically generated TOC component.
-CustomTOC bool ;_cgfc *TOC ;
+// Margins represents page margins or margins around an element.
+type Margins struct{Left float64 ;Right float64 ;Top float64 ;Bottom float64 ;};
 
-// Controls whether outlines will be generated.
-AddOutlines bool ;_dbfa *_gf .Outline ;_fece *_gf .PdfOutlineTreeNode ;_ffae *_gf .PdfAcroForm ;_dadc _acb .PdfObject ;_aae _gf .Optimizer ;_bgcg []*_gf .PdfFont ;_bbd *_gf .PdfFont ;_deca *_gf .PdfFont ;};
+// BorderOpacity returns the border opacity of the ellipse (0-1).
+func (_bbbcb *Ellipse )BorderOpacity ()float64 {return _bbbcb ._gdgd };func (_gabdcb *Paragraph )getTextWidth ()float64 {_gced :=0.0;for _ ,_gege :=range _gabdcb ._fagf {if _gege =='\u000A'{continue ;};_edgg ,_aded :=_gabdcb ._gbdaa .GetRuneMetrics (_gege );
+if !_aded {_da .Log .Debug ("\u0045\u0052R\u004f\u0052\u003a\u0020\u0052u\u006e\u0065\u0020\u0063\u0068a\u0072\u0020\u006d\u0065\u0074\u0072\u0069\u0063\u0073\u0020\u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064\u0021\u0020\u0028\u0072\u0075\u006e\u0065\u0020\u0030\u0078\u0025\u0030\u0034\u0078\u003d\u0025\u0063\u0029",_gege ,_gege );
+return -1;};_gced +=_gabdcb ._bgef *_edgg .Wx ;};return _gced ;};
 
-// DrawFooter sets a function to draw a footer on created output pages.
-func (_fdbg *Creator )DrawFooter (drawFooterFunc func (_bcbg *Block ,_bddb FooterFunctionArgs )){_fdbg ._gbc =drawFooterFunc ;};
+// Cols returns the total number of columns the table has.
+func (_gade *Table )Cols ()int {return _gade ._fcfd };
 
-// Insert adds a new text chunk at the specified position in the paragraph.
-func (_fgdc *StyledParagraph )Insert (index uint ,text string )*TextChunk {_feed :=uint (len (_fgdc ._gdae ));if index > _feed {index =_feed ;};_fffg :=NewTextChunk (text ,_fgdc ._cadaf );_fgdc ._gdae =append (_fgdc ._gdae [:index ],append ([]*TextChunk {_fffg },_fgdc ._gdae [index :]...)...);
-_fgdc .wrapText ();return _fffg ;};
+// SetBorderColor sets the border color.
+func (_cbaa *PolyBezierCurve )SetBorderColor (color Color ){_cbaa ._cceb .BorderColor =_cfd (color )};
+
+// SetMargins sets the Block's left, right, top, bottom, margins.
+func (_cbe *Block )SetMargins (left ,right ,top ,bottom float64 ){_cbe ._gb .Left =left ;_cbe ._gb .Right =right ;_cbe ._gb .Top =top ;_cbe ._gb .Bottom =bottom ;};
+
+// SetLinePageStyle sets the style for the page part of all new lines
+// of the table of contents.
+func (_gfcb *TOC )SetLinePageStyle (style TextStyle ){_gfcb ._ddege =style };
+
+// GetMargins returns the Image's margins: left, right, top, bottom.
+func (_cdbd *Image )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _cdbd ._dgb .Left ,_cdbd ._dgb .Right ,_cdbd ._dgb .Top ,_cdbd ._dgb .Bottom ;};
+
+// NewCellProps returns the default properties of an invoice cell.
+func (_faacb *Invoice )NewCellProps ()InvoiceCellProps {_eebe :=ColorRGBFrom8bit (255,255,255);return InvoiceCellProps {TextStyle :_faacb ._gbecb ,Alignment :CellHorizontalAlignmentLeft ,BackgroundColor :_eebe ,BorderColor :_eebe ,BorderWidth :1,BorderSides :[]CellBorderSide {CellBorderSideAll }};
+};const (PositionRelative Positioning =iota ;PositionAbsolute ;);func (_dgeeba *templateProcessor )parsePageBreak (_aafa *templateNode )(interface{},error ){return _gaffdg (),nil ;};func (_edf *Chapter )headingNumber ()string {var _badg string ;if _edf ._dadd {if _edf ._feba !=0{_badg =_fe .Itoa (_edf ._feba )+"\u002e";
+};if _edf ._deea !=nil {_ccd :=_edf ._deea .headingNumber ();if _ccd !=""{_badg =_ccd +_badg ;};};};return _badg ;};
+
+// Background contains properties related to the background of a component.
+type Background struct{FillColor Color ;BorderColor Color ;BorderSize float64 ;BorderRadiusTopLeft float64 ;BorderRadiusTopRight float64 ;BorderRadiusBottomLeft float64 ;BorderRadiusBottomRight float64 ;};
+
+// SetOptimizer sets the optimizer to optimize PDF before writing.
+func (_dafb *Creator )SetOptimizer (optimizer _fee .Optimizer ){_dafb ._cecf =optimizer };
+
+// Height returns the Block's height.
+func (_cdd *Block )Height ()float64 {return _cdd ._egb };
+
+// SetWidthBottom sets border width for bottom.
+func (_afa *border )SetWidthBottom (bw float64 ){_afa ._eec =bw };
+
+// SetWidth sets the width of the rectangle.
+func (_debba *Rectangle )SetWidth (width float64 ){_debba ._bfddd =width };func (_cgac *templateProcessor )parseTextVerticalAlignmentAttr (_fffb ,_cbcc string )TextVerticalAlignment {_da .Log .Debug ("\u0050\u0061\u0072\u0073\u0069\u006e\u0067\u0020\u0074\u0065\u0078\u0074\u0020\u0076\u0065r\u0074\u0069\u0063\u0061\u006c\u0020\u0061\u006c\u0069\u0067\u006e\u006d\u0065n\u0074\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a (\u0060\u0025\u0073\u0060\u002c\u0020\u0025\u0073\u0029\u002e",_fffb ,_cbcc );
+_fbfgb :=map[string ]TextVerticalAlignment {"\u0062\u0061\u0073\u0065\u006c\u0069\u006e\u0065":TextVerticalAlignmentBaseline ,"\u0063\u0065\u006e\u0074\u0065\u0072":TextVerticalAlignmentCenter }[_cbcc ];return _fbfgb ;};
+
+// SetMargins sets the Chapter margins: left, right, top, bottom.
+// Typically not needed as the creator's page margins are used.
+func (_gca *Chapter )SetMargins (left ,right ,top ,bottom float64 ){_gca ._bcbb .Left =left ;_gca ._bcbb .Right =right ;_gca ._bcbb .Top =top ;_gca ._bcbb .Bottom =bottom ;};
+
+// GeneratePageBlocks generates a page break block.
+func (_gaccf *PageBreak )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_aeeabc :=[]*Block {NewBlock (ctx .PageWidth ,ctx .PageHeight -ctx .Y ),NewBlock (ctx .PageWidth ,ctx .PageHeight )};ctx .Page ++;_fbde :=ctx ;_fbde .Y =ctx .Margins .Top ;
+_fbde .X =ctx .Margins .Left ;_fbde .Height =ctx .PageHeight -ctx .Margins .Top -ctx .Margins .Bottom ;_fbde .Width =ctx .PageWidth -ctx .Margins .Left -ctx .Margins .Right ;ctx =_fbde ;return _aeeabc ,ctx ,nil ;};
+
+// Subtotal returns the invoice subtotal description and value cells.
+// The returned values can be used to customize the styles of the cells.
+func (_fgce *Invoice )Subtotal ()(*InvoiceCell ,*InvoiceCell ){return _fgce ._decgf [0],_fgce ._decgf [1];};
+
+// Positioning returns the type of positioning the rectangle is set to use.
+func (_dcbf *Rectangle )Positioning ()Positioning {return _dcbf ._fgaa };func (_fbcad *templateProcessor )parseChart (_geefe *templateNode )(interface{},error ){var _bggc string ;for _ ,_cddec :=range _geefe ._bdbga .Attr {_bcbea :=_cddec .Value ;switch _dcgc :=_cddec .Name .Local ;
+_dcgc {case "\u0073\u0072\u0063":_bggc =_bcbea ;};};if _bggc ==""{_da .Log .Error ("\u0043\u0068\u0061\u0072\u0074\u0020\u0060\u0073\u0072\u0063\u0060\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u0020\u0063\u0061n\u006e\u006f\u0074\u0020\u0062e\u0020\u0065m\u0070\u0074\u0079\u002e");
+return nil ,_gaeg ;};_gacbc ,_gdef :=_fbcad ._deag .ChartMap [_bggc ];if !_gdef {_da .Log .Error ("\u0043\u006ful\u0064\u0020\u006eo\u0074\u0020\u0066\u0069nd \u0063ha\u0072\u0074\u0020\u0072\u0065\u0073\u006fur\u0063\u0065\u003a\u0020\u0060\u0025\u0073`\u002e",_bggc );
+return nil ,_gaeg ;};_bcbee :=NewChart (_gacbc );for _ ,_eebed :=range _geefe ._bdbga .Attr {_ebeac :=_eebed .Value ;switch _fdcdf :=_eebed .Name .Local ;_fdcdf {case "\u0078":_bcbee .SetPos (_fbcad .parseFloatAttr (_fdcdf ,_ebeac ),_bcbee ._abfg );case "\u0079":_bcbee .SetPos (_bcbee ._gfcd ,_fbcad .parseFloatAttr (_fdcdf ,_ebeac ));
+case "\u006d\u0061\u0072\u0067\u0069\u006e":_ggfdg :=_fbcad .parseMarginAttr (_fdcdf ,_ebeac );_bcbee .SetMargins (_ggfdg .Left ,_ggfdg .Right ,_ggfdg .Top ,_ggfdg .Bottom );case "\u0077\u0069\u0064t\u0068":_bcbee ._edbg .SetWidth (int (_fbcad .parseFloatAttr (_fdcdf ,_ebeac )));
+case "\u0068\u0065\u0069\u0067\u0068\u0074":_bcbee ._edbg .SetHeight (int (_fbcad .parseFloatAttr (_fdcdf ,_ebeac )));case "\u0073\u0072\u0063":break ;default:_da .Log .Debug ("\u0055n\u0073\u0075p\u0070\u006f\u0072\u0074e\u0064\u0020\u0063h\u0061\u0072\u0074\u0020\u0061\u0074\u0074\u0072\u0069bu\u0074\u0065\u003a \u0060\u0025s\u0060\u002e\u0020\u0053\u006b\u0069p\u0070\u0069n\u0067\u002e",_fdcdf );
+};};return _bcbee ,nil ;};
+
+// SetLineColor sets the line color.
+func (_cafa *Polyline )SetLineColor (color Color ){_cafa ._dadfd .LineColor =_cfd (color )};
+
+// ScaleToHeight scales the ellipse to the specified height. The width of
+// the ellipse is scaled so that the aspect ratio is maintained.
+func (_bbff *Ellipse )ScaleToHeight (h float64 ){_efaf :=_bbff ._baeg /_bbff ._afaf ;_bbff ._afaf =h ;_bbff ._baeg =h *_efaf ;};
+
+// SetBoundingBox set gradient color bounding box where the gradient would be rendered.
+func (_bada *RadialShading )SetBoundingBox (x ,y ,width ,height float64 ){_bada ._aaecd =&_fee .PdfRectangle {Llx :x ,Lly :y ,Urx :x +width ,Ury :y +height };};func _bege (_gbde ,_agbb ,_febaa TextChunk ,_bdagf uint ,_egeg TextStyle )*TOCLine {_bgbfc :=_dccc (_egeg );
+_bgbfc .SetEnableWrap (true );_bgbfc .SetTextAlignment (TextAlignmentLeft );_bgbfc .SetMargins (0,0,2,2);_fafbe :=&TOCLine {_dabee :_bgbfc ,Number :_gbde ,Title :_agbb ,Page :_febaa ,Separator :TextChunk {Text :"\u002e",Style :_egeg },_gfgb :0,_bbec :_bdagf ,_eedde :10,_bgfaa :PositionRelative };
+_bgbfc ._eebag .Left =_fafbe ._gfgb +float64 (_fafbe ._bbec -1)*_fafbe ._eedde ;_bgbfc ._dbff =_fafbe .prepareParagraph ;return _fafbe ;};
+
+// GeneratePageBlocks generate the Page blocks. Multiple blocks are generated
+// if the contents wrap over multiple pages.
+func (_dfgdf *Invoice )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_adad :=ctx ;_bcgc :=[]func (_badcf DrawContext )([]*Block ,DrawContext ,error ){_dfgdf .generateHeaderBlocks ,_dfgdf .generateInformationBlocks ,_dfgdf .generateLineBlocks ,_dfgdf .generateTotalBlocks ,_dfgdf .generateNoteBlocks };
+var _bcgg []*Block ;for _ ,_eddb :=range _bcgc {_ceea ,_gfbdf ,_ddcg :=_eddb (ctx );if _ddcg !=nil {return _bcgg ,ctx ,_ddcg ;};if len (_bcgg )==0{_bcgg =_ceea ;}else if len (_ceea )> 0{_bcgg [len (_bcgg )-1].mergeBlocks (_ceea [0]);_bcgg =append (_bcgg ,_ceea [1:]...);
+};ctx =_gfbdf ;};if _dfgdf ._ddfd .IsRelative (){ctx .X =_adad .X ;};if _dfgdf ._ddfd .IsAbsolute (){return _bcgg ,_adad ,nil ;};return _bcgg ,ctx ,nil ;};
+
+// SetContent sets the cell's content.  The content is a VectorDrawable, i.e.
+// a Drawable with a known height and width.
+// Currently supported VectorDrawables:
+// - *Paragraph
+// - *StyledParagraph
+// - *Image
+// - *Chart
+// - *Table
+// - *Division
+// - *List
+// - *Rectangle
+// - *Ellipse
+// - *Line
+func (_dgfb *TableCell )SetContent (vd VectorDrawable )error {switch _agabf :=vd .(type ){case *Paragraph :if _agabf ._ecfa {_agabf ._ccee =true ;};_dgfb ._cfdd =vd ;case *StyledParagraph :if _agabf ._cbbga {_agabf ._egge =true ;};_dgfb ._cfdd =vd ;case *Image ,*Chart ,*Table ,*Division ,*List ,*Rectangle ,*Ellipse ,*Line :_dgfb ._cfdd =vd ;
+default:_da .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0075\u006e\u0073\u0075\u0070\u0070o\u0072\u0074\u0065\u0064\u0020\u0063e\u006c\u006c\u0020\u0063\u006f\u006e\u0074\u0065\u006e\u0074\u0020\u0074\u0079p\u0065\u0020\u0025\u0054",vd );
+return _dd .ErrTypeError ;};return nil ;};
+
+// Ellipse defines an ellipse with a center at (xc,yc) and a specified width and height.  The ellipse can have a colored
+// fill and/or border with a specified width.
+// Implements the Drawable interface and can be drawn on PDF using the Creator.
+type Ellipse struct{_gbd float64 ;_efd float64 ;_baeg float64 ;_afaf float64 ;_bbgc Positioning ;_dbeaf Color ;_eeec float64 ;_fdfd Color ;_bedef float64 ;_gdgd float64 ;_fbed Margins ;_ffgf FitMode ;};
+
+// SetTotal sets the total of the invoice.
+func (_ddcbf *Invoice )SetTotal (value string ){_ddcbf ._abb [1].Value =value };func (_ceca *templateProcessor )parseLinkAttr (_fbedb ,_ddcce string )*_fee .PdfAnnotation {_ddcce =_cf .TrimSpace (_ddcce );if _cf .HasPrefix (_ddcce ,"\u0075\u0072\u006c(\u0027")&&_cf .HasSuffix (_ddcce ,"\u0027\u0029")&&len (_ddcce )> 7{return _gfgag (_ddcce [5:len (_ddcce )-2]);
+};if _cf .HasPrefix (_ddcce ,"\u0070\u0061\u0067e\u0028")&&_cf .HasSuffix (_ddcce ,"\u0029")&&len (_ddcce )> 6{var (_fgbg error ;_gcggg int64 ;_adde float64 ;_eacdf float64 ;_bgeed =1.0;_acagcf =_cf .Split (_ddcce [5:len (_ddcce )-1],"\u002c"););_gcggg ,_fgbg =_fe .ParseInt (_cf .TrimSpace (_acagcf [0]),10,64);
+if _fgbg !=nil {_da .Log .Error ("\u0046\u0061\u0069\u006c\u0065\u0064 \u0070\u0061\u0072\u0073\u0069\u006e\u0067\u0020\u0070\u0061\u0067\u0065\u0020p\u0061\u0072\u0061\u006d\u0065\u0074\u0065r\u003a\u0020\u0025\u0076",_fgbg );return nil ;};if len (_acagcf )>=2{_adde ,_fgbg =_fe .ParseFloat (_cf .TrimSpace (_acagcf [1]),64);
+if _fgbg !=nil {_da .Log .Error ("\u0046\u0061\u0069\u006c\u0065\u0064\u0020\u0070\u0061\u0072\u0073\u0069\u006eg\u0020\u0058\u0020\u0070\u006f\u0073i\u0074\u0069\u006f\u006e\u0020\u0070\u0061\u0072\u0061\u006d\u0065\u0074\u0065r\u003a\u0020\u0025\u0076",_fgbg );
+return nil ;};};if len (_acagcf )>=3{_eacdf ,_fgbg =_fe .ParseFloat (_cf .TrimSpace (_acagcf [2]),64);if _fgbg !=nil {_da .Log .Error ("\u0046\u0061\u0069\u006c\u0065\u0064\u0020\u0070\u0061\u0072\u0073\u0069\u006eg\u0020\u0059\u0020\u0070\u006f\u0073i\u0074\u0069\u006f\u006e\u0020\u0070\u0061\u0072\u0061\u006d\u0065\u0074\u0065r\u003a\u0020\u0025\u0076",_fgbg );
+return nil ;};};if len (_acagcf )>=4{_bgeed ,_fgbg =_fe .ParseFloat (_cf .TrimSpace (_acagcf [3]),64);if _fgbg !=nil {_da .Log .Error ("\u0046\u0061\u0069\u006c\u0065\u0064 \u0070\u0061\u0072\u0073\u0069\u006e\u0067\u0020\u007a\u006f\u006f\u006d\u0020p\u0061\u0072\u0061\u006d\u0065\u0074\u0065r\u003a\u0020\u0025\u0076",_fgbg );
+return nil ;};};return _gabgca (_gcggg -1,_adde ,_eacdf ,_bgeed );};return nil ;};func (_cggbb *templateProcessor )parseFloatArray (_bebdf ,_bedd string )[]float64 {_da .Log .Debug ("\u0050\u0061\u0072s\u0069\u006e\u0067\u0020\u0066\u006c\u006f\u0061\u0074\u0020\u0061\u0072\u0072\u0061\u0079\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0028\u0060%\u0073\u0060\u002c\u0020\u0025\u0073\u0029\u002e",_bebdf ,_bedd );
+_eecd :=_cf .Fields (_bedd );_cace :=make ([]float64 ,0,len (_eecd ));for _ ,_bcbc :=range _eecd {_gceb ,_ :=_fe .ParseFloat (_bcbc ,64);_cace =append (_cace ,_gceb );};return _cace ;};
 
 // DrawTemplate renders the template provided through the specified reader,
 // using the specified `data` and `options`.
@@ -364,16 +712,353 @@ _fgdc .wrapText ();return _fffg ;};
 // The second phase of processing is actually parsing the template, translating
 // it into creator components and rendering them using the provided options.
 // Both the `data` and `options` parameters can be nil.
-func (_bgcb *Creator )DrawTemplate (r _ag .Reader ,data interface{},options *TemplateOptions )error {return _efefe (_bgcb ,r ,data ,options ,_bgcb );};func _ggbee (_dcgcf ...interface{})(map[string ]interface{},error ){_ccfga :=len (_dcgcf );if _ccfga %2!=0{_cf .Log .Error ("\u0049\u006e\u0076\u0061\u006c\u0069\u0064\u0020\u006e\u0075\u006d\u0062\u0065\u0072\u0020\u006f\u0066\u0020p\u0061\u0072\u0061\u006d\u0065\u0074\u0065r\u0073\u0020\u0066\u006f\u0072\u0020\u0063\u0072\u0065\u0061\u0074i\u006e\u0067\u0020\u006d\u0061\u0070\u003a\u0020\u0025\u0064\u002e",_ccfga );
-return nil ,_acb .ErrRangeError ;};_gceg :=map[string ]interface{}{};for _cegga :=0;_cegga < _ccfga ;_cegga +=2{_efabe ,_ggada :=_dcgcf [_cegga ].(string );if !_ggada {_cf .Log .Error ("\u0049\u006e\u0076\u0061\u006c\u0069\u0064 \u006d\u0061\u0070 \u006b\u0065\u0079\u0020t\u0079\u0070\u0065\u0020\u0028\u0025\u0054\u0029\u002e\u0020\u0045\u0078\u0070\u0065\u0063\u0074\u0065\u0064\u0020\u0073\u0074\u0072\u0069\u006e\u0067\u002e",_dcgcf [_cegga ]);
-return nil ,_acb .ErrTypeError ;};_gceg [_efabe ]=_dcgcf [_cegga +1];};return _gceg ,nil ;};
+func (_fcd *Creator )DrawTemplate (r _fg .Reader ,data interface{},options *TemplateOptions )error {return _gcdc (_fcd ,r ,data ,options ,_fcd );};
+
+// AddShadingResource adds shading dictionary inside the resources dictionary.
+func (_gfba *RadialShading )AddShadingResource (block *Block )(_aafdb _dd .PdfObjectName ,_fabg error ){_ffegc :=1;_aafdb =_dd .PdfObjectName ("\u0053\u0068"+_fe .Itoa (_ffegc ));for block ._gf .HasShadingByName (_aafdb ){_ffegc ++;_aafdb =_dd .PdfObjectName ("\u0053\u0068"+_fe .Itoa (_ffegc ));
+};if _bagac :=block ._gf .SetShadingByName (_aafdb ,_gfba .shadingModel ().ToPdfObject ());_bagac !=nil {return "",_bagac ;};return _aafdb ,nil ;};const (CellBorderStyleNone CellBorderStyle =iota ;CellBorderStyleSingle ;CellBorderStyleDouble ;);
+
+// SetLineHeight sets the line height (1.0 default).
+func (_cegca *Paragraph )SetLineHeight (lineheight float64 ){_cegca ._adgg =lineheight };
+
+// EnableFontSubsetting enables font subsetting for `font` when the creator output is written to file.
+// Embeds only the subset of the runes/glyphs that are actually used to display the file.
+// Subsetting can reduce the size of fonts significantly.
+func (_bdfg *Creator )EnableFontSubsetting (font *_fee .PdfFont ){_bdfg ._gbc =append (_bdfg ._gbc ,font )};func _aegf (_bfaf string )(*GraphicSVG ,error ){_afdbc ,_gefd :=_aeb .ParseFromString (_bfaf );if _gefd !=nil {return nil ,_gefd ;};return _caac (_afdbc );
+};
+
+// GeneratePageBlocks generate the Page blocks. Multiple blocks are generated
+// if the contents wrap over multiple pages.
+func (_bfgbaa *TOCLine )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_eebabd :=ctx ;_fgggd ,ctx ,_bdfed :=_bfgbaa ._dabee .GeneratePageBlocks (ctx );if _bdfed !=nil {return _fgggd ,ctx ,_bdfed ;};if _bfgbaa ._bgfaa .IsRelative (){ctx .X =_eebabd .X ;
+};if _bfgbaa ._bgfaa .IsAbsolute (){return _fgggd ,_eebabd ,nil ;};return _fgggd ,ctx ,nil ;};
+
+// TextVerticalAlignment controls the vertical position of the text
+// in a styled paragraph.
+type TextVerticalAlignment int ;
+
+// AddColorStop add color stop info for rendering gradient color.
+func (_dbfg *RadialShading )AddColorStop (color Color ,point float64 ){_dbfg ._ecef .AddColorStop (color ,point );};
+
+// NewTextChunk returns a new text chunk instance.
+func NewTextChunk (text string ,style TextStyle )*TextChunk {return &TextChunk {Text :text ,Style :style ,VerticalAlignment :TextVerticalAlignmentBaseline };};func (_cgae *Invoice )generateInformationBlocks (_dadf DrawContext )([]*Block ,DrawContext ,error ){_dda :=_dccc (_cgae ._gbecb );
+_dda .SetMargins (0,0,0,20);_ecee :=_cgae .drawAddress (_cgae ._dfbd );_ecee =append (_ecee ,_dda );_ecee =append (_ecee ,_cgae .drawAddress (_cgae ._aedg )...);_fcbg :=_fgee ();for _ ,_cgaa :=range _ecee {_fcbg .Add (_cgaa );};_gafc :=_cgae .drawInformation ();
+_beae :=_agegf (2);_beae .SetMargins (0,0,25,0);_dcbd :=_beae .NewCell ();_dcbd .SetIndent (0);_dcbd .SetContent (_fcbg );_dcbd =_beae .NewCell ();_dcbd .SetContent (_gafc );return _beae .GeneratePageBlocks (_dadf );};
+
+// Drawable is a widget that can be used to draw with the Creator.
+type Drawable interface{
+
+// GeneratePageBlocks draw onto blocks representing Page contents. As the content can wrap over many pages, multiple
+// templates are returned, one per Page.  The function also takes a draw context containing information
+// where to draw (if relative positioning) and the available height to draw on accounting for Margins etc.
+GeneratePageBlocks (_eeed DrawContext )([]*Block ,DrawContext ,error );};func _fabcd (_gaee []_bg .CubicBezierCurve )*PolyBezierCurve {return &PolyBezierCurve {_cceb :&_bg .PolyBezierCurve {Curves :_gaee ,BorderColor :_fee .NewPdfColorDeviceRGB (0,0,0),BorderWidth :1.0},_aabg :1.0,_ebef :1.0};
+};
+
+// SetOutlineTree adds the specified outline tree to the PDF file generated
+// by the creator. Adding an external outline tree disables the automatic
+// generation of outlines done by the creator for the relevant components.
+func (_ddfc *Creator )SetOutlineTree (outlineTree *_fee .PdfOutlineTreeNode ){_ddfc ._eaa =outlineTree };
+
+// ScaleToWidth scale Image to a specified width w, maintaining the aspect ratio.
+func (_ecacf *Image )ScaleToWidth (w float64 ){_fgdf :=_ecacf ._eega /_ecacf ._edda ;_ecacf ._edda =w ;_ecacf ._eega =w *_fgdf ;};
+
+// Color interface represents colors in the PDF creator.
+type Color interface{ToRGB ()(float64 ,float64 ,float64 );};
+
+// TOC represents a table of contents component.
+// It consists of a paragraph heading and a collection of
+// table of contents lines.
+// The representation of a table of contents line is as follows:
+//       [number] [title]      [separator] [page]
+// e.g.: Chapter1 Introduction ........... 1
+type TOC struct{_bfaa *StyledParagraph ;_bbfe []*TOCLine ;_bbda TextStyle ;_gaebe TextStyle ;_ffedc TextStyle ;_ddege TextStyle ;_gabb string ;_gfdfe float64 ;_fdgc Margins ;_eebf Positioning ;_dcdcg TextStyle ;_ffag bool ;};
+
+// FitMode defines resizing options of an object inside a container.
+type FitMode int ;
+
+// FitMode returns the fit mode of the line.
+func (_ffaa *Line )FitMode ()FitMode {return _ffaa ._fgcc };
+
+// SetSubtotal sets the subtotal of the invoice.
+func (_aefa *Invoice )SetSubtotal (value string ){_aefa ._decgf [1].Value =value };
+
+// LineWidth returns the width of the line.
+func (_deec *Line )LineWidth ()float64 {return _deec ._bdfc };
+
+// CellBorderStyle defines the table cell's border style.
+type CellBorderStyle int ;
+
+// DueDate returns the invoice due date description and value cells.
+// The returned values can be used to customize the styles of the cells.
+func (_bace *Invoice )DueDate ()(*InvoiceCell ,*InvoiceCell ){return _bace ._edgf [0],_bace ._edgf [1]};
+
+// TemplateOptions contains options and resources to use when rendering
+// a template with a Creator instance.
+// All the resources in the map fields can be referenced by their
+// name/key in the template which is rendered using the options instance.
+type TemplateOptions struct{
+
+// HelperFuncMap is used to define functions which can be accessed
+// inside the rendered templates by their assigned names.
+HelperFuncMap _ff .FuncMap ;
+
+// SubtemplateMap contains templates which can be rendered alongside
+// the main template. They can be accessed using their assigned names
+// in the main template or in the other subtemplates.
+// Subtemplates defined inside the subtemplates specified in the map
+// can be accessed directly.
+// All resources available to the main template are also available
+// to the subtemplates.
+SubtemplateMap map[string ]_fg .Reader ;
+
+// FontMap contains pre-loaded fonts which can be accessed
+// inside the rendered templates by their assigned names.
+FontMap map[string ]*_fee .PdfFont ;
+
+// ImageMap contains pre-loaded images which can be accessed
+// inside the rendered templates by their assigned names.
+ImageMap map[string ]*_fee .Image ;
+
+// ColorMap contains colors which can be accessed
+// inside the rendered templates by their assigned names.
+ColorMap map[string ]Color ;
+
+// ChartMap contains charts which can be accessed
+// inside the rendered templates by their assigned names.
+ChartMap map[string ]_ef .ChartRenderable ;};
+
+// AddInfo is used to append a piece of invoice information in the template
+// information table.
+func (_gefe *Invoice )AddInfo (description ,value string )(*InvoiceCell ,*InvoiceCell ){_gcb :=[2]*InvoiceCell {_gefe .newCell (description ,_gefe ._bdc ),_gefe .newCell (value ,_gefe ._bdc )};_gefe ._dbbdg =append (_gefe ._dbbdg ,_gcb );return _gcb [0],_gcb [1];
+};
+
+// AddColorStop add color stop information for rendering gradient.
+func (_ecgef *shading )AddColorStop (color Color ,point float64 ){_ecgef ._ccff =append (_ecgef ._ccff ,_fafb (color ,point ));};func (_fffe *Division )ctxHeight (_egcd float64 )float64 {_egcd -=_fffe ._ceeba .Left +_fffe ._ceeba .Right +_fffe ._deca .Left +_fffe ._deca .Right ;
+var _gfea float64 ;for _ ,_bdde :=range _fffe ._aegg {_gfea +=_gfedb (_bdde ,_egcd );};return _gfea ;};
 
 // SetMargins sets the margins of the chart component.
-func (_gdd *Chart )SetMargins (left ,right ,top ,bottom float64 ){_gdd ._fbfc .Left =left ;_gdd ._fbfc .Right =right ;_gdd ._fbfc .Top =top ;_gdd ._fbfc .Bottom =bottom ;};var (PageSizeA3 =PageSize {297*PPMM ,420*PPMM };PageSizeA4 =PageSize {210*PPMM ,297*PPMM };
-PageSizeA5 =PageSize {148*PPMM ,210*PPMM };PageSizeLetter =PageSize {8.5*PPI ,11*PPI };PageSizeLegal =PageSize {8.5*PPI ,14*PPI };);func (_dbea *Division )split (_fceb DrawContext )(_geec ,_abdc *Division ){var (_addd float64 ;_afbge ,_dcab []VectorDrawable ;
-);_agca :=_fceb .Width -_dbea ._dcbe .Left -_dbea ._dcbe .Right -_dbea ._acbg .Left -_dbea ._acbg .Right ;for _edde ,_cada :=range _dbea ._ebd {_addd +=_gebd (_cada ,_agca );if _addd < _fceb .Height {_afbge =append (_afbge ,_cada );}else {_dcab =_dbea ._ebd [_edde :];
-break ;};};if len (_afbge )> 0{_geec =_cbb ();*_geec =*_dbea ;_geec ._ebd =_afbge ;if _dbea ._dfea !=nil {_geec ._dfea =&Background {};*_geec ._dfea =*_dbea ._dfea ;};};if len (_dcab )> 0{_abdc =_cbb ();*_abdc =*_dbea ;_abdc ._ebd =_dcab ;if _dbea ._dfea !=nil {_abdc ._dfea =&Background {};
-*_abdc ._dfea =*_dbea ._dfea ;};};return _geec ,_abdc ;};
+func (_gccd *Chart )SetMargins (left ,right ,top ,bottom float64 ){_gccd ._cgc .Left =left ;_gccd ._cgc .Right =right ;_gccd ._cgc .Top =top ;_gccd ._cgc .Bottom =bottom ;};
+
+// SetLineWidth sets the line width.
+func (_acbc *Polyline )SetLineWidth (lineWidth float64 ){_acbc ._dadfd .LineWidth =lineWidth };type componentRenderer interface{Draw (_dcebf Drawable )error ;};
+
+// SetMargins sets the Paragraph's margins.
+func (_acggb *StyledParagraph )SetMargins (left ,right ,top ,bottom float64 ){_acggb ._eebag .Left =left ;_acggb ._eebag .Right =right ;_acggb ._eebag .Top =top ;_acggb ._eebag .Bottom =bottom ;};
+
+// AddTextItem appends a new item with the specified text to the list.
+// The method creates a styled paragraph with the specified text and returns
+// it so that the item style can be customized.
+// The method also returns the marker used for the newly added item.
+// The marker object can be used to change the text and style of the marker
+// for the current item.
+func (_acagc *List )AddTextItem (text string )(*StyledParagraph ,*TextChunk ,error ){_agdca :=_dccc (_acagc ._bdbe );_agdca .Append (text );_gabdc ,_debd :=_acagc .Add (_agdca );return _agdca ,_gabdc ,_debd ;};
+
+// GetRowHeight returns the height of the specified row.
+func (_afee *Table )GetRowHeight (row int )(float64 ,error ){if row < 1||row > len (_afee ._agda ){return 0,_d .New ("\u0072\u0061\u006e\u0067\u0065\u0020\u0063\u0068\u0065\u0063\u006b\u0020e\u0072\u0072\u006f\u0072");};return _afee ._agda [row -1],nil ;
+};
+
+// AddLine appends a new line to the invoice line items table.
+func (_dcef *Invoice )AddLine (values ...string )[]*InvoiceCell {_gcfg :=len (_dcef ._eaafb );var _gabd []*InvoiceCell ;for _dfbc ,_cdfe :=range values {_aedf :=_dcef .newCell (_cdfe ,_dcef ._dbdg );if _dfbc < _gcfg {_aedf .Alignment =_dcef ._eaafb [_dfbc ].Alignment ;
+};_gabd =append (_gabd ,_aedf );};_dcef ._ccbed =append (_dcef ._ccbed ,_gabd );return _gabd ;};
+
+// Reset removes all the text chunks the paragraph contains.
+func (_geegb *StyledParagraph )Reset (){_geegb ._adeb =[]*TextChunk {}};func (_abgef *Table )wrapContent (_eaafg DrawContext )error {if _abgef ._cfbac {return nil ;};_eacde :=func (_dagd *TableCell ,_dagda int ,_febagg int ,_ffed int )(_abgaa int ){if _ffed < 1{return -1;
+};_dgdgf :=0;for _aeegc :=_febagg +1;_aeegc < len (_abgef ._afbaa )-1;_aeegc ++{_ddgec :=_abgef ._afbaa [_aeegc ];if _ddgec ._eeadc ==_ffed {_dgdgf =_aeegc ;if (_ddgec ._faga < _dagd ._faga &&_abgef ._fcfd > _ddgec ._faga )||_dagd ._faga < _abgef ._fcfd {continue ;
+};break ;};};_egcfee :=float64 (0.0);for _ccgg :=0;_ccgg < _dagd ._dbbfc ;_ccgg ++{_egcfee +=_abgef ._agda [_dagd ._eeadc +_ccgg -1];};_dddbe :=float64 (0.0);for _bcbf :=0;_bcbf < _dagd ._cdefg ;_bcbf ++{_dddbe +=_abgef ._fadgg [_dagd ._faga +_bcbf -1];
+};var (_bdee VectorDrawable ;_afafd =false ;);switch _ddac :=_dagd ._cfdd .(type ){case *StyledParagraph :_cfcgf :=_eaafg ;_cfcgf .Height =_fa .Floor (_egcfee -_ddac ._eebag .Top -_ddac ._eebag .Bottom -0.5*_ddac .getTextHeight ());_cfcgf .Width =_dddbe ;
+_fgdda ,_dbdad ,_ggegb :=_ddac .split (_cfcgf );if _ggegb !=nil {_da .Log .Error ("\u0045\u0072\u0072o\u0072\u0020\u0077\u0072a\u0070\u0020\u0073\u0074\u0079\u006c\u0065d\u0020\u0070\u0061\u0072\u0061\u0067\u0072\u0061\u0070\u0068\u003a\u0020\u0025\u0076",_ggegb .Error ());
+};if _fgdda !=nil &&_dbdad !=nil {_abgef ._afbaa [_febagg ]._cfdd =_fgdda ;_bdee =_dbdad ;_afafd =true ;};};_abgef ._afbaa [_febagg ]._dbbfc =_dagd ._dbbfc ;_eaafg .Height =_eaafg .PageHeight -_eaafg .Margins .Top -_eaafg .Margins .Bottom ;_fceb :=_dagd .cloneProps (nil );
+if _afafd {_fceb ._cfdd =_bdee ;};_fceb ._dbbfc =_dagda -1;_fceb ._eeadc =_ffed +1;_fceb ._faga =_dagd ._faga ;_abgef ._afbaa =append (_abgef ._afbaa [:_dgdgf +1],append ([]*TableCell {_fceb },_abgef ._afbaa [_dgdgf +1:]...)...);return _dgdgf +1;};_ccfcf :=float64 (0.0);
+_egeef :=0;_baag :=-1;for _eggga ,_dfacg :=range _abgef ._afbaa {if _baag ==_eggga {_egeef =_dfacg ._eeadc ;_ccfcf =0.0;};if _dfacg ._dbbfc < 2{if _egeef < _dfacg ._eeadc &&_eggga > _baag &&_ccfcf < _eaafg .Height {_ccfcf +=_abgef ._agda [_dfacg ._eeadc -1];
+};_egeef =_dfacg ._eeadc ;continue ;};_acbce :=float64 (0.0);_cgad :=-1;_dgagb :=-1;_fbdb :=0;for _gfff :=0;_gfff < _dfacg ._dbbfc ;_gfff ++{if (_acbce +_abgef ._agda [_dfacg ._eeadc +_gfff -1])> (_eaafg .Height -_ccfcf ){_fbdb --;break ;};_acbce +=_abgef ._agda [_dfacg ._eeadc +_gfff -1];
+_dgagb =_dfacg ._eeadc +_gfff -1;_cgad =_dfacg ._dbbfc -_gfff +1;_fbdb ++;};if _cgad > 0&&_dfacg ._dbbfc > _fbdb {_dfacg ._dbbfc =_fbdb ;_baag =_eacde (_dfacg ,_cgad ,_eggga ,_dgagb );_egeef =_dgagb ;};};return nil ;};func _dgbg (_ggde ,_gddd TextStyle )*Invoice {_agdc :=&Invoice {_faea :"\u0049N\u0056\u004f\u0049\u0043\u0045",_eafaf :"\u002c\u0020",_gbecb :_ggde ,_dbge :_gddd };
+_agdc ._dfbd =&InvoiceAddress {Separator :_agdc ._eafaf };_agdc ._aedg =&InvoiceAddress {Heading :"\u0042i\u006c\u006c\u0020\u0074\u006f",Separator :_agdc ._eafaf };_ffgd :=ColorRGBFrom8bit (245,245,245);_aacgg :=ColorRGBFrom8bit (155,155,155);_agdc ._effe =_gddd ;
+_agdc ._effe .Color =_aacgg ;_agdc ._effe .FontSize =20;_agdc ._bdbg =_ggde ;_agdc ._dbbf =_gddd ;_agdc ._dabeb =_ggde ;_agdc ._fadg =_gddd ;_agdc ._bdc =_agdc .NewCellProps ();_agdc ._bdc .BackgroundColor =_ffgd ;_agdc ._bdc .TextStyle =_gddd ;_agdc ._ggee =_agdc .NewCellProps ();
+_agdc ._ggee .TextStyle =_gddd ;_agdc ._ggee .BackgroundColor =_ffgd ;_agdc ._ggee .BorderColor =_ffgd ;_agdc ._dbdg =_agdc .NewCellProps ();_agdc ._dbdg .BorderColor =_ffgd ;_agdc ._dbdg .BorderSides =[]CellBorderSide {CellBorderSideBottom };_agdc ._dbdg .Alignment =CellHorizontalAlignmentRight ;
+_agdc ._afdac =_agdc .NewCellProps ();_agdc ._afdac .Alignment =CellHorizontalAlignmentRight ;_agdc ._agebg =[2]*InvoiceCell {_agdc .newCell ("\u0049\u006e\u0076\u006f\u0069\u0063\u0065\u0020\u006eu\u006d\u0062\u0065\u0072",_agdc ._bdc ),_agdc .newCell ("",_agdc ._bdc )};
+_agdc ._gfbd =[2]*InvoiceCell {_agdc .newCell ("\u0044\u0061\u0074\u0065",_agdc ._bdc ),_agdc .newCell ("",_agdc ._bdc )};_agdc ._edgf =[2]*InvoiceCell {_agdc .newCell ("\u0044\u0075\u0065\u0020\u0044\u0061\u0074\u0065",_agdc ._bdc ),_agdc .newCell ("",_agdc ._bdc )};
+_agdc ._decgf =[2]*InvoiceCell {_agdc .newCell ("\u0053\u0075\u0062\u0074\u006f\u0074\u0061\u006c",_agdc ._afdac ),_agdc .newCell ("",_agdc ._afdac )};_aeffd :=_agdc ._afdac ;_aeffd .TextStyle =_gddd ;_aeffd .BackgroundColor =_ffgd ;_aeffd .BorderColor =_ffgd ;
+_agdc ._abb =[2]*InvoiceCell {_agdc .newCell ("\u0054\u006f\u0074a\u006c",_aeffd ),_agdc .newCell ("",_aeffd )};_agdc ._egdda =[2]string {"\u004e\u006f\u0074e\u0073",""};_agdc ._bfda =[2]string {"T\u0065r\u006d\u0073\u0020\u0061\u006e\u0064\u0020\u0063o\u006e\u0064\u0069\u0074io\u006e\u0073",""};
+_agdc ._eaafb =[]*InvoiceCell {_agdc .newColumn ("D\u0065\u0073\u0063\u0072\u0069\u0070\u0074\u0069\u006f\u006e",CellHorizontalAlignmentLeft ),_agdc .newColumn ("\u0051\u0075\u0061\u006e\u0074\u0069\u0074\u0079",CellHorizontalAlignmentRight ),_agdc .newColumn ("\u0055\u006e\u0069\u0074\u0020\u0070\u0072\u0069\u0063\u0065",CellHorizontalAlignmentRight ),_agdc .newColumn ("\u0041\u006d\u006f\u0075\u006e\u0074",CellHorizontalAlignmentRight )};
+return _agdc ;};
+
+// SetAnchor set gradient position anchor.
+// Default to center.
+func (_cadd *RadialShading )SetAnchor (anchor AnchorPoint ){_cadd ._egaae =anchor };
+
+// Level returns the indentation level of the TOC line.
+func (_fdebg *TOCLine )Level ()uint {return _fdebg ._bbec };
+
+// GeneratePageBlocks draws the polyline on a new block representing the page.
+// Implements the Drawable interface.
+func (_edfb *Polyline )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_bdgf :=NewBlock (ctx .PageWidth ,ctx .PageHeight );_eefe ,_ggebc :=_bdgf .setOpacity (_edfb ._eadf ,_edfb ._eadf );if _ggebc !=nil {return nil ,ctx ,_ggebc ;};
+_aceb :=_edfb ._dadfd .Points ;for _cbbee :=range _aceb {_bead :=&_aceb [_cbbee ];_bead .Y =ctx .PageHeight -_bead .Y ;};_gcefg ,_ ,_ggebc :=_edfb ._dadfd .Draw (_eefe );if _ggebc !=nil {return nil ,ctx ,_ggebc ;};if _ggebc =_bdgf .addContentsByString (string (_gcefg ));
+_ggebc !=nil {return nil ,ctx ,_ggebc ;};return []*Block {_bdgf },ctx ,nil ;};func _fcgca (_ffggf *_fd .File )([]*_fee .PdfPage ,error ){_bfebf ,_dafgg :=_fee .NewPdfReader (_ffggf );if _dafgg !=nil {return nil ,_dafgg ;};_dbgg ,_dafgg :=_bfebf .GetNumPages ();
+if _dafgg !=nil {return nil ,_dafgg ;};var _cebe []*_fee .PdfPage ;for _egdf :=0;_egdf < _dbgg ;_egdf ++{_dbfab ,_baee :=_bfebf .GetPage (_egdf +1);if _baee !=nil {return nil ,_baee ;};_cebe =append (_cebe ,_dbfab );};return _cebe ,nil ;};type rgbColor struct{_ade ,_fcc ,_fbe float64 };
+
+
+// NewGraphicSVGFromString creates a graphic SVG from a SVG string.
+func NewGraphicSVGFromString (svgStr string )(*GraphicSVG ,error ){return _aegf (svgStr )};
+
+// Height returns the height of the graphic svg.
+func (_bfcb *GraphicSVG )Height ()float64 {return _bfcb ._cfff .Height };
+
+// SetTextOverflow controls the behavior of paragraph text which
+// does not fit in the available space.
+func (_gacaf *StyledParagraph )SetTextOverflow (textOverflow TextOverflow ){_gacaf ._ebbd =textOverflow ;};
+
+// SetBorderOpacity sets the border opacity of the ellipse.
+func (_bdgcg *Ellipse )SetBorderOpacity (opacity float64 ){_bdgcg ._gdgd =opacity };
+
+// Height returns Image's document height.
+func (_cdac *Image )Height ()float64 {return _cdac ._eega };
+
+// Invoice represents a configurable invoice template.
+type Invoice struct{_faea string ;_gaffd *Image ;_aedg *InvoiceAddress ;_dfbd *InvoiceAddress ;_eafaf string ;_agebg [2]*InvoiceCell ;_gfbd [2]*InvoiceCell ;_edgf [2]*InvoiceCell ;_dbbdg [][2]*InvoiceCell ;_eaafb []*InvoiceCell ;_ccbed [][]*InvoiceCell ;
+_decgf [2]*InvoiceCell ;_abb [2]*InvoiceCell ;_gcffc [][2]*InvoiceCell ;_egdda [2]string ;_bfda [2]string ;_eeda [][2]string ;_gbecb TextStyle ;_dbge TextStyle ;_effe TextStyle ;_bdbg TextStyle ;_dbbf TextStyle ;_dabeb TextStyle ;_fadg TextStyle ;_bdc InvoiceCellProps ;
+_ggee InvoiceCellProps ;_dbdg InvoiceCellProps ;_afdac InvoiceCellProps ;_ddfd Positioning ;};
+
+// SetPositioning sets the positioning of the ellipse (absolute or relative).
+func (_defd *Ellipse )SetPositioning (position Positioning ){_defd ._bbgc =position };
+
+// Horizontal returns total horizontal (left + right) margin.
+func (_ace *Margins )Horizontal ()float64 {return _ace .Left +_ace .Right };
+
+// NewInvoice returns an instance of an empty invoice.
+func (_faae *Creator )NewInvoice ()*Invoice {_ecdbb :=_faae .NewTextStyle ();_ecdbb .Font =_faae ._gbad ;return _dgbg (_faae .NewTextStyle (),_ecdbb );};
+
+// GetMargins returns the Block's margins: left, right, top, bottom.
+func (_bfg *Block )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _bfg ._gb .Left ,_bfg ._gb .Right ,_bfg ._gb .Top ,_bfg ._gb .Bottom ;};
+
+// GeneratePageBlocks draws the ellipse on a new block representing the page.
+func (_dbdb *Ellipse )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){var (_fgdc []*Block ;_ffd =NewBlock (ctx .PageWidth ,ctx .PageHeight );_beedc =ctx ;);_eaeaa :=_dbdb ._bbgc .IsRelative ();if _eaeaa {_dbdb .applyFitMode (ctx .Width );
+ctx .X +=_dbdb ._fbed .Left ;ctx .Y +=_dbdb ._fbed .Top ;ctx .Width -=_dbdb ._fbed .Left +_dbdb ._fbed .Right ;ctx .Height -=_dbdb ._fbed .Top +_dbdb ._fbed .Bottom ;if _dbdb ._afaf > ctx .Height {_fgdc =append (_fgdc ,_ffd );_ffd =NewBlock (ctx .PageWidth ,ctx .PageHeight );
+ctx .Page ++;_cgbb :=ctx ;_cgbb .Y =ctx .Margins .Top +_dbdb ._fbed .Top ;_cgbb .X =ctx .Margins .Left +_dbdb ._fbed .Left ;_cgbb .Height =ctx .PageHeight -ctx .Margins .Top -ctx .Margins .Bottom -_dbdb ._fbed .Top -_dbdb ._fbed .Bottom ;_cgbb .Width =ctx .PageWidth -ctx .Margins .Left -ctx .Margins .Right -_dbdb ._fbed .Left -_dbdb ._fbed .Right ;
+ctx =_cgbb ;};}else {ctx .X =_dbdb ._gbd -_dbdb ._baeg /2;ctx .Y =_dbdb ._efd -_dbdb ._afaf /2;};_cef :=_bg .Circle {X :ctx .X ,Y :ctx .PageHeight -ctx .Y -_dbdb ._afaf ,Width :_dbdb ._baeg ,Height :_dbdb ._afaf ,BorderWidth :_dbdb ._bedef ,Opacity :1.0};
+if _dbdb ._dbeaf !=nil {_cef .FillEnabled =true ;_dffg :=_cfd (_dbdb ._dbeaf );_ebdf :=_aacgba (_ffd ,_dffg ,_dbdb ._dbeaf ,func ()Rectangle {return Rectangle {_cfbab :_cef .X ,_cffbf :_cef .Y ,_bfddd :_cef .Width ,_abfd :_cef .Height };});if _ebdf !=nil {return nil ,ctx ,_ebdf ;
+};_cef .FillColor =_dffg ;};if _dbdb ._fdfd !=nil {_cef .BorderEnabled =false ;if _dbdb ._bedef > 0{_cef .BorderEnabled =true ;};_cef .BorderColor =_cfd (_dbdb ._fdfd );_cef .BorderWidth =_dbdb ._bedef ;};_gaec ,_effc :=_ffd .setOpacity (_dbdb ._eeec ,_dbdb ._gdgd );
+if _effc !=nil {return nil ,ctx ,_effc ;};_decg ,_ ,_effc :=_cef .Draw (_gaec );if _effc !=nil {return nil ,ctx ,_effc ;};_effc =_ffd .addContentsByString (string (_decg ));if _effc !=nil {return nil ,ctx ,_effc ;};if _eaeaa {ctx .X =_beedc .X ;ctx .Width =_beedc .Width ;
+ctx .Y +=_dbdb ._afaf +_dbdb ._fbed .Bottom ;ctx .Height -=_dbdb ._afaf ;}else {ctx =_beedc ;};_fgdc =append (_fgdc ,_ffd );return _fgdc ,ctx ,nil ;};
+
+// The Image type is used to draw an image onto PDF.
+type Image struct{_aaae *_fee .XObjectImage ;_dgaec *_fee .Image ;_dbbd float64 ;_edda ,_eega float64 ;_bfdf ,_eaaa float64 ;_agagd Positioning ;_eeef HorizontalAlignment ;_gbcdd float64 ;_egbgf float64 ;_edcd float64 ;_dgb Margins ;_egca ,_cddb float64 ;
+_fcgd _dd .StreamEncoder ;_eged FitMode ;};func _edafc (_dgdefb *templateProcessor ,_gdge *templateNode )(interface{},error ){return _dgdefb .parseListMarker (_gdge );};
+
+// SetLineMargins sets the margins for all new lines of the table of contents.
+func (_ddafb *TOC )SetLineMargins (left ,right ,top ,bottom float64 ){_baegc :=&_ddafb ._fdgc ;_baegc .Left =left ;_baegc .Right =right ;_baegc .Top =top ;_baegc .Bottom =bottom ;};
+
+// CellBorderSide defines the table cell's border side.
+type CellBorderSide int ;
+
+// SetBorderColor sets the cell's border color.
+func (_ccbg *TableCell )SetBorderColor (col Color ){_ccbg ._gefeb =col ;_ccbg ._fcgg =col ;_ccbg ._fgdgg =col ;_ccbg ._gcac =col ;};
+
+// PageSize represents the page size as a 2 element array representing the width and height in PDF document units (points).
+type PageSize [2]float64 ;func (_aecd *templateProcessor )parseFontAttr (_bcec ,_ceeea string )*_fee .PdfFont {_da .Log .Debug ("P\u0061\u0072\u0073\u0069\u006e\u0067 \u0066\u006f\u006e\u0074\u0020\u0061t\u0074\u0072\u0069\u0062\u0075\u0074\u0065:\u0020\u0028\u0060\u0025\u0073\u0060\u002c\u0020\u0025\u0073)\u002e",_bcec ,_ceeea );
+_eacac :=_aecd .creator ._eedd ;if _ceeea ==""{return _eacac ;};_dcda :=_cf .Split (_ceeea ,"\u002c");for _ ,_bcbgg :=range _dcda {_bcbgg =_cf .TrimSpace (_bcbgg );if _bcbgg ==""{continue ;};_ffba ,_faaca :=_aecd ._deag .FontMap [_ceeea ];if _faaca {return _ffba ;
+};_fgad ,_faaca :=map[string ]_fee .StdFontName {"\u0063o\u0075\u0072\u0069\u0065\u0072":_fee .CourierName ,"\u0063\u006f\u0075r\u0069\u0065\u0072\u002d\u0062\u006f\u006c\u0064":_fee .CourierBoldName ,"\u0063o\u0075r\u0069\u0065\u0072\u002d\u006f\u0062\u006c\u0069\u0071\u0075\u0065":_fee .CourierObliqueName ,"c\u006fu\u0072\u0069\u0065\u0072\u002d\u0062\u006f\u006cd\u002d\u006f\u0062\u006ciq\u0075\u0065":_fee .CourierBoldObliqueName ,"\u0068e\u006c\u0076\u0065\u0074\u0069\u0063a":_fee .HelveticaName ,"\u0068\u0065\u006c\u0076\u0065\u0074\u0069\u0063\u0061-\u0062\u006f\u006c\u0064":_fee .HelveticaBoldName ,"\u0068\u0065\u006c\u0076\u0065\u0074\u0069\u0063\u0061\u002d\u006f\u0062l\u0069\u0071\u0075\u0065":_fee .HelveticaObliqueName ,"\u0068\u0065\u006c\u0076et\u0069\u0063\u0061\u002d\u0062\u006f\u006c\u0064\u002d\u006f\u0062\u006c\u0069\u0071u\u0065":_fee .HelveticaBoldObliqueName ,"\u0073\u0079\u006d\u0062\u006f\u006c":_fee .SymbolName ,"\u007a\u0061\u0070\u0066\u002d\u0064\u0069\u006e\u0067\u0062\u0061\u0074\u0073":_fee .ZapfDingbatsName ,"\u0074\u0069\u006de\u0073":_fee .TimesRomanName ,"\u0074\u0069\u006d\u0065\u0073\u002d\u0062\u006f\u006c\u0064":_fee .TimesBoldName ,"\u0074\u0069\u006de\u0073\u002d\u0069\u0074\u0061\u006c\u0069\u0063":_fee .TimesItalicName ,"\u0074\u0069\u006d\u0065\u0073\u002d\u0062\u006f\u006c\u0064\u002d\u0069t\u0061\u006c\u0069\u0063":_fee .TimesBoldItalicName }[_ceeea ];
+if _faaca {if _eegba ,_adbgd :=_fee .NewStandard14Font (_fgad );_adbgd ==nil {return _eegba ;};};if _bfded :=_aecd .parseAttrPropList (_bcbgg );len (_bfded )> 0{if _gdefa ,_bebed :=_bfded ["\u0070\u0061\u0074\u0068"];_bebed {_ccad :=_fee .NewPdfFontFromTTFFile ;
+if _aebge ,_cgebg :=_bfded ["\u0074\u0079\u0070\u0065"];_cgebg &&_aebge =="\u0063o\u006d\u0070\u006f\u0073\u0069\u0074e"{_ccad =_fee .NewCompositePdfFontFromTTFFile ;};if _gcdf ,_ebbg :=_ccad (_gdefa );_ebbg !=nil {_da .Log .Debug ("\u0043\u006fu\u006c\u0064\u0020\u006e\u006f\u0074\u0020\u006c\u006f\u0061\u0064\u0020\u0066\u006f\u006e\u0074\u0020\u0060\u0025\u0073\u0060\u003a %\u0076\u002e",_gdefa ,_ebbg );
+}else {return _gcdf ;};};};};return _eacac ;};
+
+// SetColorBottom sets border color for bottom.
+func (_fea *border )SetColorBottom (col Color ){_fea ._beed =col };func _dgga (_eddfcb *templateProcessor ,_bgdef *templateNode )(interface{},error ){return _eddfcb .parseTableCell (_bgdef );};
+
+// NoteHeadingStyle returns the style properties used to render the heading of
+// the invoice note sections.
+func (_cefg *Invoice )NoteHeadingStyle ()TextStyle {return _cefg ._fadg };
+
+// SetPositioning sets the positioning of the line (absolute or relative).
+func (_bccg *Line )SetPositioning (positioning Positioning ){_bccg ._aede =positioning };
+
+// AddShadingResource adds shading dictionary inside the resources dictionary.
+func (_fdbbf *LinearShading )AddShadingResource (block *Block )(_dgfef _dd .PdfObjectName ,_dged error ){_gfddg :=1;_dgfef =_dd .PdfObjectName ("\u0053\u0068"+_fe .Itoa (_gfddg ));for block ._gf .HasShadingByName (_dgfef ){_gfddg ++;_dgfef =_dd .PdfObjectName ("\u0053\u0068"+_fe .Itoa (_gfddg ));
+};if _aaaf :=block ._gf .SetShadingByName (_dgfef ,_fdbbf .shadingModel ().ToPdfObject ());_aaaf !=nil {return "",_aaaf ;};return _dgfef ,nil ;};
+
+// Insert adds a new text chunk at the specified position in the paragraph.
+func (_ffbf *StyledParagraph )Insert (index uint ,text string )*TextChunk {_ggdf :=uint (len (_ffbf ._adeb ));if index > _ggdf {index =_ggdf ;};_ddedf :=NewTextChunk (text ,_ffbf ._cefc );_ffbf ._adeb =append (_ffbf ._adeb [:index ],append ([]*TextChunk {_ddedf },_ffbf ._adeb [index :]...)...);
+_ffbf .wrapText ();return _ddedf ;};
+
+// GetHeading returns the chapter heading paragraph. Used to give access to address style: font, sizing etc.
+func (_dfc *Chapter )GetHeading ()*Paragraph {return _dfc ._ddc };
+
+// SetFitMode sets the fit mode of the line.
+// NOTE: The fit mode is only applied if relative positioning is used.
+func (_ceff *Line )SetFitMode (fitMode FitMode ){_ceff ._fgcc =fitMode };
+
+// Terms returns the terms and conditions section of the invoice as a
+// title-content pair.
+func (_ecge *Invoice )Terms ()(string ,string ){return _ecge ._bfda [0],_ecge ._bfda [1]};
+
+// NewBlock creates a new Block with specified width and height.
+func NewBlock (width float64 ,height float64 )*Block {_ebd :=&Block {};_ebd ._db =&_ebc .ContentStreamOperations {};_ebd ._gf =_fee .NewPdfPageResources ();_ebd ._bab =width ;_ebd ._egb =height ;return _ebd ;};
+
+// EnablePageWrap controls whether the division is wrapped across pages.
+// If disabled, the division is moved in its entirety on a new page, if it
+// does not fit in the available height. By default, page wrapping is enabled.
+// If the height of the division is larger than an entire page, wrapping is
+// enabled automatically in order to avoid unwanted behavior.
+// Currently, page wrapping can only be disabled for vertical divisions.
+func (_dfcg *Division )EnablePageWrap (enable bool ){_dfcg ._fgg =enable };func _acea (_efca ,_eced ,_acgge ,_baaf float64 )*Ellipse {return &Ellipse {_gbd :_efca ,_efd :_eced ,_baeg :_acgge ,_afaf :_baaf ,_bbgc :PositionAbsolute ,_eeec :1.0,_fdfd :ColorBlack ,_bedef :1.0,_gdgd :1.0};
+};
+
+// Height returns the height of the rectangle.
+// NOTE: the returned value does not include the border width of the rectangle.
+func (_aeed *Rectangle )Height ()float64 {return _aeed ._abfd };func _ggad (_fbdgg *Creator ,_abdcc []byte ,_gfbdb *TemplateOptions ,_gead componentRenderer )*templateProcessor {if _gfbdb ==nil {_gfbdb =&TemplateOptions {};};_gfbdb .init ();if _gead ==nil {_gead =_fbdgg ;
+};return &templateProcessor {creator :_fbdgg ,_ffcd :_abdcc ,_deag :_gfbdb ,_cgcaa :_gead };};
+
+// MultiCell makes a new cell with the specified row span and col span
+// and inserts it into the table at the current position.
+func (_edbd *Table )MultiCell (rowspan ,colspan int )*TableCell {_edbd ._gacbf ++;_cdead :=(_edbd .moveToNextAvailableCell ()-1)%(_edbd ._fcfd )+1;_abcb :=(_edbd ._gacbf -1)/_edbd ._fcfd +1;for _abcb > _edbd ._edde {_edbd ._edde ++;_edbd ._agda =append (_edbd ._agda ,_edbd ._gbbe );
+};_gdga :=&TableCell {};_gdga ._eeadc =_abcb ;_gdga ._faga =_cdead ;_gdga ._bdff =5;_gdga ._fgfda =CellBorderStyleNone ;_gdga ._gaeaa =_bg .LineStyleSolid ;_gdga ._cdfcd =CellHorizontalAlignmentLeft ;_gdga ._egfeb =CellVerticalAlignmentTop ;_gdga ._bcdfe =0;
+_gdga ._fabe =0;_gdga ._bdga =0;_gdga ._cbcbcg =0;_bbga :=ColorBlack ;_gdga ._gefeb =_bbga ;_gdga ._fcgg =_bbga ;_gdga ._fgdgg =_bbga ;_gdga ._gcac =_bbga ;if rowspan < 1{_da .Log .Debug ("\u0054\u0061\u0062\u006c\u0065\u003a\u0020\u0063\u0065\u006c\u006c\u0020\u0072\u006f\u0077\u0073\u0070a\u006e\u0020\u006c\u0065\u0073\u0073\u0020\u0074\u0068\u0061t\u0020\u0031\u0020\u0028\u0025\u0064\u0029\u002e\u0020\u0053\u0065\u0074\u0074\u0069\u006e\u0067\u0020\u0063e\u006c\u006c\u0020\u0072\u006f\u0077s\u0070\u0061n\u0020\u0074o\u00201\u002e",rowspan );
+rowspan =1;};_dgab :=_edbd ._edde -(_gdga ._eeadc -1);if rowspan > _dgab {_da .Log .Debug ("\u0054\u0061b\u006c\u0065\u003a\u0020\u0063\u0065\u006c\u006c\u0020\u0072\u006f\u0077\u0073\u0070\u0061\u006e\u0020\u0028\u0025d\u0029\u0020\u0065\u0078\u0063\u0065e\u0064\u0073\u0020\u0072\u0065\u006d\u0061\u0069\u006e\u0069\u006e\u0067\u0020\u0072o\u0077\u0073 \u0028\u0025\u0064\u0029.\u0020\u0041\u0064\u0064\u0069n\u0067\u0020\u0072\u006f\u0077\u0073\u002e",rowspan ,_dgab );
+_edbd ._edde +=rowspan -1;for _bcgb :=0;_bcgb <=rowspan -_dgab ;_bcgb ++{_edbd ._agda =append (_edbd ._agda ,_edbd ._gbbe );};};for _fefgb :=0;_fefgb < colspan &&_cdead +_fefgb -1< len (_edbd ._gbdga );_fefgb ++{_edbd ._gbdga [_cdead +_fefgb -1]=rowspan -1;
+};_gdga ._dbbfc =rowspan ;if colspan < 1{_da .Log .Debug ("\u0054\u0061\u0062\u006c\u0065\u003a\u0020\u0063\u0065\u006c\u006c\u0020\u0063\u006f\u006c\u0073\u0070a\u006e\u0020\u006c\u0065\u0073\u0073\u0020\u0074\u0068\u0061n\u0020\u0031\u0020\u0028\u0025\u0064\u0029\u002e\u0020\u0053\u0065\u0074\u0074\u0069\u006e\u0067\u0020\u0063e\u006c\u006c\u0020\u0063\u006f\u006cs\u0070\u0061n\u0020\u0074o\u00201\u002e",colspan );
+colspan =1;};_gdfba :=_edbd ._fcfd -(_gdga ._faga -1);if colspan > _gdfba {_da .Log .Debug ("\u0054\u0061\u0062\u006c\u0065:\u0020\u0063\u0065\u006c\u006c\u0020\u0063o\u006c\u0073\u0070\u0061\u006e\u0020\u0028\u0025\u0064\u0029\u0020\u0065\u0078\u0063\u0065\u0065\u0064\u0073\u0020\u0072\u0065\u006d\u0061\u0069\u006e\u0069\u006e\u0067\u0020\u0072\u006f\u0077\u0020\u0063\u006f\u006c\u0073\u0020\u0028\u0025d\u0029\u002e\u0020\u0041\u0064\u006a\u0075\u0073\u0074\u0069\u006e\u0067 \u0063\u006f\u006c\u0073\u0070\u0061n\u002e",colspan ,_gdfba );
+colspan =_gdfba ;};_gdga ._cdefg =colspan ;_edbd ._gacbf +=colspan -1;_edbd ._afbaa =append (_edbd ._afbaa ,_gdga );_gdga ._fagfd =_edbd ;return _gdga ;};
+
+// SetColumnWidths sets the fractional column widths.
+// Each width should be in the range 0-1 and is a fraction of the table width.
+// The number of width inputs must match number of columns, otherwise an error is returned.
+func (_bgbc *Table )SetColumnWidths (widths ...float64 )error {if len (widths )!=_bgbc ._fcfd {_da .Log .Debug ("M\u0069\u0073\u006d\u0061\u0074\u0063\u0068\u0069\u006e\u0067\u0020\u006e\u0075\u006d\u0062\u0065\u0072\u0020o\u0066\u0020\u0077\u0069\u0064\u0074\u0068\u0073\u0020\u0061nd\u0020\u0063\u006fl\u0075m\u006e\u0073");
+return _d .New ("\u0072\u0061\u006e\u0067\u0065\u0020\u0063\u0068\u0065\u0063\u006b\u0020e\u0072\u0072\u006f\u0072");};_bgbc ._fadgg =widths ;return nil ;};
+
+// Title returns the title of the invoice.
+func (_gbfa *Invoice )Title ()string {return _gbfa ._faea };
+
+// ScaleToWidth scales the Block to a specified width, maintaining the same aspect ratio.
+func (_cdea *Block )ScaleToWidth (w float64 ){_fc :=w /_cdea ._bab ;_cdea .Scale (_fc ,_fc )};
+
+// SetFitMode sets the fit mode of the rectangle.
+// NOTE: The fit mode is only applied if relative positioning is used.
+func (_dbfe *Rectangle )SetFitMode (fitMode FitMode ){_dbfe ._fefc =fitMode };func _bafd (_dabebc float64 ,_gagd float64 ,_dfccf float64 ,_ecgb float64 ,_dccd []*ColorPoint )*RadialShading {return &RadialShading {_ecef :&shading {_bbcfd :ColorWhite ,_fbfeg :false ,_gcefb :[]bool {false ,false },_ccff :_dccd },_cbbeee :_dabebc ,_gbfb :_gagd ,_cgfcf :_dfccf ,_bbdd :_ecgb ,_egaae :AnchorCenter };
+};
+
+// Width returns the width of the chart. In relative positioning mode,
+// all the available context width is used at render time.
+func (_eccga *Chart )Width ()float64 {return float64 (_eccga ._edbg .Width ())};
+
+// SetTextVerticalAlignment sets the vertical alignment of the text within the
+// bounds of the styled paragraph.
+//
+// Note: Currently Styled Paragraph doesn't support TextVerticalAlignmentBottom
+// as that option only used for aligning text chunks.
+//
+// In order to change the vertical alignment of individual text chunks, use TextChunk.VerticalAlignment.
+func (_edag *StyledParagraph )SetTextVerticalAlignment (align TextVerticalAlignment ){_edag ._cfebc =align ;};func (_cgdcc *shading )generatePdfFunctions ()[]_fee .PdfFunction {if len (_cgdcc ._ccff )==0{return nil ;}else if len (_cgdcc ._ccff )<=2{_ffdfc ,_bdcg ,_ffdg :=_cgdcc ._ccff [0]._abfba .ToRGB ();
+_gadd ,_fdeb ,_efcfd :=_cgdcc ._ccff [len (_cgdcc ._ccff )-1]._abfba .ToRGB ();return []_fee .PdfFunction {&_fee .PdfFunctionType2 {Domain :[]float64 {0.0,1.0},Range :[]float64 {0.0,1.0,0.0,1.0,0.0,1.0},N :1,C0 :[]float64 {_ffdfc ,_bdcg ,_ffdg },C1 :[]float64 {_gadd ,_fdeb ,_efcfd }}};
+}else {_efgaa :=[]_fee .PdfFunction {};_gbae :=[]float64 {};for _bcagf :=0;_bcagf < len (_cgdcc ._ccff )-1;_bcagf ++{_begd ,_ebgfb ,_cdbca :=_cgdcc ._ccff [_bcagf ]._abfba .ToRGB ();_fgfd ,_bbgf ,_abcf :=_cgdcc ._ccff [_bcagf +1]._abfba .ToRGB ();_dfefb :=&_fee .PdfFunctionType2 {Domain :[]float64 {0.0,1.0},Range :[]float64 {0.0,1.0,0.0,1.0,0.0,1.0},N :1,C0 :[]float64 {_begd ,_ebgfb ,_cdbca },C1 :[]float64 {_fgfd ,_bbgf ,_abcf }};
+_efgaa =append (_efgaa ,_dfefb );if _bcagf > 0{_gbae =append (_gbae ,_cgdcc ._ccff [_bcagf ]._gfeg );};};_ebfg :=[]float64 {};for range _efgaa {_ebfg =append (_ebfg ,[]float64 {0.0,1.0}...);};return []_fee .PdfFunction {&_fee .PdfFunctionType3 {Domain :[]float64 {0.0,1.0},Range :[]float64 {0.0,1.0,0.0,1.0,0.0,1.0},Functions :_efgaa ,Bounds :_gbae ,Encode :_ebfg }};
+};};
+
+// ToRGB implements interface Color.
+// Note: It's not directly used since shading color works differently than regular color.
+func (_gbaa *LinearShading )ToRGB ()(float64 ,float64 ,float64 ){return 0,0,0};
+
+// Heading returns the heading component of the table of contents.
+func (_eggfd *TOC )Heading ()*StyledParagraph {return _eggfd ._bfaa };func (_bgaa *Paragraph )getTextLineWidth (_eaad string )float64 {var _gfab float64 ;for _ ,_gggdb :=range _eaad {if _gggdb =='\u000A'{continue ;};_eeadf ,_ebddf :=_bgaa ._gbdaa .GetRuneMetrics (_gggdb );
+if !_ebddf {_da .Log .Debug ("\u0045\u0052R\u004f\u0052\u003a\u0020\u0052u\u006e\u0065\u0020\u0063\u0068a\u0072\u0020\u006d\u0065\u0074\u0072\u0069\u0063\u0073\u0020\u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064\u0021\u0020\u0028\u0072\u0075\u006e\u0065\u0020\u0030\u0078\u0025\u0030\u0034\u0078\u003d\u0025\u0063\u0029",_gggdb ,_gggdb );
+return -1;};_gfab +=_bgaa ._bgef *_eeadf .Wx ;};return _gfab ;};
 
 // Add adds a new Drawable to the chapter.
 // Currently supported Drawables:
@@ -390,1786 +1075,191 @@ break ;};};if len (_afbge )> 0{_geec =_cbb ();*_geec =*_dbea ;_geec ._ebd =_afbg
 // - *Block,
 // - *PageBreak
 // - *Chapter
-func (_eef *Chapter )Add (d Drawable )error {if Drawable (_eef )==d {_cf .Log .Debug ("\u0045R\u0052\u004f\u0052\u003a\u0020\u0043\u0061\u006e\u006e\u006f\u0074 \u0061\u0064\u0064\u0020\u0069\u0074\u0073\u0065\u006c\u0066");return _d .New ("\u0072\u0061\u006e\u0067\u0065\u0020\u0063\u0068\u0065\u0063\u006b\u0020e\u0072\u0072\u006f\u0072");
-};switch _afcd :=d .(type ){case *Paragraph ,*StyledParagraph ,*Image ,*Chart ,*Table ,*Division ,*List ,*Rectangle ,*Ellipse ,*Line ,*Block ,*PageBreak ,*Chapter :_eef ._cgc =append (_eef ._cgc ,d );case containerDrawable :_afcdf ,_badc :=_afcd .ContainerComponent (_eef );
-if _badc !=nil {return _badc ;};_eef ._cgc =append (_eef ._cgc ,_afcdf );default:_cf .Log .Debug ("\u0055n\u0073u\u0070\u0070\u006f\u0072\u0074\u0065\u0064\u003a\u0020\u0025\u0054",d );return _d .New ("\u0074\u0079p\u0065\u0020\u0063h\u0065\u0063\u006b\u0020\u0065\u0072\u0072\u006f\u0072");
+func (_aec *Chapter )Add (d Drawable )error {if Drawable (_aec )==d {_da .Log .Debug ("\u0045R\u0052\u004f\u0052\u003a\u0020\u0043\u0061\u006e\u006e\u006f\u0074 \u0061\u0064\u0064\u0020\u0069\u0074\u0073\u0065\u006c\u0066");return _d .New ("\u0072\u0061\u006e\u0067\u0065\u0020\u0063\u0068\u0065\u0063\u006b\u0020e\u0072\u0072\u006f\u0072");
+};switch _afda :=d .(type ){case *Paragraph ,*StyledParagraph ,*Image ,*Chart ,*Table ,*Division ,*List ,*Rectangle ,*Ellipse ,*Line ,*Block ,*PageBreak ,*Chapter :_aec ._cbf =append (_aec ._cbf ,d );case containerDrawable :_dbf ,_dgege :=_afda .ContainerComponent (_aec );
+if _dgege !=nil {return _dgege ;};_aec ._cbf =append (_aec ._cbf ,_dbf );default:_da .Log .Debug ("\u0055n\u0073u\u0070\u0070\u006f\u0072\u0074\u0065\u0064\u003a\u0020\u0025\u0054",d );return _d .New ("\u0074\u0079p\u0065\u0020\u0063h\u0065\u0063\u006b\u0020\u0065\u0072\u0072\u006f\u0072");
 };return nil ;};
 
-// GeneratePageBlocks generate the Page blocks. Draws the Image on a block, implementing the Drawable interface.
-func (_cacg *Image )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){if _cacg ._ddec ==nil {if _cfag :=_cacg .makeXObject ();_cfag !=nil {return nil ,ctx ,_cfag ;};};var _eeeb []*Block ;_dgf :=ctx ;_fegf :=NewBlock (ctx .PageWidth ,ctx .PageHeight );
-if _cacg ._ebff .IsRelative (){_cacg .applyFitMode (ctx .Width );ctx .X +=_cacg ._gbeae .Left ;ctx .Y +=_cacg ._gbeae .Top ;ctx .Width -=_cacg ._gbeae .Left +_cacg ._gbeae .Right ;ctx .Height -=_cacg ._gbeae .Top +_cacg ._gbeae .Bottom ;if _cacg ._dcde > ctx .Height {_eeeb =append (_eeeb ,_fegf );
-_fegf =NewBlock (ctx .PageWidth ,ctx .PageHeight );ctx .Page ++;_baea :=ctx ;_baea .Y =ctx .Margins .Top +_cacg ._gbeae .Top ;_baea .X =ctx .Margins .Left +_cacg ._gbeae .Left ;_baea .Height =ctx .PageHeight -ctx .Margins .Top -ctx .Margins .Bottom -_cacg ._gbeae .Top -_cacg ._gbeae .Bottom ;
-_baea .Width =ctx .PageWidth -ctx .Margins .Left -ctx .Margins .Right -_cacg ._gbeae .Left -_cacg ._gbeae .Right ;ctx =_baea ;};}else {ctx .X =_cacg ._ecadg ;ctx .Y =_cacg ._ggbg ;};ctx ,_gcb :=_gbffc (_fegf ,_cacg ,ctx );if _gcb !=nil {return nil ,ctx ,_gcb ;
-};_eeeb =append (_eeeb ,_fegf );if _cacg ._ebff .IsAbsolute (){ctx =_dgf ;}else {ctx .X =_dgf .X ;ctx .Width =_dgf .Width ;ctx .Y +=_cacg ._gbeae .Bottom ;};return _eeeb ,ctx ,nil ;};
-
-// SetEnableWrap sets the line wrapping enabled flag.
-func (_ccfdc *StyledParagraph )SetEnableWrap (enableWrap bool ){_ccfdc ._fbbcc =enableWrap ;_ccfdc ._feege =false ;};
-
-// Width returns the width of the Paragraph.
-func (_ebfc *Paragraph )Width ()float64 {if _ebfc ._bedd &&int (_ebfc ._bdcb )> 0{return _ebfc ._bdcb ;};return _ebfc .getTextWidth ()/1000.0;};func _befc (_dade TextStyle )*List {return &List {_bdeb :TextChunk {Text :"\u2022\u0020",Style :_dade },_gbdd :0,_egca :true ,_daeb :PositionRelative ,_dgcbd :_dade };
-};func (_feec *InvoiceAddress )fmtLine (_afdgc ,_gbg string ,_aecea bool )string {if _aecea {_gbg ="";};return _agd .Sprintf ("\u0025\u0073\u0025s\u000a",_gbg ,_afdgc );};func (_cegd *templateProcessor )parseLinkAttr (_dggd ,_cgbc string )*_gf .PdfAnnotation {_cgbc =_eg .TrimSpace (_cgbc );
-if _eg .HasPrefix (_cgbc ,"\u0075\u0072\u006c(\u0027")&&_eg .HasSuffix (_cgbc ,"\u0027\u0029")&&len (_cgbc )> 7{return _cdag (_cgbc [5:len (_cgbc )-2]);};if _eg .HasPrefix (_cgbc ,"\u0070\u0061\u0067e\u0028")&&_eg .HasSuffix (_cgbc ,"\u0029")&&len (_cgbc )> 6{var (_gfadd error ;
-_bagbg int64 ;_bcca float64 ;_ggcbc float64 ;_ddeea =1.0;_agfg =_eg .Split (_cgbc [5:len (_cgbc )-1],"\u002c"););_bagbg ,_gfadd =_egd .ParseInt (_eg .TrimSpace (_agfg [0]),10,64);if _gfadd !=nil {_cf .Log .Error ("\u0046\u0061\u0069\u006c\u0065\u0064 \u0070\u0061\u0072\u0073\u0069\u006e\u0067\u0020\u0070\u0061\u0067\u0065\u0020p\u0061\u0072\u0061\u006d\u0065\u0074\u0065r\u003a\u0020\u0025\u0076",_gfadd );
-return nil ;};if len (_agfg )>=2{_bcca ,_gfadd =_egd .ParseFloat (_eg .TrimSpace (_agfg [1]),64);if _gfadd !=nil {_cf .Log .Error ("\u0046\u0061\u0069\u006c\u0065\u0064\u0020\u0070\u0061\u0072\u0073\u0069\u006eg\u0020\u0058\u0020\u0070\u006f\u0073i\u0074\u0069\u006f\u006e\u0020\u0070\u0061\u0072\u0061\u006d\u0065\u0074\u0065r\u003a\u0020\u0025\u0076",_gfadd );
-return nil ;};};if len (_agfg )>=3{_ggcbc ,_gfadd =_egd .ParseFloat (_eg .TrimSpace (_agfg [2]),64);if _gfadd !=nil {_cf .Log .Error ("\u0046\u0061\u0069\u006c\u0065\u0064\u0020\u0070\u0061\u0072\u0073\u0069\u006eg\u0020\u0059\u0020\u0070\u006f\u0073i\u0074\u0069\u006f\u006e\u0020\u0070\u0061\u0072\u0061\u006d\u0065\u0074\u0065r\u003a\u0020\u0025\u0076",_gfadd );
-return nil ;};};if len (_agfg )>=4{_ddeea ,_gfadd =_egd .ParseFloat (_eg .TrimSpace (_agfg [3]),64);if _gfadd !=nil {_cf .Log .Error ("\u0046\u0061\u0069\u006c\u0065\u0064 \u0070\u0061\u0072\u0073\u0069\u006e\u0067\u0020\u007a\u006f\u006f\u006d\u0020p\u0061\u0072\u0061\u006d\u0065\u0074\u0065r\u003a\u0020\u0025\u0076",_gfadd );
-return nil ;};};return _feab (_bagbg -1,_bcca ,_ggcbc ,_ddeea );};return nil ;};
-
-// MoveY moves the drawing context to absolute position y.
-func (_ddc *Creator )MoveY (y float64 ){_ddc ._fagd .Y =y };
-
-// Scale scales the ellipse dimensions by the specified factors.
-func (_bgd *Ellipse )Scale (xFactor ,yFactor float64 ){_bgd ._bcce =xFactor *_bgd ._bcce ;_bgd ._ccae =yFactor *_bgd ._ccae ;};func (_cgdg *Paragraph )wrapText ()error {if !_cgdg ._bedd ||int (_cgdg ._bdcb )<=0{_cgdg ._edcc =[]string {_cgdg ._ccaac };return nil ;
-};_gcdc :=NewTextChunk (_cgdg ._ccaac ,TextStyle {Font :_cgdg ._befba ,FontSize :_cgdg ._dgfa });_ddfd ,_dcac :=_gcdc .Wrap (_cgdg ._bdcb );if _dcac !=nil {return _dcac ;};if _cgdg ._dgfc > 0&&len (_ddfd )> _cgdg ._dgfc {_ddfd =_ddfd [:_cgdg ._dgfc ];};
-_cgdg ._edcc =_ddfd ;return nil ;};
-
-// LineWidth returns the width of the line.
-func (_cfcd *Line )LineWidth ()float64 {return _cfcd ._decc };
-
-// SetNotes sets the notes section of the invoice.
-func (_bffc *Invoice )SetNotes (title ,content string ){_bffc ._gedg =[2]string {title ,content }};
-
-// SetBorderColor sets the border color for the path.
-func (_abfc *FilledCurve )SetBorderColor (color Color ){_abfc ._afde =color };func (_fdea *Invoice )generateTotalBlocks (_ccgga DrawContext )([]*Block ,DrawContext ,error ){_fddc :=_afcfg (4);_fddc .SetMargins (0,0,10,10);_agbg :=[][2]*InvoiceCell {_fdea ._ecgfa };
-_agbg =append (_agbg ,_fdea ._gecf ...);_agbg =append (_agbg ,_fdea ._aefbg );for _ ,_egcf :=range _agbg {_abeg ,_gfbbg :=_egcf [0],_egcf [1];if _gfbbg .Value ==""{continue ;};_fddc .SkipCells (2);_fecf :=_fddc .NewCell ();_fecf .SetBackgroundColor (_abeg .BackgroundColor );
-_fecf .SetHorizontalAlignment (_gfbbg .Alignment );_fdea .setCellBorder (_fecf ,_abeg );_ebcgg :=_ebab (_abeg .TextStyle );_ebcgg .SetMargins (0,0,2,1);_ebcgg .Append (_abeg .Value );_fecf .SetContent (_ebcgg );_fecf =_fddc .NewCell ();_fecf .SetBackgroundColor (_gfbbg .BackgroundColor );
-_fecf .SetHorizontalAlignment (_gfbbg .Alignment );_fdea .setCellBorder (_fecf ,_abeg );_ebcgg =_ebab (_gfbbg .TextStyle );_ebcgg .SetMargins (0,0,2,1);_ebcgg .Append (_gfbbg .Value );_fecf .SetContent (_ebcgg );};return _fddc .GeneratePageBlocks (_ccgga );
-};
-
-// SetBoundingBox set gradient color bounding box where the gradient would be rendered.
-func (_ddgd *LinearShading )SetBoundingBox (x ,y ,width ,height float64 ){_ddgd ._cbba =&_gf .PdfRectangle {Llx :x ,Lly :y ,Urx :x +width ,Ury :y +height };};
-
-// SetOpacity sets opacity for Image.
-func (_aaab *Image )SetOpacity (opacity float64 ){_aaab ._cbfe =opacity };
-
-// Vertical returns total vertical (top + bottom) margin.
-func (_eaag *Margins )Vertical ()float64 {return _eaag .Bottom +_eaag .Top };
-
-// AddExternalLink adds a new external link to the paragraph.
-// The text parameter represents the text that is displayed and the url
-// parameter sets the destionation of the link.
-func (_gaeca *StyledParagraph )AddExternalLink (text ,url string )*TextChunk {_cefff :=NewTextChunk (text ,_gaeca ._fcfd );_cefff ._cacbg =_cdag (url );return _gaeca .appendChunk (_cefff );};
-
-// SetAnnotation sets a annotation on a TextChunk.
-func (_egcad *TextChunk )SetAnnotation (annotation *_gf .PdfAnnotation ){_egcad ._cacbg =annotation };
-
-// Cols returns the total number of columns the table has.
-func (_cgafb *Table )Cols ()int {return _cgafb ._eeecb };
-
-// GetCoords returns the center coordinates of ellipse (`xc`, `yc`).
-func (_acfe *Ellipse )GetCoords ()(float64 ,float64 ){return _acfe ._gecd ,_acfe ._abbb };func (_adbbf *templateProcessor )parseLinearGradientAttr (creator *Creator ,_abdgg string )Color {_efea :=ColorBlack ;if _abdgg ==""{return _efea ;};_dbcfg :=creator .NewLinearGradientColor ([]*ColorPoint {});
-_dbcfg .SetExtends (true ,true );var (_dfgbe =_eg .Split (_abdgg [16:len (_abdgg )-1],"\u002c");_dgdc =_eg .TrimSpace (_dfgbe [0]););if _eg .HasSuffix (_dgdc ,"\u0064\u0065\u0067"){_eacfc ,_cefdbe :=_egd .ParseFloat (_dgdc [:len (_dgdc )-3],64);if _cefdbe !=nil {_cf .Log .Debug ("\u0046\u0061\u0069\u006c\u0065\u0064 \u0070\u0061\u0072\u0073\u0069\u006e\u0067\u0020\u0067\u0072\u0061\u0064\u0069e\u006e\u0074\u0020\u0061\u006e\u0067\u006ce\u003a\u0020\u0025\u0076",_cefdbe );
-}else {_dbcfg .SetAngle (_eacfc );};_dfgbe =_dfgbe [1:];};_ebbgb ,_ggcf :=_adbbf .processGradientColorPair (_dfgbe );if _ebbgb ==nil ||_ggcf ==nil {return _efea ;};for _bcdg :=0;_bcdg < len (_ebbgb );_bcdg ++{_dbcfg .AddColorStop (_ebbgb [_bcdg ],_ggcf [_bcdg ]);
-};return _dbcfg ;};func (_eggcg *templateProcessor )parseMarginAttr (_abgac ,_aaecb string )Margins {_cf .Log .Debug ("\u0050\u0061r\u0073\u0069\u006e\u0067 \u006d\u0061r\u0067\u0069\u006e\u0020\u0061\u0074\u0074\u0072i\u0062\u0075\u0074\u0065\u003a\u0020\u0028\u0060\u0025\u0073\u0060\u002c \u0025\u0073\u0029\u002e",_abgac ,_aaecb );
-_gbfa :=Margins {};switch _cggfa :=_eg .Fields (_aaecb );len (_cggfa ){case 1:_gbfa .Top ,_ =_egd .ParseFloat (_cggfa [0],64);_gbfa .Bottom =_gbfa .Top ;_gbfa .Left =_gbfa .Top ;_gbfa .Right =_gbfa .Top ;case 2:_gbfa .Top ,_ =_egd .ParseFloat (_cggfa [0],64);
-_gbfa .Bottom =_gbfa .Top ;_gbfa .Left ,_ =_egd .ParseFloat (_cggfa [1],64);_gbfa .Right =_gbfa .Left ;case 3:_gbfa .Top ,_ =_egd .ParseFloat (_cggfa [0],64);_gbfa .Left ,_ =_egd .ParseFloat (_cggfa [1],64);_gbfa .Right =_gbfa .Left ;_gbfa .Bottom ,_ =_egd .ParseFloat (_cggfa [2],64);
-case 4:_gbfa .Top ,_ =_egd .ParseFloat (_cggfa [0],64);_gbfa .Right ,_ =_egd .ParseFloat (_cggfa [1],64);_gbfa .Bottom ,_ =_egd .ParseFloat (_cggfa [2],64);_gbfa .Left ,_ =_egd .ParseFloat (_cggfa [3],64);};return _gbfa ;};
-
-// TextRenderingMode determines whether showing text shall cause glyph
-// outlines to be stroked, filled, used as a clipping boundary, or some
-// combination of the three.
-// See section 9.3 "Text State Parameters and Operators" and
-// Table 106 (pp. 254-255 PDF32000_2008).
-type TextRenderingMode int ;
-
-// SetDate sets the date of the invoice.
-func (_ebde *Invoice )SetDate (date string )(*InvoiceCell ,*InvoiceCell ){_ebde ._bggdg [1].Value =date ;return _ebde ._bggdg [0],_ebde ._bggdg [1];};
-
-// SetColorLeft sets border color for left.
-func (_caa *border )SetColorLeft (col Color ){_caa ._agbc =col };func (_dgeb *templateProcessor )parseAttrPropList (_gabf string )map[string ]string {_bagbf :=_eg .Fields (_gabf );if len (_bagbf )==0{return nil ;};_dceag :=map[string ]string {};for _ ,_gcgd :=range _bagbf {_gffbd :=_gbbcd .FindStringSubmatch (_gcgd );
-if len (_gffbd )< 3{continue ;};_dcgde ,_gfbfg :=_eg .TrimSpace (_gffbd [1]),_gffbd [2];if _dcgde ==""{continue ;};_dceag [_dcgde ]=_gfbfg ;};return _dceag ;};
-
-// GetMargins returns the Block's margins: left, right, top, bottom.
-func (_feb *Block )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _feb ._ced .Left ,_feb ._ced .Right ,_feb ._ced .Top ,_feb ._ced .Bottom ;};
-
-// SetMargins sets the margins of the rectangle.
-// NOTE: rectangle margins are only applied if relative positioning is used.
-func (_fgbcf *Rectangle )SetMargins (left ,right ,top ,bottom float64 ){_fgbcf ._geacg .Left =left ;_fgbcf ._geacg .Right =right ;_fgbcf ._geacg .Top =top ;_fgbcf ._geacg .Bottom =bottom ;};
-
-// Lines returns all the rows of the invoice line items table.
-func (_bfcd *Invoice )Lines ()[][]*InvoiceCell {return _bfcd ._ebcg };
-
-// SetOptimizer sets the optimizer to optimize PDF before writing.
-func (_edgb *Creator )SetOptimizer (optimizer _gf .Optimizer ){_edgb ._aae =optimizer };
-
-// SetPageSize sets the Creator's page size.  Pages that are added after this will be created with
-// this Page size.
-// Does not affect pages already created.
-//
-// Common page sizes are defined as constants.
-// Examples:
-// 1. c.SetPageSize(creator.PageSizeA4)
-// 2. c.SetPageSize(creator.PageSizeA3)
-// 3. c.SetPageSize(creator.PageSizeLegal)
-// 4. c.SetPageSize(creator.PageSizeLetter)
-//
-// For custom sizes: Use the PPMM (points per mm) and PPI (points per inch) when defining those based on
-// physical page sizes:
-//
-// Examples:
-// 1. 10x15 sq. mm: SetPageSize(PageSize{10*creator.PPMM, 15*creator.PPMM}) where PPMM is points per mm.
-// 2. 3x2 sq. inches: SetPageSize(PageSize{3*creator.PPI, 2*creator.PPI}) where PPI is points per inch.
-func (_efe *Creator )SetPageSize (size PageSize ){_efe ._gcg =size ;_efe ._bfda =size [0];_efe ._fbe =size [1];_acab :=0.1*_efe ._bfda ;_efe ._fegd .Left =_acab ;_efe ._fegd .Right =_acab ;_efe ._fegd .Top =_acab ;_efe ._fegd .Bottom =_acab ;};
-
-// SetLevel sets the indentation level of the TOC line.
-func (_egcbd *TOCLine )SetLevel (level uint ){_egcbd ._gfggc =level ;_egcbd ._dfbba ._gdfc .Left =_egcbd ._gbed +float64 (_egcbd ._gfggc -1)*_egcbd ._edaee ;};func (_ebfd *templateProcessor )parseLineStyleAttr (_bgbb ,_aggf string )_g .LineStyle {_cf .Log .Debug ("\u0050\u0061\u0072\u0073\u0069n\u0067\u0020\u006c\u0069\u006e\u0065\u0020\u0073\u0074\u0079\u006c\u0065\u0020a\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0028\u0060\u0025\u0073\u0060\u002c\u0020\u0025\u0073\u0029\u002e",_bgbb ,_aggf );
-_bbgff :=map[string ]_g .LineStyle {"\u0073\u006f\u006ci\u0064":_g .LineStyleSolid ,"\u0064\u0061\u0073\u0068\u0065\u0064":_g .LineStyleDashed }[_aggf ];return _bbgff ;};
-
-// FooterFunctionArgs holds the input arguments to a footer drawing function.
-// It is designed as a struct, so additional parameters can be added in the future with backwards
-// compatibility.
-type FooterFunctionArgs struct{PageNum int ;TotalPages int ;};func (_acdc *templateProcessor )parseColor (_ccde string )Color {if _ccde ==""{return nil ;};_ebeg ,_bbeca :=_acdc ._cfae .ColorMap [_ccde ];if _bbeca {return _ebeg ;};if _ccde [0]=='#'{return ColorRGBFromHex (_ccde );
-};return nil ;};
-
-// SetFillOpacity sets the fill opacity.
-func (_beeef *PolyBezierCurve )SetFillOpacity (opacity float64 ){_beeef ._bcbcf =opacity };
-
-// SetAntiAlias enables anti alias config.
-//
-// Anti alias is disabled by default.
-func (_ecef *RadialShading )SetAntiAlias (enable bool ){_ecef ._acce .SetAntiAlias (enable )};
-
-// Reset removes all the text chunks the paragraph contains.
-func (_adbe *StyledParagraph )Reset (){_adbe ._gdae =[]*TextChunk {}};
-
-// TitleStyle returns the style properties used to render the invoice title.
-func (_ecec *Invoice )TitleStyle ()TextStyle {return _ecec ._dcgf };
-
-// GeneratePageBlocks draws the rectangle on a new block representing the page. Implements the Drawable interface.
-func (_agad *Rectangle )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){var (_bgafg []*Block ;_gefcd =NewBlock (ctx .PageWidth ,ctx .PageHeight );_baaa =ctx ;_debff =_agad ._eacf /2;);_adbb :=_agad ._bcgca .IsRelative ();if _adbb {_agad .applyFitMode (ctx .Width );
-ctx .X +=_agad ._geacg .Left +_debff ;ctx .Y +=_agad ._geacg .Top +_debff ;ctx .Width -=_agad ._geacg .Left +_agad ._geacg .Right ;ctx .Height -=_agad ._geacg .Top +_agad ._geacg .Bottom ;if _agad ._dffef > ctx .Height {_bgafg =append (_bgafg ,_gefcd );
-_gefcd =NewBlock (ctx .PageWidth ,ctx .PageHeight );ctx .Page ++;_cccf :=ctx ;_cccf .Y =ctx .Margins .Top +_agad ._geacg .Top +_debff ;_cccf .X =ctx .Margins .Left +_agad ._geacg .Left +_debff ;_cccf .Height =ctx .PageHeight -ctx .Margins .Top -ctx .Margins .Bottom -_agad ._geacg .Top -_agad ._geacg .Bottom ;
-_cccf .Width =ctx .PageWidth -ctx .Margins .Left -ctx .Margins .Right -_agad ._geacg .Left -_agad ._geacg .Right ;ctx =_cccf ;};}else {ctx .X =_agad ._fgfd ;ctx .Y =_agad ._aedgf ;};_ebfce :=_g .Rectangle {X :ctx .X ,Y :ctx .PageHeight -ctx .Y -_agad ._dffef ,Width :_agad ._adeb ,Height :_agad ._dffef ,BorderRadiusTopLeft :_agad ._bdcg ,BorderRadiusTopRight :_agad ._eged ,BorderRadiusBottomLeft :_agad ._dbfc ,BorderRadiusBottomRight :_agad ._abca ,Opacity :1.0};
-if _agad ._cdfdf !=nil {_ebfce .FillEnabled =true ;_afge :=_dca (_agad ._cdfdf );_fgce :=_ggfba (_gefcd ,_afge ,_agad ._cdfdf ,func ()Rectangle {return Rectangle {_fgfd :_ebfce .X ,_aedgf :_ebfce .Y ,_adeb :_ebfce .Width ,_dffef :_ebfce .Height };});if _fgce !=nil {return nil ,ctx ,_fgce ;
-};_ebfce .FillColor =_afge ;};if _agad ._fbdc !=nil &&_agad ._eacf > 0{_ebfce .BorderEnabled =true ;_ebfce .BorderColor =_dca (_agad ._fbdc );_ebfce .BorderWidth =_agad ._eacf ;};_cdfb ,_cbcb :=_gefcd .setOpacity (_agad ._acea ,_agad ._eeee );if _cbcb !=nil {return nil ,ctx ,_cbcb ;
-};_dcbf ,_ ,_cbcb :=_ebfce .Draw (_cdfb );if _cbcb !=nil {return nil ,ctx ,_cbcb ;};if _cbcb =_gefcd .addContentsByString (string (_dcbf ));_cbcb !=nil {return nil ,ctx ,_cbcb ;};if _adbb {ctx .X =_baaa .X ;ctx .Width =_baaa .Width ;_adaca :=_agad ._dffef +_debff ;
-ctx .Y +=_adaca +_agad ._geacg .Bottom ;ctx .Height -=_adaca ;}else {ctx =_baaa ;};_bgafg =append (_bgafg ,_gefcd );return _bgafg ,ctx ,nil ;};func (_ccb *Block )addContents (_ece *_cd .ContentStreamOperations ){_ccb ._egf .WrapIfNeeded ();_ece .WrapIfNeeded ();
-*_ccb ._egf =append (*_ccb ._egf ,*_ece ...);};
-
-// Length calculates and returns the length of the line.
-func (_ffacb *Line )Length ()float64 {return _ee .Sqrt (_ee .Pow (_ffacb ._badg -_ffacb ._aecg ,2.0)+_ee .Pow (_ffacb ._acba -_ffacb ._cdbf ,2.0));};
-
-// SetColorRight sets border color for right.
-func (_cfd *border )SetColorRight (col Color ){_cfd ._aeg =col };func _gdfbb (_bbgab string ,_ccaea bool )string {_fedb :=_bbgab ;if _fedb ==""{return "";};_baded :=_ca .Paragraph {};_ ,_efffc :=_baded .SetString (_bbgab );if _efffc !=nil {return _fedb ;
-};_eeaa ,_efffc :=_baded .Order ();if _efffc !=nil {return _fedb ;};_acec :=_eeaa .NumRuns ();_bggb :=make ([]string ,_acec );for _dedff :=0;_dedff < _eeaa .NumRuns ();_dedff ++{_gbgbg :=_eeaa .Run (_dedff );_dbeaf :=_gbgbg .String ();if _gbgbg .Direction ()==_ca .RightToLeft {_dbeaf =_ca .ReverseString (_dbeaf );
-};if _ccaea {_bggb [_dedff ]=_dbeaf ;}else {_bggb [_acec -1]=_dbeaf ;};_acec --;};if len (_bggb )!=_eeaa .NumRuns (){return _bbgab ;};_fedb =_eg .Join (_bggb ,"");return _fedb ;};func _cdfae (_bcde ,_cbcd ,_agef ,_bcbcd ,_febg ,_gdcbc float64 )*Curve {_bgbg :=&Curve {};
-_bgbg ._gbd =_bcde ;_bgbg ._addf =_cbcd ;_bgbg ._agaf =_agef ;_bgbg ._cec =_bcbcd ;_bgbg ._cce =_febg ;_bgbg ._ddcf =_gdcbc ;_bgbg ._fbfg =ColorBlack ;_bgbg ._begc =1.0;return _bgbg ;};func _adgfb (_cdfda *_gf .PdfAnnotation )*_gf .PdfAnnotation {if _cdfda ==nil {return nil ;
-};var _fgcbf *_gf .PdfAnnotation ;switch _cbeb :=_cdfda .GetContext ().(type ){case *_gf .PdfAnnotationLink :if _ecaag :=_egdda (_cbeb );_ecaag !=nil {_fgcbf =_ecaag .PdfAnnotation ;};};return _fgcbf ;};func _ggdce (_fbdee *Block ,_dbeg *Paragraph ,_eggb DrawContext )(DrawContext ,error ){_gabd :=1;
-_bedde :=_acb .PdfObjectName ("\u0046\u006f\u006e\u0074"+_egd .Itoa (_gabd ));for _fbdee ._cff .HasFontByName (_bedde ){_gabd ++;_bedde =_acb .PdfObjectName ("\u0046\u006f\u006e\u0074"+_egd .Itoa (_gabd ));};_caba :=_fbdee ._cff .SetFontByName (_bedde ,_dbeg ._befba .ToPdfObject ());
-if _caba !=nil {return _eggb ,_caba ;};_dbeg .wrapText ();_edeb :=_cd .NewContentCreator ();_edeb .Add_q ();_faabb :=_eggb .PageHeight -_eggb .Y -_dbeg ._dgfa *_dbeg ._dbdc ;_edeb .Translate (_eggb .X ,_faabb );if _dbeg ._cegag !=0{_edeb .RotateDeg (_dbeg ._cegag );
-};_gcde :=_dca (_dbeg ._efefb );_caba =_ggfba (_fbdee ,_gcde ,_dbeg ._efefb ,func ()Rectangle {return Rectangle {_fgfd :_eggb .X ,_aedgf :_faabb ,_adeb :_dbeg .getMaxLineWidth ()/1000.0,_dffef :_dbeg .Height ()};});if _caba !=nil {return _eggb ,_caba ;
-};_edeb .Add_BT ().SetNonStrokingColor (_gcde ).Add_Tf (_bedde ,_dbeg ._dgfa ).Add_TL (_dbeg ._dgfa *_dbeg ._dbdc );for _edae ,_ebcec :=range _dbeg ._edcc {if _edae !=0{_edeb .Add_Tstar ();};_gfca :=[]rune (_ebcec );_cgga :=0.0;_cecbd :=0;for _cabf ,_ffbe :=range _gfca {if _ffbe ==' '{_cecbd ++;
-continue ;};if _ffbe =='\u000A'{continue ;};_caec ,_gcdab :=_dbeg ._befba .GetRuneMetrics (_ffbe );if !_gcdab {_cf .Log .Debug ("\u0055\u006e\u0073\u0075\u0070\u0070\u006f\u0072\u0074\u0065\u0064\u0020\u0072\u0075\u006e\u0065\u0020\u0069=\u0025\u0064\u0020\u0072\u0075\u006e\u0065=\u0030\u0078\u0025\u0030\u0034\u0078\u003d\u0025\u0063\u0020\u0069n\u0020\u0066\u006f\u006e\u0074\u0020\u0025\u0073\u0020\u0025\u0073",_cabf ,_ffbe ,_ffbe ,_dbeg ._befba .BaseFont (),_dbeg ._befba .Subtype ());
-return _eggb ,_d .New ("\u0075\u006e\u0073\u0075pp\u006f\u0072\u0074\u0065\u0064\u0020\u0074\u0065\u0078\u0074\u0020\u0067\u006c\u0079p\u0068");};_cgga +=_dbeg ._dgfa *_caec .Wx ;};var _cadg []_acb .PdfObject ;_bbbb ,_bfgd :=_dbeg ._befba .GetRuneMetrics (' ');
-if !_bfgd {return _eggb ,_d .New ("\u0074\u0068e \u0066\u006f\u006et\u0020\u0064\u006f\u0065s n\u006ft \u0068\u0061\u0076\u0065\u0020\u0061\u0020sp\u0061\u0063\u0065\u0020\u0067\u006c\u0079p\u0068");};_ebbb :=_bbbb .Wx ;switch _dbeg ._ebdd {case TextAlignmentJustify :if _cecbd > 0&&_edae < len (_dbeg ._edcc )-1{_ebbb =(_dbeg ._bdcb *1000.0-_cgga )/float64 (_cecbd )/_dbeg ._dgfa ;
-};case TextAlignmentCenter :_egcda :=_cgga +float64 (_cecbd )*_ebbb *_dbeg ._dgfa ;_fdaec :=(_dbeg ._bdcb *1000.0-_egcda )/2/_dbeg ._dgfa ;_cadg =append (_cadg ,_acb .MakeFloat (-_fdaec ));case TextAlignmentRight :_agdfe :=_cgga +float64 (_cecbd )*_ebbb *_dbeg ._dgfa ;
-_dbdd :=(_dbeg ._bdcb *1000.0-_agdfe )/_dbeg ._dgfa ;_cadg =append (_cadg ,_acb .MakeFloat (-_dbdd ));};_aaebc :=_dbeg ._befba .Encoder ();var _aedg []byte ;for _ ,_aeef :=range _gfca {if _aeef =='\u000A'{continue ;};if _aeef ==' '{if len (_aedg )> 0{_cadg =append (_cadg ,_acb .MakeStringFromBytes (_aedg ));
-_aedg =nil ;};_cadg =append (_cadg ,_acb .MakeFloat (-_ebbb ));}else {if _ ,_gadd :=_aaebc .RuneToCharcode (_aeef );!_gadd {_caba =UnsupportedRuneError {Message :_agd .Sprintf ("\u0075\u006e\u0073\u0075\u0070\u0070\u006fr\u0074\u0065\u0064 \u0072\u0075\u006e\u0065 \u0069\u006e\u0020\u0074\u0065\u0078\u0074\u0020\u0065\u006e\u0063\u006f\u0064\u0069\u006e\u0067\u003a\u0020\u0025\u0023\u0078\u0020\u0028\u0025\u0063\u0029",_aeef ,_aeef ),Rune :_aeef };
-_eggb ._gbeb =append (_eggb ._gbeb ,_caba );_cf .Log .Debug (_caba .Error ());if _eggb ._aegb <=0{continue ;};_aeef =_eggb ._aegb ;};_aedg =append (_aedg ,_aaebc .Encode (string (_aeef ))...);};};if len (_aedg )> 0{_cadg =append (_cadg ,_acb .MakeStringFromBytes (_aedg ));
-};_edeb .Add_TJ (_cadg ...);};_edeb .Add_ET ();_edeb .Add_Q ();_cbge :=_edeb .Operations ();_cbge .WrapIfNeeded ();_fbdee .addContents (_cbge );if _dbeg ._dced .IsRelative (){_aded :=_dbeg .Height ();_eggb .Y +=_aded ;_eggb .Height -=_aded ;if _eggb .Inline {_eggb .X +=_dbeg .Width ()+_dbeg ._eddc .Right ;
-};};return _eggb ,nil ;};func (_gfbb *Invoice )newColumn (_egeca string ,_bggcb CellHorizontalAlignment )*InvoiceCell {_abec :=&InvoiceCell {_gfbb ._ebcb ,_egeca };_abec .Alignment =_bggcb ;return _abec ;};func (_ggfe *shading )generatePdfFunctions ()[]_gf .PdfFunction {if len (_ggfe ._dfae )==0{return nil ;
-}else if len (_ggfe ._dfae )<=2{_bgfc ,_gbffe ,_ebee :=_ggfe ._dfae [0]._bebab .ToRGB ();_gbded ,_cffgg ,_gfce :=_ggfe ._dfae [len (_ggfe ._dfae )-1]._bebab .ToRGB ();return []_gf .PdfFunction {&_gf .PdfFunctionType2 {Domain :[]float64 {0.0,1.0},Range :[]float64 {0.0,1.0,0.0,1.0,0.0,1.0},N :1,C0 :[]float64 {_bgfc ,_gbffe ,_ebee },C1 :[]float64 {_gbded ,_cffgg ,_gfce }}};
-}else {_edce :=[]_gf .PdfFunction {};_gebfe :=[]float64 {};for _afeec :=0;_afeec < len (_ggfe ._dfae )-1;_afeec ++{_bgafe ,_bgfb ,_gfab :=_ggfe ._dfae [_afeec ]._bebab .ToRGB ();_cccb ,_egbb ,_ggad :=_ggfe ._dfae [_afeec +1]._bebab .ToRGB ();_fdab :=&_gf .PdfFunctionType2 {Domain :[]float64 {0.0,1.0},Range :[]float64 {0.0,1.0,0.0,1.0,0.0,1.0},N :1,C0 :[]float64 {_bgafe ,_bgfb ,_gfab },C1 :[]float64 {_cccb ,_egbb ,_ggad }};
-_edce =append (_edce ,_fdab );if _afeec > 0{_gebfe =append (_gebfe ,_ggfe ._dfae [_afeec ]._bdbeg );};};_dgbd :=[]float64 {};for range _edce {_dgbd =append (_dgbd ,[]float64 {0.0,1.0}...);};return []_gf .PdfFunction {&_gf .PdfFunctionType3 {Domain :[]float64 {0.0,1.0},Range :[]float64 {0.0,1.0,0.0,1.0,0.0,1.0},Functions :_edce ,Bounds :_gebfe ,Encode :_dgbd }};
-};};
-
-// EnablePageWrap controls whether the division is wrapped across pages.
-// If disabled, the division is moved in its entirety on a new page, if it
-// does not fit in the available height. By default, page wrapping is enabled.
-// If the height of the division is larger than an entire page, wrapping is
-// enabled automatically in order to avoid unwanted behavior.
-// Currently, page wrapping can only be disabled for vertical divisions.
-func (_gebg *Division )EnablePageWrap (enable bool ){_gebg ._befa =enable };
-
-// VectorDrawable is a Drawable with a specified width and height.
-type VectorDrawable interface{Drawable ;
-
-// Width returns the width of the Drawable.
-Width ()float64 ;
-
-// Height returns the height of the Drawable.
-Height ()float64 ;};
-
-// IsRelative checks if the positioning is relative.
-func (_cdb Positioning )IsRelative ()bool {return _cdb ==PositionRelative };
-
-// Terms returns the terms and conditions section of the invoice as a
-// title-content pair.
-func (_eegd *Invoice )Terms ()(string ,string ){return _eegd ._cdgd [0],_eegd ._cdgd [1]};func (_eag *Creator )newPage ()*_gf .PdfPage {_gdga :=_gf .NewPdfPage ();_ecg :=_eag ._gcg [0];_gfba :=_eag ._gcg [1];_befb :=_gf .PdfRectangle {Llx :0,Lly :0,Urx :_ecg ,Ury :_gfba };
-_gdga .MediaBox =&_befb ;_eag ._bfda =_ecg ;_eag ._fbe =_gfba ;_eag .initContext ();return _gdga ;};
-
-// SetNoteStyle sets the style properties used to render the content of the
-// invoice note sections.
-func (_faeb *Invoice )SetNoteStyle (style TextStyle ){_faeb ._bggdb =style };func (_eeebb *templateProcessor )parseFontAttr (_baaf ,_fgceb string )*_gf .PdfFont {_cf .Log .Debug ("P\u0061\u0072\u0073\u0069\u006e\u0067 \u0066\u006f\u006e\u0074\u0020\u0061t\u0074\u0072\u0069\u0062\u0075\u0074\u0065:\u0020\u0028\u0060\u0025\u0073\u0060\u002c\u0020\u0025\u0073)\u002e",_baaf ,_fgceb );
-_ebba :=_eeebb .creator ._bbd ;if _fgceb ==""{return _ebba ;};_fcef :=_eg .Split (_fgceb ,"\u002c");for _ ,_agcg :=range _fcef {_agcg =_eg .TrimSpace (_agcg );if _agcg ==""{continue ;};_ddab ,_abcg :=_eeebb ._cfae .FontMap [_fgceb ];if _abcg {return _ddab ;
-};_baae ,_abcg :=map[string ]_gf .StdFontName {"\u0063o\u0075\u0072\u0069\u0065\u0072":_gf .CourierName ,"\u0063\u006f\u0075r\u0069\u0065\u0072\u002d\u0062\u006f\u006c\u0064":_gf .CourierBoldName ,"\u0063o\u0075r\u0069\u0065\u0072\u002d\u006f\u0062\u006c\u0069\u0071\u0075\u0065":_gf .CourierObliqueName ,"c\u006fu\u0072\u0069\u0065\u0072\u002d\u0062\u006f\u006cd\u002d\u006f\u0062\u006ciq\u0075\u0065":_gf .CourierBoldObliqueName ,"\u0068e\u006c\u0076\u0065\u0074\u0069\u0063a":_gf .HelveticaName ,"\u0068\u0065\u006c\u0076\u0065\u0074\u0069\u0063\u0061-\u0062\u006f\u006c\u0064":_gf .HelveticaBoldName ,"\u0068\u0065\u006c\u0076\u0065\u0074\u0069\u0063\u0061\u002d\u006f\u0062l\u0069\u0071\u0075\u0065":_gf .HelveticaObliqueName ,"\u0068\u0065\u006c\u0076et\u0069\u0063\u0061\u002d\u0062\u006f\u006c\u0064\u002d\u006f\u0062\u006c\u0069\u0071u\u0065":_gf .HelveticaBoldObliqueName ,"\u0073\u0079\u006d\u0062\u006f\u006c":_gf .SymbolName ,"\u007a\u0061\u0070\u0066\u002d\u0064\u0069\u006e\u0067\u0062\u0061\u0074\u0073":_gf .ZapfDingbatsName ,"\u0074\u0069\u006de\u0073":_gf .TimesRomanName ,"\u0074\u0069\u006d\u0065\u0073\u002d\u0062\u006f\u006c\u0064":_gf .TimesBoldName ,"\u0074\u0069\u006de\u0073\u002d\u0069\u0074\u0061\u006c\u0069\u0063":_gf .TimesItalicName ,"\u0074\u0069\u006d\u0065\u0073\u002d\u0062\u006f\u006c\u0064\u002d\u0069t\u0061\u006c\u0069\u0063":_gf .TimesBoldItalicName }[_fgceb ];
-if _abcg {if _fdgge ,_fdced :=_gf .NewStandard14Font (_baae );_fdced ==nil {return _fdgge ;};};if _agdac :=_eeebb .parseAttrPropList (_agcg );len (_agdac )> 0{if _bcded ,_eacfg :=_agdac ["\u0070\u0061\u0074\u0068"];_eacfg {_gcbb :=_gf .NewPdfFontFromTTFFile ;
-if _feda ,_eagd :=_agdac ["\u0074\u0079\u0070\u0065"];_eagd &&_feda =="\u0063o\u006d\u0070\u006f\u0073\u0069\u0074e"{_gcbb =_gf .NewCompositePdfFontFromTTFFile ;};if _cfbcc ,_eafcc :=_gcbb (_bcded );_eafcc !=nil {_cf .Log .Debug ("\u0043\u006fu\u006c\u0064\u0020\u006e\u006f\u0074\u0020\u006c\u006f\u0061\u0064\u0020\u0066\u006f\u006e\u0074\u0020\u0060\u0025\u0073\u0060\u003a %\u0076\u002e",_bcded ,_eafcc );
-}else {return _cfbcc ;};};};};return _ebba ;};
-
-// PageBreak represents a page break for a chapter.
-type PageBreak struct{};
-
-// SetBorderColor sets the cell's border color.
-func (_edggf *TableCell )SetBorderColor (col Color ){_edggf ._effe =col ;_edggf ._feeb =col ;_edggf ._afgf =col ;_edggf ._dffad =col ;};func (_bgcfa *templateProcessor )parseChapterHeading (_aeaa *templateNode )(interface{},error ){if _aeaa ._edcee ==nil {_cf .Log .Error ("\u0043\u0068a\u0070\u0074\u0065\u0072 \u0068\u0065a\u0064\u0069\u006e\u0067\u0020\u0070\u0061\u0072e\u006e\u0074\u0020\u0063\u0061\u006e\u006e\u006f\u0074\u0020\u0062\u0065 \u006e\u0069\u006c\u002e");
-return nil ,_gbcf ;};_bgdb ,_ebgga :=_aeaa ._edcee ._aeeaa .(*Chapter );if !_ebgga {_cf .Log .Error ("\u0043h\u0061\u0070t\u0065\u0072\u0020h\u0065\u0061\u0064\u0069\u006e\u0067\u0020p\u0061\u0072\u0065\u006e\u0074\u0020(\u0025\u0054\u0029\u0020\u0069\u0073\u0020\u006e\u006f\u0074\u0020a\u0020\u0063\u0068\u0061\u0070\u0074\u0065\u0072\u002e",_aeaa ._edcee ._aeeaa );
-return nil ,_gbcf ;};_ecddgf :=_bgdb .GetHeading ();if _ ,_eeadd :=_bgcfa .parseParagraph (_aeaa ,_ecddgf );_eeadd !=nil {return nil ,_eeadd ;};return _ecddgf ,nil ;};
-
-// GetCoords returns coordinates of border.
-func (_bdd *border )GetCoords ()(float64 ,float64 ){return _bdd ._dae ,_bdd ._deea };
-
-// NewSubchapter creates a new child chapter with the specified title.
-func (_cfc *Chapter )NewSubchapter (title string )*Chapter {_ccga :=_daad (_cfc ._agdbe ._befba );_ccga .FontSize =14;_cfc ._acd ++;_aad :=_egdd (_cfc ,_cfc ._acc ,_cfc ._ffffg ,title ,_cfc ._acd ,_ccga );_cfc .Add (_aad );return _aad ;};
-
-// SetDueDate sets the due date of the invoice.
-func (_ddf *Invoice )SetDueDate (dueDate string )(*InvoiceCell ,*InvoiceCell ){_ddf ._acgf [1].Value =dueDate ;return _ddf ._acgf [0],_ddf ._acgf [1];};
-
-// Width is not used. Not used as a Table element is designed to fill into
-// available width depending on the context. Returns 0.
-func (_becd *Table )Width ()float64 {return 0};
-
-// ToPdfShadingPattern generates a new model.PdfShadingPatternType2 object.
-func (_accgg *LinearShading )ToPdfShadingPattern ()*_gf .PdfShadingPatternType2 {_aegf ,_bafc ,_dfccg :=_accgg ._adbg ._adddc .ToRGB ();_cfec :=_accgg .shadingModel ();_cfec .PdfShading .Background =_acb .MakeArrayFromFloats ([]float64 {_aegf ,_bafc ,_dfccg });
-_abbg :=_gf .NewPdfShadingPatternType2 ();_abbg .Shading =_cfec ;return _abbg ;};func _gbdee (_ddbc ,_bffd ,_beea string ,_cegb uint ,_debffg TextStyle )*TOCLine {return _gede (TextChunk {Text :_ddbc ,Style :_debffg },TextChunk {Text :_bffd ,Style :_debffg },TextChunk {Text :_beea ,Style :_debffg },_cegb ,_debffg );
-};func _dbgfb (_cgaga *templateProcessor ,_gaafa *templateNode )(interface{},error ){return _cgaga .parseListItem (_gaafa );};
-
-// Finalize renders all blocks to the creator pages. In addition, it takes care
-// of adding headers and footers, as well as generating the front page,
-// table of contents and outlines.
-// Finalize is automatically called before writing the document out. Calling the
-// method manually can be useful when adding external pages to the creator,
-// using the AddPage method, as it renders all creator blocks to the added
-// pages, without having to write the document out.
-// NOTE: TOC and outlines are generated only if the AddTOC and AddOutlines
-// fields of the creator are set to true (enabled by default). Furthermore, TOCs
-// and outlines without content are skipped. TOC and outline content is
-// added automatically when using the chapter component. TOCs and outlines can
-// also be set externally, using the SetTOC and SetOutlineTree methods.
-// Finalize should only be called once, after all draw calls have taken place,
-// as it will return immediately if the creator instance has been finalized.
-func (_abe *Creator )Finalize ()error {if _abe ._abd {return nil ;};_ceaf :=len (_abe ._geac );_fabf :=0;if _abe ._dfg !=nil {_gbbc :=*_abe ;_abe ._geac =nil ;_abe ._bgc =nil ;_abe .initContext ();_bdde :=FrontpageFunctionArgs {PageNum :1,TotalPages :_ceaf };
-_abe ._dfg (_bdde );_fabf +=len (_abe ._geac );_abe ._geac =_gbbc ._geac ;_abe ._bgc =_gbbc ._bgc ;};if _abe .AddTOC {_abe .initContext ();_abe ._fagd .Page =_fabf +1;if _abe .CustomTOC &&_abe ._dec !=nil {_bdbe :=*_abe ;_abe ._geac =nil ;_abe ._bgc =nil ;
-if _egfa :=_abe ._dec (_abe ._cgfc );_egfa !=nil {return _egfa ;};_fabf +=len (_abe ._geac );_abe ._geac =_bdbe ._geac ;_abe ._bgc =_bdbe ._bgc ;}else {if _abe ._dec !=nil {if _fgdf :=_abe ._dec (_abe ._cgfc );_fgdf !=nil {return _fgdf ;};};_caae ,_ ,_agdf :=_abe ._cgfc .GeneratePageBlocks (_abe ._fagd );
-if _agdf !=nil {_cf .Log .Debug ("\u0046\u0061i\u006c\u0065\u0064\u0020\u0074\u006f\u0020\u0067\u0065\u006e\u0065\u0072\u0061\u0074\u0065\u0020\u0062\u006c\u006f\u0063\u006b\u0073: \u0025\u0076",_agdf );return _agdf ;};_fabf +=len (_caae );};_dbeeb :=_abe ._cgfc .Lines ();
-for _ ,_bggd :=range _dbeeb {_acbd ,_dfcdd :=_egd .Atoi (_bggd .Page .Text );if _dfcdd !=nil {continue ;};_bggd .Page .Text =_egd .Itoa (_acbd +_fabf );_bggd ._gdfbf +=int64 (_fabf );};};_cgfe :=false ;var _daef []*_gf .PdfPage ;if _abe ._dfg !=nil {_fbgd :=*_abe ;
-_abe ._geac =nil ;_abe ._bgc =nil ;_bdac :=FrontpageFunctionArgs {PageNum :1,TotalPages :_ceaf };_abe ._dfg (_bdac );_ceaf +=len (_abe ._geac );_daef =_abe ._geac ;_abe ._geac =append (_abe ._geac ,_fbgd ._geac ...);_abe ._bgc =_fbgd ._bgc ;_cgfe =true ;
-};var _cbfdf []*_gf .PdfPage ;if _abe .AddTOC {_abe .initContext ();if _abe .CustomTOC &&_abe ._dec !=nil {_gagb :=*_abe ;_abe ._geac =nil ;_abe ._bgc =nil ;if _agff :=_abe ._dec (_abe ._cgfc );_agff !=nil {_cf .Log .Debug ("\u0045r\u0072\u006f\u0072\u0020\u0067\u0065\u006e\u0065\u0072\u0061\u0074i\u006e\u0067\u0020\u0054\u004f\u0043\u003a\u0020\u0025\u0076",_agff );
-return _agff ;};_cbfdf =_abe ._geac ;_ceaf +=len (_cbfdf );_abe ._geac =_gagb ._geac ;_abe ._bgc =_gagb ._bgc ;}else {if _abe ._dec !=nil {if _faage :=_abe ._dec (_abe ._cgfc );_faage !=nil {_cf .Log .Debug ("\u0045r\u0072\u006f\u0072\u0020\u0067\u0065\u006e\u0065\u0072\u0061\u0074i\u006e\u0067\u0020\u0054\u004f\u0043\u003a\u0020\u0025\u0076",_faage );
-return _faage ;};};_cadfc ,_ ,_ :=_abe ._cgfc .GeneratePageBlocks (_abe ._fagd );for _ ,_fgbc :=range _cadfc {_fgbc .SetPos (0,0);_ceaf ++;_ggdb :=_abe .newPage ();_cbfdf =append (_cbfdf ,_ggdb );_abe .setActivePage (_ggdb );_abe .Draw (_fgbc );};};if _cgfe {_efee :=_daef ;
-_eeg :=_abe ._geac [len (_daef ):];_abe ._geac =append ([]*_gf .PdfPage {},_efee ...);_abe ._geac =append (_abe ._geac ,_cbfdf ...);_abe ._geac =append (_abe ._geac ,_eeg ...);}else {_abe ._geac =append (_cbfdf ,_abe ._geac ...);};};if _abe ._dbfa !=nil &&_abe .AddOutlines {var _cbea func (_egdc *_gf .OutlineItem );
-_cbea =func (_bfea *_gf .OutlineItem ){_bfea .Dest .Page +=int64 (_fabf );if _cdcge :=int (_bfea .Dest .Page );_cdcge >=0&&_cdcge < len (_abe ._geac ){_bfea .Dest .PageObj =_abe ._geac [_cdcge ].GetPageAsIndirectObject ();}else {_cf .Log .Debug ("\u0057\u0041R\u004e\u003a\u0020\u0063\u006f\u0075\u006c\u0064\u0020\u006e\u006f\u0074\u0020\u0067\u0065\u0074\u0020\u0070\u0061\u0067\u0065\u0020\u0063\u006f\u006e\u0074\u0061\u0069\u006e\u0065\u0072\u0020\u0066\u006f\u0072\u0020\u0070\u0061\u0067\u0065\u0020\u0025\u0064",_cdcge );
-};_bfea .Dest .Y =_abe ._fbe -_bfea .Dest .Y ;_efda :=_bfea .Items ();for _ ,_eaaa :=range _efda {_cbea (_eaaa );};};_dcae :=_abe ._dbfa .Items ();for _ ,_aaead :=range _dcae {_cbea (_aaead );};if _abe .AddTOC {var _befg int ;if _cgfe {_befg =len (_daef );
-};_bbeaa :=_gf .NewOutlineDest (int64 (_befg ),0,_abe ._fbe );if _befg >=0&&_befg < len (_abe ._geac ){_bbeaa .PageObj =_abe ._geac [_befg ].GetPageAsIndirectObject ();}else {_cf .Log .Debug ("\u0057\u0041R\u004e\u003a\u0020\u0063\u006f\u0075\u006c\u0064\u0020\u006e\u006f\u0074\u0020\u0067\u0065\u0074\u0020\u0070\u0061\u0067\u0065\u0020\u0063\u006f\u006e\u0074\u0061\u0069\u006e\u0065\u0072\u0020\u0066\u006f\u0072\u0020\u0070\u0061\u0067\u0065\u0020\u0025\u0064",_befg );
-};_abe ._dbfa .Insert (0,_gf .NewOutlineItem ("\u0054\u0061\u0062\u006c\u0065\u0020\u006f\u0066\u0020\u0043\u006f\u006et\u0065\u006e\u0074\u0073",_bbeaa ));};};for _dccd ,_dfef :=range _abe ._geac {_abe .setActivePage (_dfef );if _abe ._eefg !=nil {_baff ,_fbad ,_bacd :=_dfef .Size ();
-if _bacd !=nil {return _bacd ;};_eggc :=PageFinalizeFunctionArgs {PageNum :_dccd +1,PageWidth :_baff ,PageHeight :_fbad ,TOCPages :len (_cbfdf ),TotalPages :_ceaf };if _cddc :=_abe ._eefg (_eggc );_cddc !=nil {_cf .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a \u0070\u0061\u0067\u0065\u0020\u0066\u0069\u006e\u0061\u006c\u0069\u007a\u0065 \u0063\u0061\u006c\u006c\u0062\u0061\u0063k\u003a\u0020\u0025\u0076",_cddc );
-return _cddc ;};};if _abe ._baag !=nil {_aadf :=NewBlock (_abe ._bfda ,_abe ._fegd .Top );_fceg :=HeaderFunctionArgs {PageNum :_dccd +1,TotalPages :_ceaf };_abe ._baag (_aadf ,_fceg );_aadf .SetPos (0,0);if _afcdc :=_abe .Draw (_aadf );_afcdc !=nil {_cf .Log .Debug ("\u0045R\u0052\u004f\u0052\u003a \u0064\u0072\u0061\u0077\u0069n\u0067 \u0068e\u0061\u0064\u0065\u0072\u003a\u0020\u0025v",_afcdc );
-return _afcdc ;};};if _abe ._gbc !=nil {_caaf :=NewBlock (_abe ._bfda ,_abe ._fegd .Bottom );_fcaa :=FooterFunctionArgs {PageNum :_dccd +1,TotalPages :_ceaf };_abe ._gbc (_caaf ,_fcaa );_caaf .SetPos (0,_abe ._fbe -_caaf ._ce );if _dbfad :=_abe .Draw (_caaf );
-_dbfad !=nil {_cf .Log .Debug ("\u0045R\u0052\u004f\u0052\u003a \u0064\u0072\u0061\u0077\u0069n\u0067 \u0066o\u006f\u0074\u0065\u0072\u003a\u0020\u0025v",_dbfad );return _dbfad ;};};_eeae ,_acde :=_abe ._abf [_dfef ];if _ecgg ,_agfa :=_abe ._agf [_dfef ];
-_agfa {if _acde {_eeae .transformBlock (_ecgg );};if _dbcb :=_ecgg .drawToPage (_dfef );_dbcb !=nil {_cf .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a \u0064\u0072\u0061\u0077\u0069\u006e\u0067\u0020\u0070\u0061\u0067\u0065\u0020%\u0064\u0020\u0062\u006c\u006f\u0063\u006bs\u003a\u0020\u0025\u0076",_dccd +1,_dbcb );
-return _dbcb ;};};if _acde {if _gaad :=_eeae .transformPage (_dfef );_gaad !=nil {_cf .Log .Debug ("E\u0052\u0052\u004f\u0052\u003a\u0020c\u006f\u0075\u006c\u0064\u0020\u006eo\u0074\u0020\u0074\u0072\u0061\u006e\u0073f\u006f\u0072\u006d\u0020\u0070\u0061\u0067\u0065\u003a\u0020%\u0076",_gaad );
-return _gaad ;};};};_abe ._abd =true ;return nil ;};
-
-// FitMode returns the fit mode of the ellipse.
-func (_ffg *Ellipse )FitMode ()FitMode {return _ffg ._dgbc };func _fdbfe (_agdgb *templateProcessor ,_bdda *templateNode )(interface{},error ){return _agdgb .parseTable (_bdda );};
-
-// SetFillOpacity sets the fill opacity of the rectangle.
-func (_cggaa *Rectangle )SetFillOpacity (opacity float64 ){_cggaa ._acea =opacity };func (_abecb *templateProcessor )renderNode (_fafed *templateNode )error {_dgcgb :=_fafed ._aeeaa ;if _dgcgb ==nil {return nil ;};_aebe :=_fafed ._feaff .Name .Local ;_ggae ,_beed :=_cbead [_aebe ];
-if !_beed {_cf .Log .Debug ("\u0049\u006e\u0076\u0061l\u0069\u0064\u0020\u0074\u0061\u0067\u003a\u0020\u0060\u0025s\u0060.\u0020\u0053\u006b\u0069\u0070\u0070\u0069n\u0067\u002e",_aebe );return nil ;};var _ddbge interface{};if _fafed ._edcee !=nil &&_fafed ._edcee ._aeeaa !=nil {_acabc :=_fafed ._edcee ._feaff .Name .Local ;
-if _ ,_beed =_ggae ._ffbgf [_acabc ];!_beed {_cf .Log .Debug ("\u0060%\u0073\u0060 \u0069\u0073\u0020n\u006f\u0074\u0020\u0061\u0020\u0076\u0061l\u0069\u0064\u0020\u0070\u0061\u0072e\u006e\u0074\u0020\u0066\u006f\u0072\u0020\u0074\u0068\u0065\u0020`\u0025\u0073\u0060\u0020\u006e\u006f\u0064\u0065\u002e",_acabc ,_aebe );
-return _gbcf ;};_ddbge =_fafed ._edcee ._aeeaa ;}else {_faga :="\u0063r\u0065\u0061\u0074\u006f\u0072";switch _abecb ._gcfe .(type ){case *Block :_faga ="\u0062\u006c\u006fc\u006b";};if _ ,_beed =_ggae ._ffbgf [_faga ];!_beed {_cf .Log .Debug ("\u0060%\u0073\u0060 \u0069\u0073\u0020n\u006f\u0074\u0020\u0061\u0020\u0076\u0061l\u0069\u0064\u0020\u0070\u0061\u0072e\u006e\u0074\u0020\u0066\u006f\u0072\u0020\u0074\u0068\u0065\u0020`\u0025\u0073\u0060\u0020\u006e\u006f\u0064\u0065\u002e",_faga ,_aebe );
-return _gbcf ;};_ddbge =_abecb ._gcfe ;};switch _aaedb :=_ddbge .(type ){case componentRenderer :_gcae ,_gfbea :=_dgcgb .(Drawable );if !_gfbea {_cf .Log .Error ("\u0043\u006f\u006d\u0070\u006f\u006ee\u006e\u0074\u0020\u0028\u0025\u0054\u0029\u0020\u0069\u0073\u0020\u006e\u006ft\u0020\u0061\u0020\u0064\u0072\u0061\u0077a\u0062\u006c\u0065\u002e",_dgcgb );
-return _adebg ;};return _aaedb .Draw (_gcae );case *Division :switch _fddbc :=_dgcgb .(type ){case *Background :_aaedb .SetBackground (_fddbc );case VectorDrawable :return _aaedb .Add (_fddbc );};case *TableCell :_fgee ,_eebea :=_dgcgb .(VectorDrawable );
-if !_eebea {_cf .Log .Error ("C\u006f\u006d\u0070\u006f\u006e\u0065\u006e\u0074\u0020\u0028\u0025\u0054\u0029\u0020\u0069\u0073\u0020\u006eo\u0074\u0020\u0061\u0020\u0076\u0065\u0063\u0074\u006f\u0072 d\u0072\u0061\u0077a\u0062l\u0065\u002e",_dgcgb );return _adebg ;
-};return _aaedb .SetContent (_fgee );case *StyledParagraph :_dadae ,_ddbfg :=_dgcgb .(*TextChunk );if !_ddbfg {_cf .Log .Error ("C\u006f\u006d\u0070\u006f\u006e\u0065n\u0074\u0020\u0028\u0025\u0054\u0029 \u0069\u0073\u0020\u006e\u006f\u0074\u0020a\u0020\u0074\u0065\u0078\u0074\u0020\u0063\u0068\u0075\u006ek\u002e",_dgcgb );
-return _adebg ;};_aaedb .appendChunk (_dadae );case *Chapter :switch _cfbab :=_dgcgb .(type ){case *Chapter :return nil ;case *Paragraph :if _fafed ._feaff .Name .Local =="\u0063h\u0061p\u0074\u0065\u0072\u002d\u0068\u0065\u0061\u0064\u0069\u006e\u0067"{return nil ;
-};return _aaedb .Add (_cfbab );case Drawable :return _aaedb .Add (_cfbab );};case *List :switch _eddfg :=_dgcgb .(type ){case *TextChunk :case *listItem :_aaedb ._eccb =append (_aaedb ._eccb ,_eddfg );default:_cf .Log .Error ("\u0043o\u006d\u0070o\u006e\u0065\u006e\u0074 \u0028\u0025\u0054)\u0020\u0069\u0073\u0020\u006e\u006f\u0074\u0020\u0061 l\u0069\u0073\u0074 \u0069\u0074e\u006d\u002e\u0020\u0053\u006b\u0069p\u0070\u0069n\u0067\u002e",_dgcgb );
-};case *listItem :switch _eegg :=_dgcgb .(type ){case *TextChunk :case *StyledParagraph :_aaedb ._cafb =_eegg ;case *List :if _eegg ._egca {_eegg ._gbdd =15;};_aaedb ._cafb =_eegg ;case *Image :_aaedb ._cafb =_eegg ;case *Division :_aaedb ._cafb =_eegg ;
-case *Table :_aaedb ._cafb =_eegg ;default:_cf .Log .Error ("\u0043\u006f\u006d\u0070\u006f\u006e\u0065\u006e\u0074\u0020\u0028\u0025\u0054)\u0020\u0069\u0073\u0020\u006e\u006ft\u0020\u0073\u0075\u0070\u0070\u006f\u0072\u0074\u0065\u0064\u0020\u0069\u006e \u006c\u0069\u0073\u0074",_dgcgb );
-return _adebg ;};};return nil ;};
-
-// NewParagraph creates a new text paragraph.
-// Default attributes:
-// Font: Helvetica,
-// Font size: 10
-// Encoding: WinAnsiEncoding
-// Wrap: enabled
-// Text color: black
-func (_cda *Creator )NewParagraph (text string )*Paragraph {return _edef (text ,_cda .NewTextStyle ())};
-
-// SetLineHeight sets the line height (1.0 default).
-func (_cacf *StyledParagraph )SetLineHeight (lineheight float64 ){_cacf ._edccf =lineheight };
-
-// SkipRows skips over a specified number of rows in the table.
-func (_cebe *Table )SkipRows (num int ){_aaebd :=num *_cebe ._eeecb -1;if _aaebd < 0{_cf .Log .Debug ("\u0054\u0061\u0062\u006c\u0065:\u0020\u0063\u0061\u006e\u006e\u006f\u0074\u0020\u0073\u006b\u0069\u0070\u0020b\u0061\u0063\u006b\u0020\u0074\u006f\u0020\u0070\u0072\u0065\u0076\u0069\u006f\u0075\u0073\u0020\u0063\u0065\u006c\u006c\u0073");
-return ;};_cebe ._gfcae +=_aaebd ;};func _gede (_cfbfd ,_fegga ,_egdbe TextChunk ,_dcdeb uint ,_abgacb TextStyle )*TOCLine {_gfgfg :=_ebab (_abgacb );_gfgfg .SetEnableWrap (true );_gfgfg .SetTextAlignment (TextAlignmentLeft );_gfgfg .SetMargins (0,0,2,2);
-_gcfd :=&TOCLine {_dfbba :_gfgfg ,Number :_cfbfd ,Title :_fegga ,Page :_egdbe ,Separator :TextChunk {Text :"\u002e",Style :_abgacb },_gbed :0,_gfggc :_dcdeb ,_edaee :10,_gfdb :PositionRelative };_gfgfg ._gdfc .Left =_gcfd ._gbed +float64 (_gcfd ._gfggc -1)*_gcfd ._edaee ;
-_gfgfg ._adgb =_gcfd .prepareParagraph ;return _gcfd ;};
-
-// SetMargins sets the margins of the graphic svg component.
-func (_fadf *GraphicSVG )SetMargins (left ,right ,top ,bottom float64 ){_fadf ._aafd .Left =left ;_fadf ._aafd .Right =right ;_fadf ._aafd .Top =top ;_fadf ._aafd .Bottom =bottom ;};
-
-// SetFillColor sets the fill color of the ellipse.
-func (_cega *Ellipse )SetFillColor (col Color ){_cega ._agfc =col };
-
-// SetHeading sets the text and the style of the heading of the TOC component.
-func (_fdaedg *TOC )SetHeading (text string ,style TextStyle ){_aeac :=_fdaedg .Heading ();_aeac .Reset ();_cfeef :=_aeac .Append (text );_cfeef .Style =style ;};
-
-// NewRectangle creates a new rectangle with the left corner at (`x`, `y`),
-// having the specified width and height.
-// NOTE: In relative positioning mode, `x` and `y` are calculated using the
-// current context. Furthermore, when the fit mode is set to fill the available
-// space, the rectangle is scaled so that it occupies the entire context width
-// while maintaining the original aspect ratio.
-func (_dda *Creator )NewRectangle (x ,y ,width ,height float64 )*Rectangle {return _bfeeg (x ,y ,width ,height );};const (CellHorizontalAlignmentLeft CellHorizontalAlignment =iota ;CellHorizontalAlignmentCenter ;CellHorizontalAlignmentRight ;);func _cbfbag (_geddg *templateProcessor ,_ebefc *templateNode )(interface{},error ){return _geddg .parseImage (_ebefc );
-};func (_abg *Block )mergeBlocks (_agdb *Block )error {_bde :=_adf (_abg ._egf ,_abg ._cff ,_agdb ._egf ,_agdb ._cff );if _bde !=nil {return _bde ;};for _ ,_edc :=range _agdb ._egb {_abg .AddAnnotation (_edc );};return nil ;};
-
-// StyledParagraph represents text drawn with a specified font and can wrap across lines and pages.
-// By default occupies the available width in the drawing context.
-type StyledParagraph struct{_gdae []*TextChunk ;_cadaf TextStyle ;_fcfd TextStyle ;_cbcbb TextAlignment ;_ccceb TextVerticalAlignment ;_edccf float64 ;_fbbcc bool ;_bceed float64 ;_cfadd bool ;_feege bool ;_gffa TextOverflow ;_afgbg float64 ;_gdfc Margins ;
-_cdcdd Positioning ;_eaceb float64 ;_gdgb float64 ;_dbege float64 ;_gcea float64 ;_cgfdg [][]*TextChunk ;_adgb func (_aabgf *StyledParagraph ,_cacd DrawContext );};func (_gedbc cmykColor )ToRGB ()(float64 ,float64 ,float64 ){_cddf :=_gedbc ._efa ;return 1-(_gedbc ._cadf *(1-_cddf )+_cddf ),1-(_gedbc ._dfb *(1-_cddf )+_cddf ),1-(_gedbc ._cgcf *(1-_cddf )+_cddf );
-};
-
-// EnableWordWrap sets the paragraph word wrap flag.
-func (_bcdde *StyledParagraph )EnableWordWrap (val bool ){_bcdde ._cfadd =val };
-
-// SetBorderColor sets the border color.
-func (_bbfb *PolyBezierCurve )SetBorderColor (color Color ){_bbfb ._debe .BorderColor =_dca (color )};func (_dadf *templateProcessor )parseListItem (_ffcgb *templateNode )(interface{},error ){if _ffcgb ._edcee ==nil {_cf .Log .Error ("\u004c\u0069\u0073t\u0020\u0069\u0074\u0065m\u0020\u0070\u0061\u0072\u0065\u006e\u0074 \u0063\u0061\u006e\u006e\u006f\u0074\u0020\u0062\u0065\u0020\u006e\u0069\u006c\u002e");
-return nil ,_gbcf ;};_agggb ,_gfgge :=_ffcgb ._edcee ._aeeaa .(*List );if !_gfgge {_cf .Log .Error ("\u004c\u0069s\u0074\u0020\u0069\u0074\u0065\u006d\u0020\u0070\u0061\u0072\u0065\u006e\u0074\u0020\u0069\u0073\u0020\u006e\u006f\u0074\u0020\u004cis\u0074\u002e");
-return nil ,_gbcf ;};_ggda :=_gddc ();_ggda ._ccbc =_agggb ._bdeb ;return _ggda ,nil ;};
-
-// InvoiceAddress contains contact information that can be displayed
-// in an invoice. It is used for the seller and buyer information in the
-// invoice template.
-type InvoiceAddress struct{Heading string ;Name string ;Street string ;Street2 string ;Zip string ;City string ;State string ;Country string ;Phone string ;Email string ;
-
-// Separator defines the separator between different address components,
-// such as the city, state and zip code. It defaults to ", " when the
-// field is an empty string.
-Separator string ;
-
-// If enabled, the Phone field label (`Phone: `) is not displayed.
-HidePhoneLabel bool ;
-
-// If enabled, the Email field label (`Email: `) is not displayed.
-HideEmailLabel bool ;};
-
-// Margins returns the margins of the list: left, right, top, bottom.
-func (_cdbb *List )Margins ()(float64 ,float64 ,float64 ,float64 ){return _cdbb ._ccfa .Left ,_cdbb ._ccfa .Right ,_cdbb ._ccfa .Top ,_cdbb ._ccfa .Bottom ;};func _fbbge (_agffd [][]_g .CubicBezierCurve )*CurvePolygon {return &CurvePolygon {_dadd :&_g .CurvePolygon {Rings :_agffd },_ffcg :1.0,_bced :1.0};
-};func (_gbac *StyledParagraph )appendChunk (_adccg *TextChunk )*TextChunk {_gbac ._gdae =append (_gbac ._gdae ,_adccg );_gbac .wrapText ();return _adccg ;};func (_aag *Division )ctxHeight (_dgga float64 )float64 {_dgga -=_aag ._dcbe .Left +_aag ._dcbe .Right +_aag ._acbg .Left +_aag ._acbg .Right ;
-var _dgcg float64 ;for _ ,_dfad :=range _aag ._ebd {_dgcg +=_gebd (_dfad ,_dgga );};return _dgcg ;};
-
-// AppendColumn appends a column to the line items table.
-func (_cfea *Invoice )AppendColumn (description string )*InvoiceCell {_bcfc :=_cfea .NewColumn (description );_cfea ._bacc =append (_cfea ._bacc ,_bcfc );return _bcfc ;};
-
-// SellerAddress returns the seller address used in the invoice template.
-func (_ffcd *Invoice )SellerAddress ()*InvoiceAddress {return _ffcd ._cedb };
-
-// NewColorPoint creates a new color and point object for use in the gradient rendering process.
-func NewColorPoint (color Color ,point float64 )*ColorPoint {return _dgefb (color ,point )};
-
-// Level returns the indentation level of the TOC line.
-func (_fecfd *TOCLine )Level ()uint {return _fecfd ._gfggc };
-
-// SetWidth sets line width.
-func (_gagf *Curve )SetWidth (width float64 ){_gagf ._begc =width };
-
-// SetHeight sets the height of the ellipse.
-func (_acae *Ellipse )SetHeight (height float64 ){_acae ._ccae =height };
-
-// SetEnableWrap sets the line wrapping enabled flag.
-func (_bgda *Paragraph )SetEnableWrap (enableWrap bool ){_bgda ._bedd =enableWrap ;_bgda ._fecaa =false ;};type componentRenderer interface{Draw (_ffdbec Drawable )error ;};
-
-// SetMargins sets the Block's left, right, top, bottom, margins.
-func (_fff *Block )SetMargins (left ,right ,top ,bottom float64 ){_fff ._ced .Left =left ;_fff ._ced .Right =right ;_fff ._ced .Top =top ;_fff ._ced .Bottom =bottom ;};
-
-// GetMargins returns the margins of the chart (left, right, top, bottom).
-func (_bda *Chart )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _bda ._fbfc .Left ,_bda ._fbfc .Right ,_bda ._fbfc .Top ,_bda ._fbfc .Bottom ;};func (_eacd *FilledCurve )draw (_ccbac *Block ,_gbdc string )([]byte ,*_gf .PdfRectangle ,error ){_dfac :=_g .NewCubicBezierPath ();
-for _ ,_dcaec :=range _eacd ._agfb {_dfac =_dfac .AppendCurve (_dcaec );};creator :=_cd .NewContentCreator ();creator .Add_q ();if _eacd .FillEnabled &&_eacd ._dfgb !=nil {_fafb :=_dca (_eacd ._dfgb );_beag :=_ggfba (_ccbac ,_fafb ,_eacd ._dfgb ,func ()Rectangle {_cafe :=_g .NewCubicBezierPath ();
-for _ ,_eebe :=range _eacd ._agfb {_cafe =_cafe .AppendCurve (_eebe );};_fgfa :=_cafe .GetBoundingBox ();if _eacd .BorderEnabled {_fgfa .Height +=_eacd .BorderWidth ;_fgfa .Width +=_eacd .BorderWidth ;_fgfa .X -=_eacd .BorderWidth /2;_fgfa .Y -=_eacd .BorderWidth /2;
-};return Rectangle {_fgfd :_fgfa .X ,_aedgf :_fgfa .Y ,_adeb :_fgfa .Width ,_dffef :_fgfa .Height };});if _beag !=nil {return nil ,nil ,_beag ;};creator .SetNonStrokingColor (_fafb );};if _eacd .BorderEnabled {if _eacd ._afde !=nil {creator .SetStrokingColor (_dca (_eacd ._afde ));
-};creator .Add_w (_eacd .BorderWidth );};if len (_gbdc )> 1{creator .Add_gs (_acb .PdfObjectName (_gbdc ));};_g .DrawBezierPathWithCreator (_dfac ,creator );creator .Add_h ();if _eacd .FillEnabled &&_eacd .BorderEnabled {creator .Add_B ();}else if _eacd .FillEnabled {creator .Add_f ();
-}else if _eacd .BorderEnabled {creator .Add_S ();};creator .Add_Q ();_adba :=_dfac .GetBoundingBox ();if _eacd .BorderEnabled {_adba .Height +=_eacd .BorderWidth ;_adba .Width +=_eacd .BorderWidth ;_adba .X -=_eacd .BorderWidth /2;_adba .Y -=_eacd .BorderWidth /2;
-};_bcdd :=&_gf .PdfRectangle {};_bcdd .Llx =_adba .X ;_bcdd .Lly =_adba .Y ;_bcdd .Urx =_adba .X +_adba .Width ;_bcdd .Ury =_adba .Y +_adba .Height ;return creator .Bytes (),_bcdd ,nil ;};
-
-// GetRowHeight returns the height of the specified row.
-func (_abeb *Table )GetRowHeight (row int )(float64 ,error ){if row < 1||row > len (_abeb ._gdgf ){return 0,_d .New ("\u0072\u0061\u006e\u0067\u0065\u0020\u0063\u0068\u0065\u0063\u006b\u0020e\u0072\u0072\u006f\u0072");};return _abeb ._gdgf [row -1],nil ;
-};
-
-// SetIndent sets the left offset of the list when nested into another list.
-func (_bdeg *List )SetIndent (indent float64 ){_bdeg ._gbdd =indent ;_bdeg ._egca =false };
-
-// MoveDown moves the drawing context down by relative displacement dy (negative goes up).
-func (_gagbc *Creator )MoveDown (dy float64 ){_gagbc ._fagd .Y +=dy };
-
-// UnsupportedRuneError is an error that occurs when there is unsupported glyph being used.
-type UnsupportedRuneError struct{Message string ;Rune rune ;};const (HorizontalAlignmentLeft HorizontalAlignment =iota ;HorizontalAlignmentCenter ;HorizontalAlignmentRight ;);func (_afdcf *Image )applyFitMode (_gdfb float64 ){_gdfb -=_afdcf ._gbeae .Left +_afdcf ._gbeae .Right ;
-switch _afdcf ._ggcg {case FitModeFillWidth :_afdcf .ScaleToWidth (_gdfb );};};
-
-// SetLineWidth sets the line width.
-func (_edea *Line )SetLineWidth (width float64 ){_edea ._decc =width };const (DefaultHorizontalScaling =100;);
-
-// SetBackgroundColor set background color of the shading area.
-//
-// By default the background color is set to white.
-func (_efebb *LinearShading )SetBackgroundColor (backgroundColor Color ){_efebb ._adbg .SetBackgroundColor (backgroundColor );};func (_ffffgd *Image )makeXObject ()error {_eafg :=_ffffgd ._eebc ;if _eafg ==nil {_eafg =_acb .NewFlateEncoder ();};_ecfc ,_geacf :=_gf .NewXObjectImageFromImage (_ffffgd ._afaf ,nil ,_eafg );
-if _geacf !=nil {_cf .Log .Error ("\u0046\u0061\u0069le\u0064\u0020\u0074\u006f\u0020\u0063\u0072\u0065\u0061t\u0065 \u0078o\u0062j\u0065\u0063\u0074\u0020\u0069\u006d\u0061\u0067\u0065\u003a\u0020\u0025\u0073",_geacf );return _geacf ;};_ffffgd ._ddec =_ecfc ;
-return nil ;};func (_dgaf *Paragraph )getTextLineWidth (_fcbdf string )float64 {var _cebca float64 ;for _ ,_ddaca :=range _fcbdf {if _ddaca =='\u000A'{continue ;};_ccbbb ,_fbdf :=_dgaf ._befba .GetRuneMetrics (_ddaca );if !_fbdf {_cf .Log .Debug ("\u0045\u0052R\u004f\u0052\u003a\u0020\u0052u\u006e\u0065\u0020\u0063\u0068a\u0072\u0020\u006d\u0065\u0074\u0072\u0069\u0063\u0073\u0020\u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064\u0021\u0020\u0028\u0072\u0075\u006e\u0065\u0020\u0030\u0078\u0025\u0030\u0034\u0078\u003d\u0025\u0063\u0029",_ddaca ,_ddaca );
-return -1;};_cebca +=_dgaf ._dgfa *_ccbbb .Wx ;};return _cebca ;};func (_gfbge *templateProcessor )parseList (_aecfgd *templateNode )(interface{},error ){_cgecf :=_gfbge .creator .NewList ();for _ ,_cfead :=range _aecfgd ._feaff .Attr {_eced :=_cfead .Value ;
-switch _gfafaa :=_cfead .Name .Local ;_gfafaa {case "\u0069\u006e\u0064\u0065\u006e\u0074":_cgecf .SetIndent (_gfbge .parseFloatAttr (_gfafaa ,_eced ));case "\u006d\u0061\u0072\u0067\u0069\u006e":_ddcg :=_gfbge .parseMarginAttr (_gfafaa ,_eced );_cgecf .SetMargins (_ddcg .Left ,_ddcg .Right ,_ddcg .Top ,_ddcg .Bottom );
-default:_cf .Log .Debug ("\u0055\u006e\u0073\u0075\u0070\u0070\u006fr\u0074\u0065\u0064 \u006c\u0069\u0073\u0074 \u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073\u0060\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069\u006e\u0067\u002e",_gfafaa );
-};};return _cgecf ,nil ;};
-
-// SetColor sets the line color.
-func (_egfff *Curve )SetColor (col Color ){_egfff ._fbfg =col };func (_afbf *Table )wrapContent (_cagf DrawContext )error {if _afbf ._bfbf {return nil ;};_cebgd :=func (_cdac *TableCell ,_ggbe int ,_ecdbd int ,_gccac int )(_faed int ){if _gccac < 1{return -1;
-};_aaggg :=0;for _dcbcb :=_ecdbd +1;_dcbcb < len (_afbf ._fdde )-1;_dcbcb ++{_dgccb :=_afbf ._fdde [_dcbcb ];if _dgccb ._gaddf ==_gccac {_aaggg =_dcbcb ;if (_dgccb ._bgege < _cdac ._bgege &&_afbf ._eeecb > _dgccb ._bgege )||_cdac ._bgege < _afbf ._eeecb {continue ;
-};break ;};};_cbbg :=float64 (0.0);for _bddf :=0;_bddf < _cdac ._adfef ;_bddf ++{_cbbg +=_afbf ._gdgf [_cdac ._gaddf +_bddf -1];};_cfecg :=float64 (0.0);for _gefcg :=0;_gefcg < _cdac ._adcd ;_gefcg ++{_cfecg +=_afbf ._cdgf [_cdac ._bgege +_gefcg -1];};
-var (_cead VectorDrawable ;_gcag =false ;);switch _cgge :=_cdac ._afgda .(type ){case *StyledParagraph :_dcabf :=_cagf ;_dcabf .Height =_ee .Floor (_cbbg -_cgge ._gdfc .Top -_cgge ._gdfc .Bottom -0.5*_cgge .getTextHeight ());_dcabf .Width =_cfecg ;_gaeac ,_ggcc ,_dafd :=_cgge .split (_dcabf );
-if _dafd !=nil {_cf .Log .Error ("\u0045\u0072\u0072o\u0072\u0020\u0077\u0072a\u0070\u0020\u0073\u0074\u0079\u006c\u0065d\u0020\u0070\u0061\u0072\u0061\u0067\u0072\u0061\u0070\u0068\u003a\u0020\u0025\u0076",_dafd .Error ());};if _gaeac !=nil &&_ggcc !=nil {_afbf ._fdde [_ecdbd ]._afgda =_gaeac ;
-_cead =_ggcc ;_gcag =true ;};};_afbf ._fdde [_ecdbd ]._adfef =_cdac ._adfef ;_cagf .Height =_cagf .PageHeight -_cagf .Margins .Top -_cagf .Margins .Bottom ;_bdegb :=_cdac .cloneProps (nil );if _gcag {_bdegb ._afgda =_cead ;};_bdegb ._adfef =_ggbe -1;_bdegb ._gaddf =_gccac +1;
-_bdegb ._bgege =_cdac ._bgege ;_afbf ._fdde =append (_afbf ._fdde [:_aaggg +1],append ([]*TableCell {_bdegb },_afbf ._fdde [_aaggg +1:]...)...);return _aaggg +1;};_caffa :=float64 (0.0);_dadb :=0;_cccg :=-1;for _aefc ,_gaae :=range _afbf ._fdde {if _cccg ==_aefc {_dadb =_gaae ._gaddf ;
-_caffa =0.0;};if _gaae ._adfef < 2{if _dadb < _gaae ._gaddf &&_aefc > _cccg &&_caffa < _cagf .Height {_caffa +=_afbf ._gdgf [_gaae ._gaddf -1];};_dadb =_gaae ._gaddf ;continue ;};_acafe :=float64 (0.0);_acaee :=-1;_edee :=-1;_fade :=0;for _bedf :=0;_bedf < _gaae ._adfef ;
-_bedf ++{if (_acafe +_afbf ._gdgf [_gaae ._gaddf +_bedf -1])> (_cagf .Height -_caffa ){_fade --;break ;};_acafe +=_afbf ._gdgf [_gaae ._gaddf +_bedf -1];_edee =_gaae ._gaddf +_bedf -1;_acaee =_gaae ._adfef -_bedf +1;_fade ++;};if _acaee > 0&&_gaae ._adfef > _fade {_gaae ._adfef =_fade ;
-_cccg =_cebgd (_gaae ,_acaee ,_aefc ,_edee );_dadb =_edee ;};};return nil ;};
-
-// GetCoords returns the upper left corner coordinates of the rectangle (`x`, `y`).
-func (_ccce *Rectangle )GetCoords ()(float64 ,float64 ){return _ccce ._fgfd ,_ccce ._aedgf };func (_ecgc *Invoice )drawAddress (_geed *InvoiceAddress )[]*StyledParagraph {var _aaabe []*StyledParagraph ;if _geed .Heading !=""{_ecea :=_ebab (_ecgc ._dfbb );
-_ecea .SetMargins (0,0,0,7);_ecea .Append (_geed .Heading );_aaabe =append (_aaabe ,_ecea );};_ccgd :=_ebab (_ecgc ._cfgg );_ccgd .SetLineHeight (1.2);_aaff :=_geed .Separator ;if _aaff ==""{_aaff =_ecgc ._cfee ;};_bgdd :=_geed .City ;if _geed .State !=""{if _bgdd !=""{_bgdd +=_aaff ;
-};_bgdd +=_geed .State ;};if _geed .Zip !=""{if _bgdd !=""{_bgdd +=_aaff ;};_bgdd +=_geed .Zip ;};if _geed .Name !=""{_ccgd .Append (_geed .Name +"\u000a");};if _geed .Street !=""{_ccgd .Append (_geed .Street +"\u000a");};if _geed .Street2 !=""{_ccgd .Append (_geed .Street2 +"\u000a");
-};if _bgdd !=""{_ccgd .Append (_bgdd +"\u000a");};if _geed .Country !=""{_ccgd .Append (_geed .Country +"\u000a");};_bffcb :=_ebab (_ecgc ._cfgg );_bffcb .SetLineHeight (1.2);_bffcb .SetMargins (0,0,7,0);if _geed .Phone !=""{_bffcb .Append (_geed .fmtLine (_geed .Phone ,"\u0050h\u006f\u006e\u0065\u003a\u0020",_geed .HidePhoneLabel ));
-};if _geed .Email !=""{_bffcb .Append (_geed .fmtLine (_geed .Email ,"\u0045m\u0061\u0069\u006c\u003a\u0020",_geed .HideEmailLabel ));};_aaabe =append (_aaabe ,_ccgd ,_bffcb );return _aaabe ;};
-
-// Division is a container component which can wrap across multiple pages.
-// Currently supported drawable components:
-// - *Paragraph
-// - *StyledParagraph
-// - *Image
-// - *Chart
-//
-// The component stacking behavior is vertical, where the drawables are drawn
-// on top of each other.
-type Division struct{_ebd []VectorDrawable ;_dfdd Positioning ;_dcbe Margins ;_acbg Margins ;_bgbcc bool ;_befa bool ;_dfea *Background ;};
-
-// SetBorderColor sets the border color.
-func (_gacca *Polygon )SetBorderColor (color Color ){_gacca ._ffgbf .BorderColor =_dca (color )};
-
-// Chapter is used to arrange multiple drawables (paragraphs, images, etc) into a single section.
-// The concept is the same as a book or a report chapter.
-type Chapter struct{_fagg int ;_gfbfc string ;_agdbe *Paragraph ;_cgc []Drawable ;_acd int ;_agbcd bool ;_aaaa bool ;_bfdd Positioning ;_bffe ,_adee float64 ;_fbcg Margins ;_bcgb *Chapter ;_acc *TOC ;_ffffg *_gf .Outline ;_egfee *_gf .OutlineItem ;_dba uint ;
-};
-
-// NoteHeadingStyle returns the style properties used to render the heading of
-// the invoice note sections.
-func (_dbcf *Invoice )NoteHeadingStyle ()TextStyle {return _dbcf ._cggf };
-
-// Curve represents a cubic Bezier curve with a control point.
-type Curve struct{_gbd float64 ;_addf float64 ;_agaf float64 ;_cec float64 ;_cce float64 ;_ddcf float64 ;_fbfg Color ;_begc float64 ;};
-
-// Height returns the height of the rectangle.
-// NOTE: the returned value does not include the border width of the rectangle.
-func (_abcaa *Rectangle )Height ()float64 {return _abcaa ._dffef };func _fdcb (_adcbg string )(*Image ,error ){_ecb ,_afef :=_bg .Open (_adcbg );if _afef !=nil {return nil ,_afef ;};defer _ecb .Close ();_dffe ,_afef :=_gf .ImageHandling .Read (_ecb );if _afef !=nil {_cf .Log .Error ("\u0045\u0072\u0072or\u0020\u006c\u006f\u0061\u0064\u0069\u006e\u0067\u0020\u0069\u006d\u0061\u0067\u0065\u003a\u0020\u0025\u0073",_afef );
-return nil ,_afef ;};return _ddga (_dffe );};
-
-// SetNoteHeadingStyle sets the style properties used to render the heading
-// of the invoice note sections.
-func (_bec *Invoice )SetNoteHeadingStyle (style TextStyle ){_bec ._cggf =style };
-
-// CellVerticalAlignment defines the table cell's vertical alignment.
-type CellVerticalAlignment int ;
-
-// GeneratePageBlocks draws the polygon on a new block representing the page.
-// Implements the Drawable interface.
-func (_fggg *Polygon )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_acadc :=NewBlock (ctx .PageWidth ,ctx .PageHeight );_abggc ,_aegbg :=_acadc .setOpacity (_fggg ._eegca ,_fggg ._ada );if _aegbg !=nil {return nil ,ctx ,_aegbg ;
-};_beeeg :=_fggg ._ffgbf ;_beeeg .FillEnabled =_beeeg .FillColor !=nil ;_beeeg .BorderEnabled =_beeeg .BorderColor !=nil &&_beeeg .BorderWidth > 0;_ececa :=_beeeg .Points ;_ggcb :=_gf .PdfRectangle {};_gabe :=false ;for _bdea :=range _ececa {for _gbagb :=range _ececa [_bdea ]{_ggfbb :=&_ececa [_bdea ][_gbagb ];
-_ggfbb .Y =ctx .PageHeight -_ggfbb .Y ;if !_gabe {_ggcb .Llx =_ggfbb .X ;_ggcb .Lly =_ggfbb .Y ;_ggcb .Urx =_ggfbb .X ;_ggcb .Ury =_ggfbb .Y ;_gabe =true ;}else {_ggcb .Llx =_ee .Min (_ggcb .Llx ,_ggfbb .X );_ggcb .Lly =_ee .Min (_ggcb .Lly ,_ggfbb .Y );
-_ggcb .Urx =_ee .Max (_ggcb .Urx ,_ggfbb .X );_ggcb .Ury =_ee .Max (_ggcb .Ury ,_ggfbb .Y );};};};if _beeeg .FillEnabled {_cgff :=_ggfba (_acadc ,_fggg ._ffgbf .FillColor ,_fggg ._egecd ,func ()Rectangle {return Rectangle {_fgfd :_ggcb .Llx ,_aedgf :_ggcb .Lly ,_adeb :_ggcb .Width (),_dffef :_ggcb .Height ()};
-});if _cgff !=nil {return nil ,ctx ,_cgff ;};};_gcgf ,_ ,_aegbg :=_beeeg .Draw (_abggc );if _aegbg !=nil {return nil ,ctx ,_aegbg ;};if _aegbg =_acadc .addContentsByString (string (_gcgf ));_aegbg !=nil {return nil ,ctx ,_aegbg ;};return []*Block {_acadc },ctx ,nil ;
-};func (_baadb *Invoice )drawSection (_dadce ,_dcdgc string )[]*StyledParagraph {var _gaafc []*StyledParagraph ;if _dadce !=""{_gdaa :=_ebab (_baadb ._cggf );_gdaa .SetMargins (0,0,0,5);_gdaa .Append (_dadce );_gaafc =append (_gaafc ,_gdaa );};if _dcdgc !=""{_afbc :=_ebab (_baadb ._bggdb );
-_afbc .Append (_dcdgc );_gaafc =append (_gaafc ,_afbc );};return _gaafc ;};
-
-// MultiColCell makes a new cell with the specified column span and inserts it
-// into the table at the current position.
-func (_ccfag *Table )MultiColCell (colspan int )*TableCell {return _ccfag .MultiCell (1,colspan )};
-
-// Width returns the width of the graphic svg.
-func (_gffb *GraphicSVG )Width ()float64 {return _gffb ._febb .Width };
-
-// SetBorderWidth sets the border width.
-func (_aaeadf *Polygon )SetBorderWidth (borderWidth float64 ){_aaeadf ._ffgbf .BorderWidth =borderWidth };func (_dabaa *templateProcessor )parseListMarker (_cefc *templateNode )(interface{},error ){if _cefc ._edcee ==nil {_cf .Log .Error ("\u004c\u0069\u0073\u0074\u0020\u006da\u0072\u006b\u0065\u0072\u0020\u0070\u0061\u0072\u0065\u006e\u0074\u0020\u0063a\u006e\u006e\u006f\u0074\u0020\u0062\u0065 \u006e\u0069\u006c\u002e");
-return nil ,_gbcf ;};var _bcfce *TextChunk ;switch _edadc :=_cefc ._edcee ._aeeaa .(type ){case *List :_bcfce =&_edadc ._bdeb ;case *listItem :_bcfce =&_edadc ._ccbc ;default:_cf .Log .Error ("\u0025v\u0020\u0069s\u0020\u006e\u006ft\u0020\u0061\u0020\u0076\u0061\u006c\u0069d\u0020\u0070\u0061\u0072\u0065\u006et\u0020\u006e\u006f\u0064\u0065\u0020\u0066\u006f\u0072\u0020\u006ci\u0073\u0074\u0020\u006d\u0061\u0072\u006b\u0065\u0072",_edadc );
-return nil ,_gbcf ;};if _ ,_afbfa :=_dabaa .parseTextChunk (_cefc ,_bcfce );_afbfa !=nil {_cf .Log .Error ("\u0043\u006f\u0075\u006c\u0064\u0020n\u006f\u0074\u0020\u0070\u0061\u0072\u0073\u0065\u0020\u006c\u0069\u0073\u0074 \u006d\u0061\u0072\u006b\u0065\u0072\u003a \u0060\u0025\u0076\u0060",_afbfa );
-return nil ,nil ;};return _bcfce ,nil ;};func (_bdg *Invoice )generateHeaderBlocks (_gfaegb DrawContext )([]*Block ,DrawContext ,error ){_ebga :=_ebab (_bdg ._dcgf );_ebga .SetEnableWrap (true );_ebga .Append (_bdg ._ggca );_cbcda :=_afcfg (2);if _bdg ._egae !=nil {_gadg :=_cbcda .NewCell ();
-_gadg .SetHorizontalAlignment (CellHorizontalAlignmentLeft );_gadg .SetVerticalAlignment (CellVerticalAlignmentMiddle );_gadg .SetIndent (0);_gadg .SetContent (_bdg ._egae );_bdg ._egae .ScaleToHeight (_ebga .Height ()+20);}else {_cbcda .SkipCells (1);
-};_fedf :=_cbcda .NewCell ();_fedf .SetHorizontalAlignment (CellHorizontalAlignmentRight );_fedf .SetVerticalAlignment (CellVerticalAlignmentMiddle );_fedf .SetContent (_ebga );return _cbcda .GeneratePageBlocks (_gfaegb );};func (_dcc *Creator )setActivePage (_egde *_gf .PdfPage ){_dcc ._bgc =_egde };
-
-
-// GetHeading returns the chapter heading paragraph. Used to give access to address style: font, sizing etc.
-func (_dad *Chapter )GetHeading ()*Paragraph {return _dad ._agdbe };
-
-// SetAddressHeadingStyle sets the style properties used to render the
-// heading of the invoice address sections.
-func (_ccea *Invoice )SetAddressHeadingStyle (style TextStyle ){_ccea ._dfbb =style };
-
-// Width returns the width of the line.
-// NOTE: Depending on the fit mode the line is set to use, its width may be
-// calculated at runtime (e.g. when using FitModeFillWidth).
-func (_fdae *Line )Width ()float64 {return _ee .Abs (_fdae ._badg -_fdae ._aecg )};
-
-// BorderOpacity returns the border opacity of the rectangle (0-1).
-func (_adac *Rectangle )BorderOpacity ()float64 {return _adac ._eeee };
-
-// NewImageFromData creates an Image from image data.
-func (_bae *Creator )NewImageFromData (data []byte )(*Image ,error ){return _ecf (data )};func (_edadd *StyledParagraph )getTextLineWidth (_gcbg []*TextChunk )float64 {var _ffffb float64 ;_dfcge :=len (_gcbg );for _ccgb ,_ggef :=range _gcbg {_dbag :=&_ggef .Style ;
-_ccfcd :=len (_ggef .Text );for _aecge ,_faad :=range _ggef .Text {if _faad =='\u000A'{continue ;};_ebfb ,_dada :=_dbag .Font .GetRuneMetrics (_faad );if !_dada {_cf .Log .Debug ("\u0052\u0075\u006e\u0065\u0020\u0063\u0068\u0061\u0072\u0020\u006d\u0065\u0074\u0072\u0069c\u0073 \u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064\u0021\u0020\u0025\u0076\u000a",_faad );
-return -1;};_ffffb +=_dbag .FontSize *_ebfb .Wx *_dbag .horizontalScale ();if _faad !=' '&&(_ccgb !=_dfcge -1||_aecge !=_ccfcd -1){_ffffb +=_dbag .CharSpacing *1000.0;};};};return _ffffb ;};
-
-// SetTextAlignment sets the horizontal alignment of the text within the space provided.
-func (_cade *Paragraph )SetTextAlignment (align TextAlignment ){_cade ._ebdd =align };func (_geae *templateProcessor )parseTextChunk (_dbeag *templateNode ,_bfbff *TextChunk )(interface{},error ){if _dbeag ._edcee ==nil {_cf .Log .Error ("\u0054\u0065\u0078\u0074\u0020\u0063\u0068\u0075\u006e\u006b\u0020\u0070\u0061\u0072\u0065n\u0074 \u0063\u0061\u006e\u006e\u006f\u0074\u0020\u0062\u0065\u0020\u006e\u0069\u006c\u002e");
-return nil ,_gbcf ;};var (_edge =_geae .creator .NewTextStyle ();_edbf bool ;);for _ ,_cddb :=range _dbeag ._feaff .Attr {if _cddb .Name .Local =="\u006c\u0069\u006e\u006b"{_dcadg ,_fdcd :=_dbeag ._edcee ._aeeaa .(*StyledParagraph );if !_fdcd {_cf .Log .Error ("\u004c\u0069\u006e\u006b\u0020\u0061t\u0074\u0072\u0069b\u0075\u0074\u0065 \u006f\u006e\u006c\u0079\u0020\u0061\u0070\u0070\u006c\u0069c\u0061\u0062\u006c\u0065\u0020to\u0020\u0070\u0061\u0072\u0061\u0067\u0072\u0061\u0070\u0068\u0027\u0073\u0020\u0074\u0065\u0078\u0074\u0020\u0063\u0068\u0075\u006e\u006b");
-_edbf =true ;}else {_edge =_dcadg ._fcfd ;};break ;};};if _bfbff ==nil {_bfbff =NewTextChunk ("",_edge );};for _ ,_ccebd :=range _dbeag ._feaff .Attr {_adea :=_ccebd .Value ;switch _gbfd :=_ccebd .Name .Local ;_gbfd {case "\u0063\u006f\u006co\u0072":_bfbff .Style .Color =_geae .parseColorAttr (_gbfd ,_adea );
-case "\u006f\u0075\u0074\u006c\u0069\u006e\u0065\u002d\u0063\u006f\u006c\u006f\u0072":_bfbff .Style .OutlineColor =_geae .parseColorAttr (_gbfd ,_adea );case "\u0066\u006f\u006e\u0074":_bfbff .Style .Font =_geae .parseFontAttr (_gbfd ,_adea );case "\u0066o\u006e\u0074\u002d\u0073\u0069\u007ae":_bfbff .Style .FontSize =_geae .parseFloatAttr (_gbfd ,_adea );
-case "\u006f\u0075\u0074l\u0069\u006e\u0065\u002d\u0073\u0069\u007a\u0065":_bfbff .Style .OutlineSize =_geae .parseFloatAttr (_gbfd ,_adea );case "\u0063\u0068\u0061\u0072\u0061\u0063\u0074\u0065\u0072\u002d\u0073\u0070a\u0063\u0069\u006e\u0067":_bfbff .Style .CharSpacing =_geae .parseFloatAttr (_gbfd ,_adea );
-case "\u0068o\u0072i\u007a\u006f\u006e\u0074\u0061l\u002d\u0073c\u0061\u006c\u0069\u006e\u0067":_bfbff .Style .HorizontalScaling =_geae .parseFloatAttr (_gbfd ,_adea );case "\u0072\u0065\u006e\u0064\u0065\u0072\u0069\u006e\u0067-\u006d\u006f\u0064\u0065":_bfbff .Style .RenderingMode =_geae .parseTextRenderingModeAttr (_gbfd ,_adea );
-case "\u0075n\u0064\u0065\u0072\u006c\u0069\u006ee":_bfbff .Style .Underline =_geae .parseBoolAttr (_gbfd ,_adea );case "\u0075n\u0064e\u0072\u006c\u0069\u006e\u0065\u002d\u0063\u006f\u006c\u006f\u0072":_bfbff .Style .UnderlineStyle .Color =_geae .parseColorAttr (_gbfd ,_adea );
-case "\u0075\u006ed\u0065\u0072\u006ci\u006e\u0065\u002d\u006f\u0066\u0066\u0073\u0065\u0074":_bfbff .Style .UnderlineStyle .Offset =_geae .parseFloatAttr (_gbfd ,_adea );case "\u0075\u006e\u0064\u0065rl\u0069\u006e\u0065\u002d\u0074\u0068\u0069\u0063\u006b\u006e\u0065\u0073\u0073":_bfbff .Style .UnderlineStyle .Thickness =_geae .parseFloatAttr (_gbfd ,_adea );
-case "\u006c\u0069\u006e\u006b":if !_edbf {_bfbff ._cacbg =_geae .parseLinkAttr (_gbfd ,_adea );};case "\u0074e\u0078\u0074\u002d\u0072\u0069\u0073e":_bfbff .Style .TextRise =_geae .parseFloatAttr (_gbfd ,_adea );default:_cf .Log .Debug ("\u0055\u006e\u0073\u0075\u0070\u0070o\u0072\u0074\u0065\u0064\u0020\u0074\u0065\u0078\u0074\u0020\u0063\u0068\u0075\u006e\u006b\u0020\u0061\u0074\u0074\u0072i\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073\u0060\u002e\u0020\u0053\u006bi\u0070p\u0069\u006e\u0067\u002e",_gbfd );
-};};return _bfbff ,nil ;};func (_bgaf *Block )translate (_aca ,_eca float64 ){_deef :=_cd .NewContentCreator ().Translate (_aca ,-_eca ).Operations ();*_bgaf ._egf =append (*_deef ,*_bgaf ._egf ...);_bgaf ._egf .WrapIfNeeded ();};
-
-// GetOptimizer returns current PDF optimizer.
-func (_eda *Creator )GetOptimizer ()_gf .Optimizer {return _eda ._aae };func _egdda (_acbdb *_gf .PdfAnnotationLink )*_gf .PdfAnnotationLink {if _acbdb ==nil {return nil ;};_cecbg :=_gf .NewPdfAnnotationLink ();_cecbg .BS =_acbdb .BS ;_cecbg .A =_acbdb .A ;
-if _gefca ,_bcfee :=_acbdb .GetAction ();_bcfee ==nil &&_gefca !=nil {_cecbg .SetAction (_gefca );};if _cbbd ,_gadgc :=_acbdb .Dest .(*_acb .PdfObjectArray );_gadgc {_cecbg .Dest =_acb .MakeArray (_cbbd .Elements ()...);};return _cecbg ;};
-
-// SetWidthRight sets border width for right.
-func (_fbd *border )SetWidthRight (bw float64 ){_fbd ._egg =bw };func (_fadaa *templateProcessor )parseParagraph (_bdegbf *templateNode ,_fggd *Paragraph )(interface{},error ){if _fggd ==nil {_fggd =_fadaa .creator .NewParagraph ("");};for _ ,_abcab :=range _bdegbf ._feaff .Attr {_gddd :=_abcab .Value ;
-switch _cbbe :=_abcab .Name .Local ;_cbbe {case "\u0066\u006f\u006e\u0074":_fggd .SetFont (_fadaa .parseFontAttr (_cbbe ,_gddd ));case "\u0066o\u006e\u0074\u002d\u0073\u0069\u007ae":_fggd .SetFontSize (_fadaa .parseFloatAttr (_cbbe ,_gddd ));case "\u0074\u0065\u0078\u0074\u002d\u0061\u006c\u0069\u0067\u006e":_fggd .SetTextAlignment (_fadaa .parseTextAlignmentAttr (_cbbe ,_gddd ));
-case "l\u0069\u006e\u0065\u002d\u0068\u0065\u0069\u0067\u0068\u0074":_fggd .SetLineHeight (_fadaa .parseFloatAttr (_cbbe ,_gddd ));case "e\u006e\u0061\u0062\u006c\u0065\u002d\u0077\u0072\u0061\u0070":_fggd .SetEnableWrap (_fadaa .parseBoolAttr (_cbbe ,_gddd ));
-case "\u0063\u006f\u006co\u0072":_fggd .SetColor (_fadaa .parseColorAttr (_cbbe ,_gddd ));case "\u0078":_fggd .SetPos (_fadaa .parseFloatAttr (_cbbe ,_gddd ),_fggd ._cfcdd );case "\u0079":_fggd .SetPos (_fggd ._fgfe ,_fadaa .parseFloatAttr (_cbbe ,_gddd ));
-case "\u0061\u006e\u0067l\u0065":_fggd .SetAngle (_fadaa .parseFloatAttr (_cbbe ,_gddd ));case "\u006d\u0061\u0072\u0067\u0069\u006e":_cddd :=_fadaa .parseMarginAttr (_cbbe ,_gddd );_fggd .SetMargins (_cddd .Left ,_cddd .Right ,_cddd .Top ,_cddd .Bottom );
-case "\u006da\u0078\u002d\u006c\u0069\u006e\u0065s":_fggd .SetMaxLines (int (_fadaa .parseInt64Attr (_cbbe ,_gddd )));default:_cf .Log .Debug ("\u0055\u006e\u0073\u0075\u0070\u0070\u006f\u0072t\u0065\u0064\u0020pa\u0072\u0061\u0067\u0072\u0061\u0070h\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073`\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069n\u0067\u002e",_cbbe );
-};};return _fggd ,nil ;};
-
-// Positioning returns the type of positioning the ellipse is set to use.
-func (_ggffa *Ellipse )Positioning ()Positioning {return _ggffa ._ceeb };
-
-// AddTotalLine adds a new line in the invoice totals table.
-func (_dfab *Invoice )AddTotalLine (desc ,value string )(*InvoiceCell ,*InvoiceCell ){_bgca :=&InvoiceCell {_dfab ._facf ,desc };_feefg :=&InvoiceCell {_dfab ._facf ,value };_dfab ._gecf =append (_dfab ._gecf ,[2]*InvoiceCell {_bgca ,_feefg });return _bgca ,_feefg ;
-};func (_agacb *Table )clone ()*Table {_gbcc :=*_agacb ;_gbcc ._gdgf =make ([]float64 ,len (_agacb ._gdgf ));copy (_gbcc ._gdgf ,_agacb ._gdgf );_gbcc ._cdgf =make ([]float64 ,len (_agacb ._cdgf ));copy (_gbcc ._cdgf ,_agacb ._cdgf );_gbcc ._fdde =make ([]*TableCell ,0,len (_agacb ._fdde ));
-for _ ,_aedgd :=range _agacb ._fdde {_fcadb :=*_aedgd ;_fcadb ._bbcg =&_gbcc ;_gbcc ._fdde =append (_gbcc ._fdde ,&_fcadb );};return &_gbcc ;};func (_cegf *TableCell )height (_ggdf float64 )float64 {var _fgagf float64 ;switch _fdegbe :=_cegf ._afgda .(type ){case *Paragraph :if _fdegbe ._bedd {_fdegbe .SetWidth (_ggdf -_cegf ._bcgf -_fdegbe ._eddc .Left -_fdegbe ._eddc .Right );
-};_fgagf =_fdegbe .Height ()+_fdegbe ._eddc .Top +_fdegbe ._eddc .Bottom +0.5*_fdegbe ._dgfa *_fdegbe ._dbdc ;case *StyledParagraph :if _fdegbe ._fbbcc {_fdegbe .SetWidth (_ggdf -_cegf ._bcgf -_fdegbe ._gdfc .Left -_fdegbe ._gdfc .Right );};_fgagf =_fdegbe .Height ()+_fdegbe ._gdfc .Top +_fdegbe ._gdfc .Bottom +0.5*_fdegbe .getTextHeight ();
-case *Image :_fdegbe .applyFitMode (_ggdf -_cegf ._bcgf );_fgagf =_fdegbe .Height ()+_fdegbe ._gbeae .Top +_fdegbe ._gbeae .Bottom ;case *Table :_fdegbe .updateRowHeights (_ggdf -_cegf ._bcgf -_fdegbe ._bbfa .Left -_fdegbe ._bbfa .Right );_fgagf =_fdegbe .Height ()+_fdegbe ._bbfa .Top +_fdegbe ._bbfa .Bottom ;
-case *List :_fgagf =_fdegbe .ctxHeight (_ggdf -_cegf ._bcgf )+_fdegbe ._ccfa .Top +_fdegbe ._ccfa .Bottom ;case *Division :_fgagf =_fdegbe .ctxHeight (_ggdf -_cegf ._bcgf )+_fdegbe ._dcbe .Top +_fdegbe ._dcbe .Bottom +_fdegbe ._acbg .Top +_fdegbe ._acbg .Bottom ;
-case *Chart :_fgagf =_fdegbe .Height ()+_fdegbe ._fbfc .Top +_fdegbe ._fbfc .Bottom ;case *Rectangle :_fdegbe .applyFitMode (_ggdf -_cegf ._bcgf );_fgagf =_fdegbe .Height ()+_fdegbe ._geacg .Top +_fdegbe ._geacg .Bottom +_fdegbe ._eacf ;case *Ellipse :_fdegbe .applyFitMode (_ggdf -_cegf ._bcgf );
-_fgagf =_fdegbe .Height ()+_fdegbe ._eac .Top +_fdegbe ._eac .Bottom ;case *Line :_fgagf =_fdegbe .Height ()+_fdegbe ._eadb .Top +_fdegbe ._eadb .Bottom ;};return _fgagf ;};
-
-// SetFillColor sets the fill color of the rectangle.
-func (_cgdd *Rectangle )SetFillColor (col Color ){_cgdd ._cdfdf =col };
-
-// CellBorderStyle defines the table cell's border style.
-type CellBorderStyle int ;func (_fcceb *Table )updateRowHeights (_afbd float64 ){for _ ,_dcfc :=range _fcceb ._fdde {_faggg :=_dcfc .width (_fcceb ._cdgf ,_afbd );_ccbca :=_fcceb ._gdgf [_dcfc ._gaddf +_dcfc ._adfef -2];if _aaee :=_dcfc .height (_faggg );
-_aaee > _ccbca {_accaf :=_aaee /float64 (_dcfc ._adfef );for _gged :=1;_gged <=_dcfc ._adfef ;_gged ++{if _accaf > _fcceb ._gdgf [_dcfc ._gaddf +_gged -2]{_fcceb ._gdgf [_dcfc ._gaddf +_gged -2]=_accaf ;};};};};};func (_dgccg *templateProcessor )parseCellBorderStyleAttr (_bgaae ,_edeab string )CellBorderStyle {_cf .Log .Debug ("\u0050\u0061\u0072\u0073\u0069\u006e\u0067\u0020c\u0065\u006c\u006c b\u006f\u0072\u0064\u0065\u0072\u0020s\u0074\u0079\u006c\u0065\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a \u0028\u0060\u0025\u0073\u0060\u002c\u0020\u0025s\u0029\u002e",_bgaae ,_edeab );
-_beef :=map[string ]CellBorderStyle {"\u006e\u006f\u006e\u0065":CellBorderStyleNone ,"\u0073\u0069\u006e\u0067\u006c\u0065":CellBorderStyleSingle ,"\u0064\u006f\u0075\u0062\u006c\u0065":CellBorderStyleDouble }[_edeab ];return _beef ;};
-
-// NewBlockFromPage creates a Block from a PDF Page.  Useful for loading template pages as blocks
-// from a PDF document and additional content with the creator.
-func NewBlockFromPage (page *_gf .PdfPage )(*Block ,error ){_de :=&Block {};_cc ,_dee :=page .GetAllContentStreams ();if _dee !=nil {return nil ,_dee ;};_df :=_cd .NewContentStreamParser (_cc );_fed ,_dee :=_df .Parse ();if _dee !=nil {return nil ,_dee ;
-};_fed .WrapIfNeeded ();_de ._egf =_fed ;if page .Resources !=nil {_de ._cff =page .Resources ;}else {_de ._cff =_gf .NewPdfPageResources ();};_ccg ,_dee :=page .GetMediaBox ();if _dee !=nil {return nil ,_dee ;};if _ccg .Llx !=0||_ccg .Lly !=0{_de .translate (-_ccg .Llx ,_ccg .Lly );
-};_de ._fgd =_ccg .Urx -_ccg .Llx ;_de ._ce =_ccg .Ury -_ccg .Lly ;if page .Rotate !=nil {_de ._eb =-float64 (*page .Rotate );};return _de ,nil ;};func (_fbea *Table )resetColumnWidths (){_fbea ._cdgf =[]float64 {};_dcad :=float64 (1.0)/float64 (_fbea ._eeecb );
-for _ffdgc :=0;_ffdgc < _fbea ._eeecb ;_ffdgc ++{_fbea ._cdgf =append (_fbea ._cdgf ,_dcad );};};
-
-// ColorCMYKFrom8bit creates a Color from c,m,y,k values (0-100).
-// Example:
-//   red := ColorCMYKFrom8Bit(0, 100, 100, 0)
-func ColorCMYKFrom8bit (c ,m ,y ,k byte )Color {return cmykColor {_cadf :_ee .Min (float64 (c ),100)/100.0,_dfb :_ee .Min (float64 (m ),100)/100.0,_cgcf :_ee .Min (float64 (y ),100)/100.0,_efa :_ee .Min (float64 (k ),100)/100.0};};
-
-// Sections returns the custom content sections of the invoice as
-// title-content pairs.
-func (_bdef *Invoice )Sections ()[][2]string {return _bdef ._ecff };
-
-// Drawable is a widget that can be used to draw with the Creator.
-type Drawable interface{
-
-// GeneratePageBlocks draw onto blocks representing Page contents. As the content can wrap over many pages, multiple
-// templates are returned, one per Page.  The function also takes a draw context containing information
-// where to draw (if relative positioning) and the available height to draw on accounting for Margins etc.
-GeneratePageBlocks (_dged DrawContext )([]*Block ,DrawContext ,error );};
-
-// SetAngle sets the rotation angle of the text.
-func (_cbde *StyledParagraph )SetAngle (angle float64 ){_cbde ._afgbg =angle };
-
-// NoteStyle returns the style properties used to render the content of the
-// invoice note sections.
-func (_gecc *Invoice )NoteStyle ()TextStyle {return _gecc ._bggdb };
-
-// FitMode returns the fit mode of the line.
-func (_ddece *Line )FitMode ()FitMode {return _ddece ._gagda };
-
-// Scale block by specified factors in the x and y directions.
-func (_eab *Block )Scale (sx ,sy float64 ){_dfcd :=_cd .NewContentCreator ().Scale (sx ,sy ).Operations ();*_eab ._egf =append (*_dfcd ,*_eab ._egf ...);_eab ._egf .WrapIfNeeded ();_eab ._fgd *=sx ;_eab ._ce *=sy ;};const (TextVerticalAlignmentBaseline TextVerticalAlignment =iota ;
-TextVerticalAlignmentCenter ;TextVerticalAlignmentBottom ;TextVerticalAlignmentTop ;);
-
-// HeaderFunctionArgs holds the input arguments to a header drawing function.
-// It is designed as a struct, so additional parameters can be added in the future with backwards
-// compatibility.
-type HeaderFunctionArgs struct{PageNum int ;TotalPages int ;};
-
-// Width returns the width of the Paragraph.
-func (_agdfc *StyledParagraph )Width ()float64 {if _agdfc ._fbbcc &&int (_agdfc ._bceed )> 0{return _agdfc ._bceed ;};return _agdfc .getTextWidth ()/1000.0;};
-
-// Height returns the height of the line.
-func (_ebffc *Line )Height ()float64 {_acda :=_ebffc ._decc ;if _ebffc ._aecg ==_ebffc ._badg {_acda /=2;};return _ee .Abs (_ebffc ._acba -_ebffc ._cdbf )+_acda ;};
-
-// NewStyledTOCLine creates a new table of contents line with the provided style.
-func (_faf *Creator )NewStyledTOCLine (number ,title ,page TextChunk ,level uint ,style TextStyle )*TOCLine {return _gede (number ,title ,page ,level ,style );};
-
-// Invoice represents a configurable invoice template.
-type Invoice struct{_ggca string ;_egae *Image ;_bcdc *InvoiceAddress ;_cedb *InvoiceAddress ;_cfee string ;_cfgb [2]*InvoiceCell ;_bggdg [2]*InvoiceCell ;_acgf [2]*InvoiceCell ;_bca [][2]*InvoiceCell ;_bacc []*InvoiceCell ;_ebcg [][]*InvoiceCell ;_ecgfa [2]*InvoiceCell ;
-_aefbg [2]*InvoiceCell ;_gecf [][2]*InvoiceCell ;_gedg [2]string ;_cdgd [2]string ;_ecff [][2]string ;_bagd TextStyle ;_geea TextStyle ;_dcgf TextStyle ;_cfgg TextStyle ;_dfbb TextStyle ;_bggdb TextStyle ;_cggf TextStyle ;_eedg InvoiceCellProps ;_ebcb InvoiceCellProps ;
-_aed InvoiceCellProps ;_facf InvoiceCellProps ;_afce Positioning ;};
-
-// Scale sets the scale ratio with `X` factor and `Y` factor for the graphic svg.
-func (_ccgc *GraphicSVG )Scale (xFactor ,yFactor float64 ){_ccgc ._febb .Width =xFactor *_ccgc ._febb .Width ;_ccgc ._febb .Height =yFactor *_ccgc ._febb .Height ;_ccgc ._febb .SetScaling (xFactor ,yFactor );};func (_egbba *templateProcessor )parseTextRenderingModeAttr (_fcga ,_eegcd string )TextRenderingMode {_cf .Log .Debug ("\u0050\u0061\u0072\u0073\u0069\u006e\u0067\u0020\u0074\u0065\u0078\u0074\u0020\u0072\u0065\u006e\u0064\u0065r\u0069\u006e\u0067\u0020\u006d\u006f\u0064e\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a \u0028\u0060\u0025\u0073\u0060\u002c\u0020\u0025\u0073\u0029\u002e",_fcga ,_eegcd );
-_bcfa :=map[string ]TextRenderingMode {"\u0066\u0069\u006c\u006c":TextRenderingModeFill ,"\u0073\u0074\u0072\u006f\u006b\u0065":TextRenderingModeStroke ,"f\u0069\u006c\u006c\u002d\u0073\u0074\u0072\u006f\u006b\u0065":TextRenderingModeFillStroke ,"\u0069n\u0076\u0069\u0073\u0069\u0062\u006ce":TextRenderingModeInvisible ,"\u0066i\u006c\u006c\u002d\u0063\u006c\u0069p":TextRenderingModeFillClip ,"s\u0074\u0072\u006f\u006b\u0065\u002d\u0063\u006c\u0069\u0070":TextRenderingModeStrokeClip ,"\u0066\u0069l\u006c\u002d\u0073t\u0072\u006f\u006b\u0065\u002d\u0063\u006c\u0069\u0070":TextRenderingModeFillStrokeClip ,"\u0063\u006c\u0069\u0070":TextRenderingModeClip }[_eegcd ];
-return _bcfa ;};
-
-// SetFillOpacity sets the fill opacity.
-func (_edag *Polygon )SetFillOpacity (opacity float64 ){_edag ._eegca =opacity };
-
-// FillOpacity returns the fill opacity of the rectangle (0-1).
-func (_abcae *Rectangle )FillOpacity ()float64 {return _abcae ._acea };
-
-// SetVerticalAlignment set the cell's vertical alignment of content.
-// Can be one of:
-// - CellHorizontalAlignmentTop
-// - CellHorizontalAlignmentMiddle
-// - CellHorizontalAlignmentBottom
-func (_acgge *TableCell )SetVerticalAlignment (valign CellVerticalAlignment ){_acgge ._gaff =valign };
-
-// SetFillColor sets the fill color.
-func (_gaea *Polygon )SetFillColor (color Color ){_gaea ._egecd =color ;_gaea ._ffgbf .FillColor =_dca (color );};func (_geff *List )ctxHeight (_bgcf float64 )float64 {_bgcf -=_geff ._gbdd ;var _bcee float64 ;for _ ,_eebeg :=range _geff ._eccb {_bcee +=_eebeg .ctxHeight (_bgcf );
-};return _bcee ;};
-
-// SetExtends specifies whether ot extend the shading beyond the starting and ending points.
-//
-// Text extends is set to `[]bool{false, false}` by default.
-func (_gabc *LinearShading )SetExtends (start bool ,end bool ){_gabc ._adbg .SetExtends (start ,end )};
-
-// Wrap wraps the text of the chunk into lines based on its style and the
-// specified width.
-func (_egeff *TextChunk )Wrap (width float64 )([]string ,error ){if int (width )<=0{return []string {_egeff .Text },nil ;};var _fbfae []string ;var _fecb []rune ;var _gbgc float64 ;var _bcgfc []float64 ;_ggfc :=_egeff .Style ;_cdeg :=_feebd (_egeff .Text );
-for _ ,_dafef :=range _egeff .Text {if _dafef =='\u000A'{_aaabg :=_gdfbb (string (_fecb ),_cdeg );_fbfae =append (_fbfae ,_eg .TrimRightFunc (_aaabg ,_dc .IsSpace )+string (_dafef ));_fecb =nil ;_gbgc =0;_bcgfc =nil ;continue ;};_gfdca :=_dafef ==' ';_cgfef ,_fcbf :=_ggfc .Font .GetRuneMetrics (_dafef );
-if !_fcbf {_cf .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0052\u0075\u006e\u0065\u0020\u0063\u0068\u0061\u0072\u0020\u006det\u0072i\u0063\u0073\u0020\u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064!\u0020\u0072\u0075\u006e\u0065\u003d\u0030\u0078\u0025\u0030\u0034\u0078\u003d\u0025\u0063\u0020\u0066o\u006e\u0074\u003d\u0025\u0073\u0020\u0025\u0023\u0071",_dafef ,_dafef ,_ggfc .Font .BaseFont (),_ggfc .Font .Subtype ());
-_cf .Log .Trace ("\u0046o\u006e\u0074\u003a\u0020\u0025\u0023v",_ggfc .Font );_cf .Log .Trace ("\u0045\u006e\u0063o\u0064\u0065\u0072\u003a\u0020\u0025\u0023\u0076",_ggfc .Font .Encoder ());return nil ,_d .New ("\u0067\u006c\u0079\u0070\u0068\u0020\u0063\u0068\u0061\u0072\u0020m\u0065\u0074\u0072\u0069\u0063\u0073\u0020\u006d\u0069\u0073s\u0069\u006e\u0067");
-};_bdcf :=_ggfc .FontSize *_cgfef .Wx ;_bede :=_bdcf ;if !_gfdca {_bede =_bdcf +_ggfc .CharSpacing *1000.0;};if _gbgc +_bdcf > width *1000.0{_bcbb :=-1;if !_gfdca {for _fecea :=len (_fecb )-1;_fecea >=0;_fecea --{if _fecb [_fecea ]==' '{_bcbb =_fecea ;
-break ;};};};_bdefa :=string (_fecb );if _bcbb > 0{_bdefa =string (_fecb [0:_bcbb +1]);_fecb =append (_fecb [_bcbb +1:],_dafef );_bcgfc =append (_bcgfc [_bcbb +1:],_bede );_gbgc =0;for _ ,_ecfcf :=range _bcgfc {_gbgc +=_ecfcf ;};}else {if _gfdca {_fecb =[]rune {};
-_bcgfc =[]float64 {};_gbgc =0;}else {_fecb =[]rune {_dafef };_bcgfc =[]float64 {_bede };_gbgc =_bede ;};};_bdefa =_gdfbb (_bdefa ,_cdeg );_fbfae =append (_fbfae ,_eg .TrimRightFunc (_bdefa ,_dc .IsSpace ));}else {_fecb =append (_fecb ,_dafef );_gbgc +=_bede ;
-_bcgfc =append (_bcgfc ,_bede );};};if len (_fecb )> 0{_fcadf :=string (_fecb );_fcadf =_gdfbb (_fcadf ,_cdeg );_fbfae =append (_fbfae ,_fcadf );};return _fbfae ,nil ;};
-
-// SetContent sets the cell's content.  The content is a VectorDrawable, i.e.
-// a Drawable with a known height and width.
-// Currently supported VectorDrawables:
-// - *Paragraph
-// - *StyledParagraph
-// - *Image
-// - *Chart
-// - *Table
-// - *Division
-// - *List
-// - *Rectangle
-// - *Ellipse
-// - *Line
-func (_egddg *TableCell )SetContent (vd VectorDrawable )error {switch _gdaee :=vd .(type ){case *Paragraph :if _gdaee ._fecaa {_gdaee ._bedd =true ;};_egddg ._afgda =vd ;case *StyledParagraph :if _gdaee ._feege {_gdaee ._fbbcc =true ;};_egddg ._afgda =vd ;
-case *Image ,*Chart ,*Table ,*Division ,*List ,*Rectangle ,*Ellipse ,*Line :_egddg ._afgda =vd ;default:_cf .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0075\u006e\u0073\u0075\u0070\u0070o\u0072\u0074\u0065\u0064\u0020\u0063e\u006c\u006c\u0020\u0063\u006f\u006e\u0074\u0065\u006e\u0074\u0020\u0074\u0079p\u0065\u0020\u0025\u0054",vd );
-return _acb .ErrTypeError ;};return nil ;};func _gebd (_adfec VectorDrawable ,_ecdd float64 )float64 {switch _ebgf :=_adfec .(type ){case *Paragraph :if _ebgf ._bedd {_ebgf .SetWidth (_ecdd -_ebgf ._eddc .Left -_ebgf ._eddc .Right );};return _ebgf .Height ()+_ebgf ._eddc .Top +_ebgf ._eddc .Bottom ;
-case *StyledParagraph :if _ebgf ._fbbcc {_ebgf .SetWidth (_ecdd -_ebgf ._gdfc .Left -_ebgf ._gdfc .Right );};return _ebgf .Height ()+_ebgf ._gdfc .Top +_ebgf ._gdfc .Bottom ;case *Image :_ebgf .applyFitMode (_ecdd );return _ebgf .Height ()+_ebgf ._gbeae .Top +_ebgf ._gbeae .Bottom ;
-case *Rectangle :_ebgf .applyFitMode (_ecdd );return _ebgf .Height ()+_ebgf ._geacg .Top +_ebgf ._geacg .Bottom +_ebgf ._eacf ;case *Ellipse :_ebgf .applyFitMode (_ecdd );return _ebgf .Height ()+_ebgf ._eac .Top +_ebgf ._eac .Bottom ;case *Division :return _ebgf .ctxHeight (_ecdd )+_ebgf ._dcbe .Top +_ebgf ._dcbe .Bottom +_ebgf ._acbg .Top +_ebgf ._acbg .Bottom ;
-case *Table :_ebgf .updateRowHeights (_ecdd -_ebgf ._bbfa .Left -_ebgf ._bbfa .Right );return _ebgf .Height ()+_ebgf ._bbfa .Top +_ebgf ._bbfa .Bottom ;case *List :return _ebgf .ctxHeight (_ecdd )+_ebgf ._ccfa .Top +_ebgf ._ccfa .Bottom ;case marginDrawable :_ ,_ ,_bbca ,_faea :=_ebgf .GetMargins ();
-return _ebgf .Height ()+_bbca +_faea ;default:return _ebgf .Height ();};};
-
-// Date returns the invoice date description and value cells.
-// The returned values can be used to customize the styles of the cells.
-func (_abbf *Invoice )Date ()(*InvoiceCell ,*InvoiceCell ){return _abbf ._bggdg [0],_abbf ._bggdg [1]};
-
-// CurRow returns the currently active cell's row number.
-func (_ccgca *Table )CurRow ()int {_fcagb :=(_ccgca ._gfcae -1)/_ccgca ._eeecb +1;return _fcagb };func (_accg *List )markerWidth ()float64 {var _bcfd float64 ;for _ ,_bacce :=range _accg ._eccb {_abgg :=_ebab (_accg ._dgcbd );_abgg .SetEnableWrap (false );
-_abgg .SetTextAlignment (TextAlignmentRight );_abgg .Append (_bacce ._ccbc .Text ).Style =_bacce ._ccbc .Style ;_ffgg :=_abgg .getTextWidth ()/1000.0;if _bcfd < _ffgg {_bcfd =_ffgg ;};};return _bcfd ;};
-
-// Height returns the height of the division, assuming all components are
-// stacked on top of each other.
-func (_cgcfb *Division )Height ()float64 {var _cabdc float64 ;for _ ,_bgba :=range _cgcfb ._ebd {switch _fccc :=_bgba .(type ){case marginDrawable :_ ,_ ,_bdaf ,_cbfb :=_fccc .GetMargins ();_cabdc +=_fccc .Height ()+_bdaf +_cbfb ;default:_cabdc +=_fccc .Height ();
-};};return _cabdc ;};
-
-// SetPositioning sets the positioning of the line (absolute or relative).
-func (_cdga *Line )SetPositioning (positioning Positioning ){_cdga ._fadc =positioning };func (_egbgc *templateProcessor )parseColorAttr (_bgad ,_bbffb string )Color {_cf .Log .Debug ("\u0050\u0061rs\u0069\u006e\u0067 \u0063\u006f\u006c\u006fr a\u0074tr\u0069\u0062\u0075\u0074\u0065\u003a\u0020(`\u0025\u0073\u0060\u002c\u0020\u0025\u0073)\u002e",_bgad ,_bbffb );
-_bbffb =_eg .TrimSpace (_bbffb );if _eg .HasPrefix (_bbffb ,"\u006c\u0069n\u0065\u0061\u0072-\u0067\u0072\u0061\u0064\u0069\u0065\u006e\u0074\u0028")&&_eg .HasSuffix (_bbffb ,"\u0029")&&len (_bbffb )> 17{return _egbgc .parseLinearGradientAttr (_egbgc .creator ,_bbffb );
-};if _eg .HasPrefix (_bbffb ,"\u0072\u0061d\u0069\u0061\u006c-\u0067\u0072\u0061\u0064\u0069\u0065\u006e\u0074\u0028")&&_eg .HasSuffix (_bbffb ,"\u0029")&&len (_bbffb )> 17{return _egbgc .parseRadialGradientAttr (_egbgc .creator ,_bbffb );};if _cbabd :=_egbgc .parseColor (_bbffb );
-_cbabd !=nil {return _cbabd ;};return ColorBlack ;};func _fgge (_gdcbg *templateProcessor ,_aeeb *templateNode )(interface{},error ){return _gdcbg .parseListMarker (_aeeb );};
-
-// SetStyleTop sets border style for top side.
-func (_gbag *border )SetStyleTop (style CellBorderStyle ){_gbag ._cedf =style };const (CellBorderStyleNone CellBorderStyle =iota ;CellBorderStyleSingle ;CellBorderStyleDouble ;);func (_dgaea *templateProcessor )parseFloatArray (_gaaee ,_abac string )[]float64 {_cf .Log .Debug ("\u0050\u0061\u0072s\u0069\u006e\u0067\u0020\u0066\u006c\u006f\u0061\u0074\u0020\u0061\u0072\u0072\u0061\u0079\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0028\u0060%\u0073\u0060\u002c\u0020\u0025\u0073\u0029\u002e",_gaaee ,_abac );
-_cbbc :=_eg .Fields (_abac );_dgcf :=make ([]float64 ,0,len (_cbbc ));for _ ,_gceac :=range _cbbc {_cggee ,_ :=_egd .ParseFloat (_gceac ,64);_dgcf =append (_dgcf ,_cggee );};return _dgcf ;};func (_gfbgf *templateProcessor )parsePageBreak (_bfbee *templateNode )(interface{},error ){return _aeea (),nil ;
-};
-
-// SetPageMargins sets the page margins: left, right, top, bottom.
-// The default page margins are 10% of document width.
-func (_fead *Creator )SetPageMargins (left ,right ,top ,bottom float64 ){_fead ._fegd .Left =left ;_fead ._fegd .Right =right ;_fead ._fegd .Top =top ;_fead ._fegd .Bottom =bottom ;};
-
-// EnablePageWrap controls whether the table is wrapped across pages.
-// If disabled, the table is moved in its entirety on a new page, if it
-// does not fit in the available height. By default, page wrapping is enabled.
-// If the height of the table is larger than an entire page, wrapping is
-// enabled automatically in order to avoid unwanted behavior.
-func (_cefd *Table )EnablePageWrap (enable bool ){_cefd ._cfdga =enable };func (_fddee *templateProcessor )parsePositioningAttr (_dfcbf ,_dgfad string )Positioning {_cf .Log .Debug ("\u0050\u0061\u0072s\u0069\u006e\u0067\u0020\u0070\u006f\u0073\u0069\u0074\u0069\u006f\u006e\u0069\u006e\u0067\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0028\u0060%\u0073\u0060\u002c\u0020\u0025\u0073\u0029\u002e",_dfcbf ,_dgfad );
-_dgedd :=map[string ]Positioning {"\u0072\u0065\u006c\u0061\u0074\u0069\u0076\u0065":PositionRelative ,"\u0061\u0062\u0073\u006f\u006c\u0075\u0074\u0065":PositionAbsolute }[_dgfad ];return _dgedd ;};
-
-// SetBorderColor sets the border color of the ellipse.
-func (_bdaca *Ellipse )SetBorderColor (col Color ){_bdaca ._geba =col };
-
-// FillColor returns the fill color of the rectangle.
-func (_geeg *Rectangle )FillColor ()Color {return _geeg ._cdfdf };
-
-// NewTOCLine creates a new table of contents line with the default style.
-func (_agea *Creator )NewTOCLine (number ,title ,page string ,level uint )*TOCLine {return _gbdee (number ,title ,page ,level ,_agea .NewTextStyle ());};
-
-// SetMargins sets the margins of the paragraph.
-func (_gagde *List )SetMargins (left ,right ,top ,bottom float64 ){_gagde ._ccfa .Left =left ;_gagde ._ccfa .Right =right ;_gagde ._ccfa .Top =top ;_gagde ._ccfa .Bottom =bottom ;};
-
-// SetColorBottom sets border color for bottom.
-func (_bag *border )SetColorBottom (col Color ){_bag ._egdf =col };
-
-// SetEncoder sets the encoding/compression mechanism for the image.
-func (_cge *Image )SetEncoder (encoder _acb .StreamEncoder ){_cge ._eebc =encoder };func _eaaaa (_agbfa []*ColorPoint )*LinearShading {return &LinearShading {_adbg :&shading {_adddc :ColorWhite ,_dgdf :false ,_gfaae :[]bool {false ,false },_dfae :_agbfa },_cbba :&_gf .PdfRectangle {}};
-};
-
-// Add adds a new line with the default style to the table of contents.
-func (_fedfa *TOC )Add (number ,title ,page string ,level uint )*TOCLine {_efff :=_fedfa .AddLine (_gede (TextChunk {Text :number ,Style :_fedfa ._gbda },TextChunk {Text :title ,Style :_fedfa ._cgddd },TextChunk {Text :page ,Style :_fedfa ._daadg },level ,_fedfa ._eeeeb ));
-if _efff ==nil {return nil ;};_daadb :=&_fedfa ._eegf ;_efff .SetMargins (_daadb .Left ,_daadb .Right ,_daadb .Top ,_daadb .Bottom );_efff .SetLevelOffset (_fedfa ._bgece );_efff .Separator .Text =_fedfa ._edddb ;_efff .Separator .Style =_fedfa ._fadbf ;
-return _efff ;};func (_daf *Block )drawToPage (_dcd *_gf .PdfPage )error {_ged :=&_cd .ContentStreamOperations {};if _dcd .Resources ==nil {_dcd .Resources =_gf .NewPdfPageResources ();};_gd :=_adf (_ged ,_dcd .Resources ,_daf ._egf ,_daf ._cff );if _gd !=nil {return _gd ;
-};if _gd =_aeca (_daf ._cff ,_dcd .Resources );_gd !=nil {return _gd ;};if _gd =_dcd .AppendContentBytes (_ged .Bytes (),true );_gd !=nil {return _gd ;};for _ ,_bee :=range _daf ._egb {_dcd .AddAnnotation (_bee );};return nil ;};func _gegf (_cafa *Block ,_edf *StyledParagraph ,_ebfgd [][]*TextChunk ,_aegba DrawContext )(DrawContext ,[][]*TextChunk ,error ){_eacfb :=1;
-_cdbg :=_acb .PdfObjectName (_agd .Sprintf ("\u0046\u006f\u006e\u0074\u0025\u0064",_eacfb ));for _cafa ._cff .HasFontByName (_cdbg ){_eacfb ++;_cdbg =_acb .PdfObjectName (_agd .Sprintf ("\u0046\u006f\u006e\u0074\u0025\u0064",_eacfb ));};_facd :=_cafa ._cff .SetFontByName (_cdbg ,_edf ._cadaf .Font .ToPdfObject ());
-if _facd !=nil {return _aegba ,nil ,_facd ;};_eacfb ++;_bgaa :=_cdbg ;_fgede :=_edf ._cadaf .FontSize ;_eded :=_edf ._cdcdd .IsRelative ();var _aacadc [][]_acb .PdfObjectName ;var _abfdc [][]*TextChunk ;var _fgea float64 ;for _dbdf ,_ddbfa :=range _ebfgd {var _dfbc []_acb .PdfObjectName ;
-var _cecc float64 ;if len (_ddbfa )> 0{_cecc =_ddbfa [0].Style .FontSize ;};for _ ,_bcge :=range _ddbfa {_gfdc :=_bcge .Style ;if _bcge .Text !=""&&_gfdc .FontSize > _cecc {_cecc =_gfdc .FontSize ;};_cdbg =_acb .PdfObjectName (_agd .Sprintf ("\u0046\u006f\u006e\u0074\u0025\u0064",_eacfb ));
-_eedfe :=_cafa ._cff .SetFontByName (_cdbg ,_gfdc .Font .ToPdfObject ());if _eedfe !=nil {return _aegba ,nil ,_eedfe ;};_dfbc =append (_dfbc ,_cdbg );_eacfb ++;};_cecc *=_edf ._edccf ;if _eded &&_fgea +_cecc > _aegba .Height {_abfdc =_ebfgd [_dbdf :];_ebfgd =_ebfgd [:_dbdf ];
-break ;};_fgea +=_cecc ;_aacadc =append (_aacadc ,_dfbc );};_abag ,_gcdd ,_aefbgg :=_edf .getLineMetrics (0);_adcgf ,_aebf :=_abag *_edf ._edccf ,_gcdd *_edf ._edccf ;if len (_ebfgd )==0{return _aegba ,_abfdc ,nil ;};_cdaf :=_cd .NewContentCreator ();_cdaf .Add_q ();
-_aaadd :=_aebf ;if _edf ._ccceb ==TextVerticalAlignmentCenter {_aaadd =_gcdd +(_abag +_aefbgg -_gcdd )/2+(_aebf -_gcdd )/2;};_dcbfc :=_aegba .PageHeight -_aegba .Y -_aaadd ;_cdaf .Translate (_aegba .X ,_dcbfc );_edebe :=_dcbfc ;if _edf ._afgbg !=0{_cdaf .RotateDeg (_edf ._afgbg );
-};if _edf ._gffa ==TextOverflowHidden {_cdaf .Add_re (0,-_fgea +_adcgf +1,_edf ._bceed ,_fgea ).Add_W ().Add_n ();};_cdaf .Add_BT ();_bgeb :=0.0;var _deda []*_g .BasicLine ;for _daba ,_ffed :=range _ebfgd {_bbffa :=_aegba .X ;var _gbddc float64 ;if len (_ffed )> 0{_gbddc =_ffed [0].Style .FontSize ;
-};_abag ,_ ,_aefbgg =_edf .getLineMetrics (_daba );_aebf =(_abag +_aefbgg );for _ ,_bddbeg :=range _ffed {_ddbea :=&_bddbeg .Style ;if _bddbeg .Text !=""&&_ddbea .FontSize > _gbddc {_gbddc =_ddbea .FontSize ;};if _aebf > _gbddc {_gbddc =_aebf ;};};if _daba !=0{_cdaf .Add_TD (0,-_gbddc *_edf ._edccf +_bgeb );
-_edebe -=_gbddc *_edf ._edccf +_bgeb ;_bgeb =0.0;};_egfde :=_daba ==len (_ebfgd )-1;var (_cegafa float64 ;_deeb float64 ;_fgba *fontMetrics ;_bcga float64 ;_gece uint ;);var _gdcf []float64 ;for _ ,_fgfdf :=range _ffed {_abdd :=&_fgfdf .Style ;if _abdd .FontSize > _deeb {_deeb =_abdd .FontSize ;
-_fgba =_bccf (_fgfdf .Style .Font ,_abdd .FontSize );};if _aebf > _deeb {_deeb =_aebf ;};_ccedf ,_cgbg :=_abdd .Font .GetRuneMetrics (' ');if !_cgbg {return _aegba ,nil ,_d .New ("\u0074\u0068e \u0066\u006f\u006et\u0020\u0064\u006f\u0065s n\u006ft \u0068\u0061\u0076\u0065\u0020\u0061\u0020sp\u0061\u0063\u0065\u0020\u0067\u006c\u0079p\u0068");
-};var _ceffea uint ;var _fbdff float64 ;_ffaag :=len (_fgfdf .Text );for _gdcca ,_abgeg :=range _fgfdf .Text {if _abgeg ==' '{_ceffea ++;continue ;};if _abgeg =='\u000A'{continue ;};_daeeb ,_acdf :=_abdd .Font .GetRuneMetrics (_abgeg );if !_acdf {_cf .Log .Debug ("\u0055\u006e\u0073\u0075p\u0070\u006f\u0072\u0074\u0065\u0064\u0020\u0072\u0075\u006ee\u0020%\u0076\u0020\u0069\u006e\u0020\u0066\u006fn\u0074\u000a",_abgeg );
-return _aegba ,nil ,_d .New ("\u0075\u006e\u0073\u0075pp\u006f\u0072\u0074\u0065\u0064\u0020\u0074\u0065\u0078\u0074\u0020\u0067\u006c\u0079p\u0068");};_fbdff +=_abdd .FontSize *_daeeb .Wx *_abdd .horizontalScale ();if _gdcca !=_ffaag -1{_fbdff +=_abdd .CharSpacing *1000.0;
-};};_gdcf =append (_gdcf ,_fbdff );_cegafa +=_fbdff ;_bcga +=float64 (_ceffea )*_ccedf .Wx *_abdd .FontSize *_abdd .horizontalScale ();_gece +=_ceffea ;};_deeb *=_edf ._edccf ;var _adbea []_acb .PdfObject ;_dbec :=_edf ._bceed *1000.0;if _edf ._cbcbb ==TextAlignmentJustify {if _gece > 0&&!_egfde {_bcga =(_dbec -_cegafa )/float64 (_gece )/_fgede ;
-};}else if _edf ._cbcbb ==TextAlignmentCenter {_dbbdg :=(_dbec -_cegafa -_bcga )/2;_gfeg :=_dbbdg /_fgede ;_adbea =append (_adbea ,_acb .MakeFloat (-_gfeg ));_bbffa +=_dbbdg /1000.0;}else if _edf ._cbcbb ==TextAlignmentRight {_deaef :=(_dbec -_cegafa -_bcga );
-_abea :=_deaef /_fgede ;_adbea =append (_adbea ,_acb .MakeFloat (-_abea ));_bbffa +=_deaef /1000.0;};if len (_adbea )> 0{_cdaf .Add_Tf (_bgaa ,_fgede ).Add_TL (_fgede *_edf ._edccf ).Add_TJ (_adbea ...);};_efgb :=0.0;for _degc ,_gagfc :=range _ffed {_edecf :=&_gagfc .Style ;
-_eedbe :=_bgaa ;_cbcab :=_fgede ;_ggdg :=_edecf .OutlineColor !=nil ;_fcdgg :=_edecf .HorizontalScaling !=DefaultHorizontalScaling ;_faafe :=_edecf .OutlineSize !=1;if _faafe {_cdaf .Add_w (_edecf .OutlineSize );};_fffad :=_edecf .RenderingMode !=TextRenderingModeFill ;
-if _fffad {_cdaf .Add_Tr (int64 (_edecf .RenderingMode ));};_faaaf :=_edecf .CharSpacing !=0;if _faaaf {_cdaf .Add_Tc (_edecf .CharSpacing );};_addbg :=_edecf .TextRise !=0;if _addbg {_cdaf .Add_Ts (_edecf .TextRise );};if _gagfc .VerticalAlignment !=TextVerticalAlignmentBaseline {_abbfe :=_bccf (_gagfc .Style .Font ,_edecf .FontSize );
-switch _gagfc .VerticalAlignment {case TextVerticalAlignmentCenter :_efgb =_fgba ._aeae /2-_abbfe ._aeae /2;case TextVerticalAlignmentBottom :_efgb =_fgba ._gbfbe -_abbfe ._gbfbe ;case TextVerticalAlignmentTop :_efgb =_gcdd -_edecf .FontSize ;};if _efgb !=0.0{_cdaf .Translate (0,_efgb );
-};};if _edf ._cbcbb !=TextAlignmentJustify ||_egfde {_fbaaf ,_bfgc :=_edecf .Font .GetRuneMetrics (' ');if !_bfgc {return _aegba ,nil ,_d .New ("\u0074\u0068e \u0066\u006f\u006et\u0020\u0064\u006f\u0065s n\u006ft \u0068\u0061\u0076\u0065\u0020\u0061\u0020sp\u0061\u0063\u0065\u0020\u0067\u006c\u0079p\u0068");
-};_eedbe =_aacadc [_daba ][_degc ];_cbcab =_edecf .FontSize ;_bcga =_fbaaf .Wx *_edecf .horizontalScale ();};_ecfbf :=_edecf .Font .Encoder ();var _bffed []byte ;for _ ,_dcdgb :=range _gagfc .Text {if _dcdgb =='\u000A'{continue ;};if _dcdgb ==' '{if len (_bffed )> 0{if _ggdg {_cdaf .SetStrokingColor (_dca (_edecf .OutlineColor ));
-};if _fcdgg {_cdaf .Add_Tz (_edecf .HorizontalScaling );};_cdaf .SetNonStrokingColor (_dca (_edecf .Color )).Add_Tf (_aacadc [_daba ][_degc ],_edecf .FontSize ).Add_TJ ([]_acb .PdfObject {_acb .MakeStringFromBytes (_bffed )}...);_bffed =nil ;};if _fcdgg {_cdaf .Add_Tz (DefaultHorizontalScaling );
-};_cdaf .Add_Tf (_eedbe ,_cbcab ).Add_TJ ([]_acb .PdfObject {_acb .MakeFloat (-_bcga )}...);_gdcf [_degc ]+=_bcga *_cbcab ;}else {if _ ,_daagf :=_ecfbf .RuneToCharcode (_dcdgb );!_daagf {_facd =UnsupportedRuneError {Message :_agd .Sprintf ("\u0075\u006e\u0073\u0075\u0070\u0070\u006fr\u0074\u0065\u0064 \u0072\u0075\u006e\u0065 \u0069\u006e\u0020\u0074\u0065\u0078\u0074\u0020\u0065\u006e\u0063\u006f\u0064\u0069\u006e\u0067\u003a\u0020\u0025\u0023\u0078\u0020\u0028\u0025\u0063\u0029",_dcdgb ,_dcdgb ),Rune :_dcdgb };
-_aegba ._gbeb =append (_aegba ._gbeb ,_facd );_cf .Log .Debug (_facd .Error ());if _aegba ._aegb <=0{continue ;};_dcdgb =_aegba ._aegb ;};_bffed =append (_bffed ,_ecfbf .Encode (string (_dcdgb ))...);};};if len (_bffed )> 0{if _ggdg {_cdaf .SetStrokingColor (_dca (_edecf .OutlineColor ));
-};if _fcdgg {_cdaf .Add_Tz (_edecf .HorizontalScaling );};_cdaf .SetNonStrokingColor (_dca (_edecf .Color )).Add_Tf (_aacadc [_daba ][_degc ],_edecf .FontSize ).Add_TJ ([]_acb .PdfObject {_acb .MakeStringFromBytes (_bffed )}...);};_effab :=_gdcf [_degc ]/1000.0;
-if _edecf .Underline {_aefga :=_edecf .UnderlineStyle .Color ;if _aefga ==nil {_aefga =_gagfc .Style .Color ;};_ffbg ,_fcfe ,_dffa :=_aefga .ToRGB ();_badbgf :=_bbffa -_aegba .X ;_dcdgce :=_edebe -_dcbfc +_edecf .TextRise -_edecf .UnderlineStyle .Offset ;
-_deda =append (_deda ,&_g .BasicLine {X1 :_badbgf ,Y1 :_dcdgce ,X2 :_badbgf +_effab ,Y2 :_dcdgce ,LineWidth :_gagfc .Style .UnderlineStyle .Thickness ,LineColor :_gf .NewPdfColorDeviceRGB (_ffbg ,_fcfe ,_dffa )});};if _gagfc ._cacbg !=nil {var _fcfg *_acb .PdfObjectArray ;
-if !_gagfc ._dgefd {switch _efeeg :=_gagfc ._cacbg .GetContext ().(type ){case *_gf .PdfAnnotationLink :_fcfg =_acb .MakeArray ();_efeeg .Rect =_fcfg ;_cgdge ,_cabcf :=_efeeg .Dest .(*_acb .PdfObjectArray );if _cabcf &&_cgdge .Len ()==5{_fbebc ,_cgee :=_cgdge .Get (1).(*_acb .PdfObjectName );
-if _cgee &&_fbebc .String ()=="\u0058\u0059\u005a"{_cfggd ,_eaff :=_acb .GetNumberAsFloat (_cgdge .Get (3));if _eaff ==nil {_cgdge .Set (3,_acb .MakeFloat (_aegba .PageHeight -_cfggd ));};};};};_gagfc ._dgefd =true ;};if _fcfg !=nil {_bgafc :=_g .NewPoint (_bbffa -_aegba .X ,_edebe +_edecf .TextRise -_dcbfc ).Rotate (_edf ._afgbg );
-_bgafc .X +=_aegba .X ;_bgafc .Y +=_dcbfc ;_fccee ,_gbbd ,_cbcag ,_beec :=_decgd (_effab ,_deeb ,_edf ._afgbg );_bgafc .X +=_fccee ;_bgafc .Y +=_gbbd ;_fcfg .Clear ();_fcfg .Append (_acb .MakeFloat (_bgafc .X ));_fcfg .Append (_acb .MakeFloat (_bgafc .Y ));
-_fcfg .Append (_acb .MakeFloat (_bgafc .X +_cbcag ));_fcfg .Append (_acb .MakeFloat (_bgafc .Y +_beec ));};_cafa .AddAnnotation (_gagfc ._cacbg );};_bbffa +=_effab ;if _faafe {_cdaf .Add_w (1.0);};if _ggdg {_cdaf .Add_RG (0.0,0.0,0.0);};if _fffad {_cdaf .Add_Tr (int64 (TextRenderingModeFill ));
-};if _faaaf {_cdaf .Add_Tc (0);};if _addbg {_cdaf .Add_Ts (0);};if _fcdgg {_cdaf .Add_Tz (DefaultHorizontalScaling );};if _efgb !=0.0{_cdaf .Translate (0,-_efgb );_efgb =0.0;};};};_cdaf .Add_ET ();for _ ,_gdgbc :=range _deda {_cdaf .SetStrokingColor (_gdgbc .LineColor ).Add_w (_gdgbc .LineWidth ).Add_m (_gdgbc .X1 ,_gdgbc .Y1 ).Add_l (_gdgbc .X2 ,_gdgbc .Y2 ).Add_s ();
-};_cdaf .Add_Q ();_dfde :=_cdaf .Operations ();_dfde .WrapIfNeeded ();_cafa .addContents (_dfde );if _eded {_dcaeg :=_fgea ;_aegba .Y +=_dcaeg ;_aegba .Height -=_dcaeg ;if _aegba .Inline {_aegba .X +=_edf .Width ()+_edf ._gdfc .Right ;};};return _aegba ,_abfdc ,nil ;
-};
-
-// SetHeaderRows turns the selected table rows into headers that are repeated
-// for every page the table spans. startRow and endRow are inclusive.
-func (_dbbab *Table )SetHeaderRows (startRow ,endRow int )error {if startRow <=0{return _d .New ("\u0068\u0065\u0061\u0064\u0065\u0072\u0020\u0073\u0074\u0061\u0072\u0074\u0020r\u006f\u0077\u0020\u006d\u0075\u0073t\u0020\u0062\u0065\u0020\u0067\u0072\u0065\u0061\u0074\u0065\u0072\u0020\u0074h\u0061\u006e\u0020\u0030");
-};if endRow <=0{return _d .New ("\u0068\u0065a\u0064\u0065\u0072\u0020e\u006e\u0064 \u0072\u006f\u0077\u0020\u006d\u0075\u0073\u0074 \u0062\u0065\u0020\u0067\u0072\u0065\u0061\u0074\u0065\u0072\u0020\u0074h\u0061\u006e\u0020\u0030");};if startRow > endRow {return _d .New ("\u0068\u0065\u0061\u0064\u0065\u0072\u0020\u0073\u0074\u0061\u0072\u0074\u0020\u0072\u006f\u0077\u0020\u0020\u006d\u0075s\u0074\u0020\u0062\u0065\u0020\u006c\u0065\u0073\u0073\u0020\u0074\u0068\u0061\u006e\u0020\u006f\u0072\u0020\u0065\u0071\u0075\u0061\u006c\u0020\u0074\u006f\u0020\u0074\u0068\u0065 \u0065\u006e\u0064\u0020\u0072o\u0077");
-};_dbbab ._eabace =true ;_dbbab ._gfagg =startRow ;_dbbab ._cedbc =endRow ;return nil ;};func (_cfeafg *templateProcessor )parseStyledParagraph (_dabga *templateNode )(interface{},error ){_egecdf :=_cfeafg .creator .NewStyledParagraph ();for _ ,_dabc :=range _dabga ._feaff .Attr {_cfeg :=_dabc .Value ;
-switch _fabe :=_dabc .Name .Local ;_fabe {case "\u0074\u0065\u0078\u0074\u002d\u0061\u006c\u0069\u0067\u006e":_egecdf .SetTextAlignment (_cfeafg .parseTextAlignmentAttr (_fabe ,_cfeg ));case "\u0076\u0065\u0072\u0074ic\u0061\u006c\u002d\u0074\u0065\u0078\u0074\u002d\u0061\u006c\u0069\u0067\u006e":_egecdf .SetTextVerticalAlignment (_cfeafg .parseTextVerticalAlignmentAttr (_fabe ,_cfeg ));
-case "l\u0069\u006e\u0065\u002d\u0068\u0065\u0069\u0067\u0068\u0074":_egecdf .SetLineHeight (_cfeafg .parseFloatAttr (_fabe ,_cfeg ));case "\u006d\u0061\u0072\u0067\u0069\u006e":_dgec :=_cfeafg .parseMarginAttr (_fabe ,_cfeg );_egecdf .SetMargins (_dgec .Left ,_dgec .Right ,_dgec .Top ,_dgec .Bottom );
-case "e\u006e\u0061\u0062\u006c\u0065\u002d\u0077\u0072\u0061\u0070":_egecdf .SetEnableWrap (_cfeafg .parseBoolAttr (_fabe ,_cfeg ));case "\u0065\u006ea\u0062\u006c\u0065-\u0077\u006f\u0072\u0064\u002d\u0077\u0072\u0061\u0070":_egecdf .EnableWordWrap (_cfeafg .parseBoolAttr (_fabe ,_cfeg ));
-case "\u0074\u0065\u0078\u0074\u002d\u006f\u0076\u0065\u0072\u0066\u006c\u006f\u0077":_egecdf .SetTextOverflow (_cfeafg .parseTextOverflowAttr (_fabe ,_cfeg ));case "\u0078":_egecdf .SetPos (_cfeafg .parseFloatAttr (_fabe ,_cfeg ),_egecdf ._gdgb );case "\u0079":_egecdf .SetPos (_egecdf ._eaceb ,_cfeafg .parseFloatAttr (_fabe ,_cfeg ));
-case "\u0061\u006e\u0067l\u0065":_egecdf .SetAngle (_cfeafg .parseFloatAttr (_fabe ,_cfeg ));default:_cf .Log .Debug ("\u0055\u006e\u0073\u0075\u0070\u0070\u006fr\u0074\u0065\u0064 \u0073\u0074\u0079l\u0065\u0064 \u0070\u0061\u0072\u0061\u0067\u0072a\u0070h \u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073\u0060\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069\u006e\u0067\u002e",_fabe );
-};};return _egecdf ,nil ;};
-
-// SetBorderColor sets border color of the rectangle.
-func (_aecgb *Rectangle )SetBorderColor (col Color ){_aecgb ._fbdc =col };func (_ffd *Invoice )newCell (_fdedc string ,_bfbc InvoiceCellProps )*InvoiceCell {return &InvoiceCell {_bfbc ,_fdedc };};
-
-// SetTotal sets the total of the invoice.
-func (_cbg *Invoice )SetTotal (value string ){_cbg ._aefbg [1].Value =value };
-
-// Columns returns all the columns in the invoice line items table.
-func (_dfcc *Invoice )Columns ()[]*InvoiceCell {return _dfcc ._bacc };
-
-// GeneratePageBlocks draws the chart onto a block.
-func (_gcad *Chart )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_feg :=ctx ;_dcga :=_gcad ._dddc .IsRelative ();var _adcaac []*Block ;if _dcga {_ggc :=1.0;_cag :=_gcad ._fbfc .Top ;if float64 (_gcad ._dde .Height ())> ctx .Height -_gcad ._fbfc .Top {_adcaac =[]*Block {NewBlock (ctx .PageWidth ,ctx .PageHeight -ctx .Y )};
-var _fffb error ;if _ ,ctx ,_fffb =_aeea ().GeneratePageBlocks (ctx );_fffb !=nil {return nil ,ctx ,_fffb ;};_cag =0;};ctx .X +=_gcad ._fbfc .Left +_ggc ;ctx .Y +=_cag ;ctx .Width -=_gcad ._fbfc .Left +_gcad ._fbfc .Right +2*_ggc ;ctx .Height -=_cag ;_gcad ._dde .SetWidth (int (ctx .Width ));
-}else {ctx .X =_gcad ._adcaa ;ctx .Y =_gcad ._fdd ;};_dgb :=_cd .NewContentCreator ();_dgb .Translate (0,ctx .PageHeight );_dgb .Scale (1,-1);_dgb .Translate (ctx .X ,ctx .Y );_cca :=NewBlock (ctx .PageWidth ,ctx .PageHeight );_gcad ._dde .Render (_ac .NewRenderer (_dgb ,_cca ._cff ),nil );
-if _gdee :=_cca .addContentsByString (_dgb .String ());_gdee !=nil {return nil ,ctx ,_gdee ;};if _dcga {_afec :=_gcad .Height ()+_gcad ._fbfc .Bottom ;ctx .Y +=_afec ;ctx .Height -=_afec ;}else {ctx =_feg ;};_adcaac =append (_adcaac ,_cca );return _adcaac ,ctx ,nil ;
-};func _ebab (_egbcd TextStyle )*StyledParagraph {return &StyledParagraph {_gdae :[]*TextChunk {},_cadaf :_egbcd ,_fcfd :_afgcg (_egbcd .Font ),_edccf :1.0,_cbcbb :TextAlignmentLeft ,_fbbcc :true ,_feege :true ,_cfadd :false ,_afgbg :0,_dbege :1,_gcea :1,_cdcdd :PositionRelative };
-};
-
-// ScaleToHeight scale Image to a specified height h, maintaining the aspect ratio.
-func (_eeeg *Image )ScaleToHeight (h float64 ){_efdg :=_eeeg ._gebf /_eeeg ._dcde ;_eeeg ._dcde =h ;_eeeg ._gebf =h *_efdg ;};
-
-// SetOpacity sets the opacity of the line (0-1).
-func (_ecfe *Line )SetOpacity (opacity float64 ){_ecfe ._cabc =opacity };
-
-// Opacity returns the opacity of the line.
-func (_fcaf *Line )Opacity ()float64 {return _fcaf ._cabc };
-
-// SetExtends specifies whether ot extend the shading beyond the starting and ending points.
-//
-// Text extends is set to `[]bool{false, false}` by default.
-func (_aabbc *RadialShading )SetExtends (start bool ,end bool ){_aabbc ._acce .SetExtends (start ,end )};
-
-// SetFitMode sets the fit mode of the image.
-// NOTE: The fit mode is only applied if relative positioning is used.
-func (_afcg *Image )SetFitMode (fitMode FitMode ){_afcg ._ggcg =fitMode };
-
-// SetColor sets the line color. Use ColorRGBFromHex, ColorRGBFrom8bit or
-// ColorRGBFromArithmetic to create the color object.
-func (_agddd *Line )SetColor (color Color ){_agddd ._ebce =color };func _bgcfe (_fdfd [][]_g .Point )*Polygon {return &Polygon {_ffgbf :&_g .Polygon {Points :_fdfd },_eegca :1.0,_ada :1.0};};func _bbgfe (_face []_g .Point )*Polyline {return &Polyline {_cfdd :&_g .Polyline {Points :_face ,LineColor :_gf .NewPdfColorDeviceRGB (0,0,0),LineWidth :1.0},_fbfe :1.0};
-};func _ddga (_cefa *_gf .Image )(*Image ,error ){_agee :=float64 (_cefa .Width );_dgef :=float64 (_cefa .Height );return &Image {_afaf :_cefa ,_cafg :_agee ,_fddb :_dgef ,_gebf :_agee ,_dcde :_dgef ,_agebb :0,_cbfe :1.0,_ebff :PositionRelative },nil ;
-};
-
-// SetBoundingBox set gradient color bounding box where the gradient would be rendered.
-func (_geegd *RadialShading )SetBoundingBox (x ,y ,width ,height float64 ){_geegd ._bbgb =&_gf .PdfRectangle {Llx :x ,Lly :y ,Urx :x +width ,Ury :y +height };};
-
-// SetFont sets the Paragraph's font.
-func (_dabg *Paragraph )SetFont (font *_gf .PdfFont ){_dabg ._befba =font };func (_gac *Block )transform (_afg _fg .Matrix ){_ba :=_cd .NewContentCreator ().Add_cm (_afg [0],_afg [1],_afg [3],_afg [4],_afg [6],_afg [7]).Operations ();*_gac ._egf =append (*_ba ,*_gac ._egf ...);
-_gac ._egf .WrapIfNeeded ();};
-
-// ScaleToWidth scales the Block to a specified width, maintaining the same aspect ratio.
-func (_bce *Block )ScaleToWidth (w float64 ){_dg :=w /_bce ._fgd ;_bce .Scale (_dg ,_dg )};
-
-// Add appends a new item to the list.
-// The supported components are: *Paragraph, *StyledParagraph, *Division, *Image, *Table, and *List.
-// Returns the marker used for the newly added item. The returned marker
-// object can be used to change the text and style of the marker for the
-// current item.
-func (_fgeg *List )Add (item VectorDrawable )(*TextChunk ,error ){_gade :=&listItem {_cafb :item ,_ccbc :_fgeg ._bdeb };switch _ccaa :=item .(type ){case *Paragraph :case *StyledParagraph :case *List :if _ccaa ._egca {_ccaa ._gbdd =15;};case *Division :case *Image :case *Table :default:return nil ,_d .New ("\u0074\u0068i\u0073\u0020\u0074\u0079\u0070\u0065\u0020\u006f\u0066\u0020\u0064\u0072\u0061\u0077\u0061\u0062\u006c\u0065\u0020\u0069\u0073\u0020\u006e\u006f\u0074\u0020\u0073\u0075\u0070\u0070\u006f\u0072\u0074\u0065\u0064\u0020\u0069\u006e\u0020\u006c\u0069\u0073\u0074");
-};_fgeg ._eccb =append (_fgeg ._eccb ,_gade );return &_gade ._ccbc ,nil ;};
-
-// ScaleToHeight scales the ellipse to the specified height. The width of
-// the ellipse is scaled so that the aspect ratio is maintained.
-func (_bgeg *Ellipse )ScaleToHeight (h float64 ){_ccd :=_bgeg ._bcce /_bgeg ._ccae ;_bgeg ._ccae =h ;_bgeg ._bcce =h *_ccd ;};
-
-// Rows returns the total number of rows the table has.
-func (_feaf *Table )Rows ()int {return _feaf ._bacg };
-
-// SetStyle sets the style for all the line components: number, title,
-// separator, page.
-func (_ccbbd *TOCLine )SetStyle (style TextStyle ){_ccbbd .Number .Style =style ;_ccbbd .Title .Style =style ;_ccbbd .Separator .Style =style ;_ccbbd .Page .Style =style ;};
-
-// AddColorStop add color stop info for rendering gradient color.
-func (_eabf *LinearShading )AddColorStop (color Color ,point float64 ){_eabf ._adbg .AddColorStop (color ,point );};
-
-// SetBorderOpacity sets the border opacity.
-func (_ecde *Polygon )SetBorderOpacity (opacity float64 ){_ecde ._ada =opacity };type templateNode struct{_aeeaa interface{};_feaff _a .StartElement ;_edcee *templateNode ;};
-
-// SetWidth sets the width of the ellipse.
-func (_facc *Ellipse )SetWidth (width float64 ){_facc ._bcce =width };
-
-// TableCell defines a table cell which can contain a Drawable as content.
-type TableCell struct{_gbge Color ;_bdbd _g .LineStyle ;_cgafa CellBorderStyle ;_effe Color ;_cefdc float64 ;_gfcgd CellBorderStyle ;_feeb Color ;_ggbc float64 ;_febbf CellBorderStyle ;_afgf Color ;_dadga float64 ;_cadag CellBorderStyle ;_dffad Color ;
-_ebbbd float64 ;_gaddf ,_bgege int ;_adfef int ;_adcd int ;_afgda VectorDrawable ;_efed CellHorizontalAlignment ;_gaff CellVerticalAlignment ;_bcgf float64 ;_bbcg *Table ;};func (_cgec *templateProcessor )parseChapter (_aagb *templateNode )(interface{},error ){_ccdda :=_cgec .creator .NewChapter ;
-if _aagb ._edcee !=nil {if _dddeb ,_gfee :=_aagb ._edcee ._aeeaa .(*Chapter );_gfee {_ccdda =_dddeb .NewSubchapter ;};};_bdefd :=_ccdda ("");for _ ,_ageg :=range _aagb ._feaff .Attr {_ecffa :=_ageg .Value ;switch _edda :=_ageg .Name .Local ;_edda {case "\u0073\u0068\u006f\u0077\u002d\u006e\u0075\u006d\u0062e\u0072\u0069\u006e\u0067":_bdefd .SetShowNumbering (_cgec .parseBoolAttr (_edda ,_ecffa ));
-case "\u0069\u006e\u0063\u006c\u0075\u0064\u0065\u002d\u0069n\u002d\u0074\u006f\u0063":_bdefd .SetIncludeInTOC (_cgec .parseBoolAttr (_edda ,_ecffa ));case "\u006d\u0061\u0072\u0067\u0069\u006e":_gfcge :=_cgec .parseMarginAttr (_edda ,_ecffa );_bdefd .SetMargins (_gfcge .Left ,_gfcge .Right ,_gfcge .Top ,_gfcge .Bottom );
-default:_cf .Log .Debug ("\u0055\u006es\u0075\u0070\u0070\u006f\u0072\u0074\u0065\u0064\u0020\u0063\u0068\u0061\u0070\u0074\u0065\u0072\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073\u0060\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069\u006e\u0067\u002e",_edda );
-};};return _bdefd ,nil ;};func _feab (_gcaec int64 ,_ggbab ,_bfafb ,_gbgb float64 )*_gf .PdfAnnotation {_eceff :=_gf .NewPdfAnnotationLink ();_deacb :=_gf .NewBorderStyle ();_deacb .SetBorderWidth (0);_eceff .BS =_deacb .ToPdfObject ();if _gcaec < 0{_gcaec =0;
-};_eceff .Dest =_acb .MakeArray (_acb .MakeInteger (_gcaec ),_acb .MakeName ("\u0058\u0059\u005a"),_acb .MakeFloat (_ggbab ),_acb .MakeFloat (_bfafb ),_acb .MakeFloat (_gbgb ));return _eceff .PdfAnnotation ;};
-
-// SetPositioning sets the positioning of the rectangle (absolute or relative).
-func (_abce *Rectangle )SetPositioning (position Positioning ){_abce ._bcgca =position };
-
-// TOCLine represents a line in a table of contents.
-// The component can be used both in the context of a
-// table of contents component and as a standalone component.
-// The representation of a table of contents line is as follows:
-/*
-         [number] [title]      [separator] [page]
-   e.g.: Chapter1 Introduction ........... 1
-*/
-type TOCLine struct{_dfbba *StyledParagraph ;
-
-// Holds the text and style of the number part of the TOC line.
-Number TextChunk ;
-
-// Holds the text and style of the title part of the TOC line.
-Title TextChunk ;
-
-// Holds the text and style of the separator part of the TOC line.
-Separator TextChunk ;
-
-// Holds the text and style of the page part of the TOC line.
-Page TextChunk ;_gbed float64 ;_gfggc uint ;_edaee float64 ;_gfdb Positioning ;_ffcfg float64 ;_fcae float64 ;_gdfbf int64 ;};func (_gead *templateProcessor )parseCellVerticalAlignmentAttr (_edbba ,_edbe string )CellVerticalAlignment {_cf .Log .Debug ("\u0050\u0061\u0072\u0073\u0069\u006e\u0067\u0020\u0063\u0065\u006c\u006c\u0020\u0076\u0065r\u0074\u0069\u0063\u0061\u006c\u0020\u0061\u006c\u0069\u0067\u006e\u006d\u0065n\u0074\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a (\u0060\u0025\u0073\u0060\u002c\u0020\u0025\u0073\u0029\u002e",_edbba ,_edbe );
-_fafgcd :=map[string ]CellVerticalAlignment {"\u0074\u006f\u0070":CellVerticalAlignmentTop ,"\u006d\u0069\u0064\u0064\u006c\u0065":CellVerticalAlignmentMiddle ,"\u0062\u006f\u0074\u0074\u006f\u006d":CellVerticalAlignmentBottom }[_edbe ];return _fafgcd ;
-};func (_eddf *Paragraph )getTextWidth ()float64 {_deafa :=0.0;for _ ,_effgb :=range _eddf ._ccaac {if _effgb =='\u000A'{continue ;};_ebgd ,_acee :=_eddf ._befba .GetRuneMetrics (_effgb );if !_acee {_cf .Log .Debug ("\u0045\u0052R\u004f\u0052\u003a\u0020\u0052u\u006e\u0065\u0020\u0063\u0068a\u0072\u0020\u006d\u0065\u0074\u0072\u0069\u0063\u0073\u0020\u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064\u0021\u0020\u0028\u0072\u0075\u006e\u0065\u0020\u0030\u0078\u0025\u0030\u0034\u0078\u003d\u0025\u0063\u0029",_effgb ,_effgb );
-return -1;};_deafa +=_eddf ._dgfa *_ebgd .Wx ;};return _deafa ;};
-
-// SetWidth sets the width of the rectangle.
-func (_gafc *Rectangle )SetWidth (width float64 ){_gafc ._adeb =width };func (_bafcf *templateProcessor )parseBackground (_abdgd *templateNode )(interface{},error ){_baga :=&Background {};for _ ,_fafgc :=range _abdgd ._feaff .Attr {_aacfeg :=_fafgc .Value ;
-switch _fdffd :=_fafgc .Name .Local ;_fdffd {case "\u0066\u0069\u006c\u006c\u002d\u0063\u006f\u006c\u006f\u0072":_baga .FillColor =_bafcf .parseColorAttr (_fdffd ,_aacfeg );case "\u0062\u006f\u0072d\u0065\u0072\u002d\u0063\u006f\u006c\u006f\u0072":_baga .BorderColor =_bafcf .parseColorAttr (_fdffd ,_aacfeg );
-case "b\u006f\u0072\u0064\u0065\u0072\u002d\u0073\u0069\u007a\u0065":_baga .BorderSize =_bafcf .parseFloatAttr (_fdffd ,_aacfeg );case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u0072\u0061\u0064\u0069\u0075\u0073":_cgbd ,_bddd ,_ebbg ,_agged :=_bafcf .parseBorderRadiusAttr (_fdffd ,_aacfeg );
-_baga .SetBorderRadius (_cgbd ,_bddd ,_agged ,_ebbg );case "\u0062\u006f\u0072\u0064er\u002d\u0074\u006f\u0070\u002d\u006c\u0065\u0066\u0074\u002d\u0072\u0061\u0064\u0069u\u0073":_baga .BorderRadiusTopLeft =_bafcf .parseFloatAttr (_fdffd ,_aacfeg );case "\u0062\u006f\u0072de\u0072\u002d\u0074\u006f\u0070\u002d\u0072\u0069\u0067\u0068\u0074\u002d\u0072\u0061\u0064\u0069\u0075\u0073":_baga .BorderRadiusTopRight =_bafcf .parseFloatAttr (_fdffd ,_aacfeg );
-case "\u0062o\u0072\u0064\u0065\u0072-\u0062\u006f\u0074\u0074\u006fm\u002dl\u0065f\u0074\u002d\u0072\u0061\u0064\u0069\u0075s":_baga .BorderRadiusBottomLeft =_bafcf .parseFloatAttr (_fdffd ,_aacfeg );case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u0062\u006f\u0074\u0074o\u006d\u002d\u0072\u0069\u0067\u0068\u0074\u002d\u0072\u0061d\u0069\u0075\u0073":_baga .BorderRadiusBottomRight =_bafcf .parseFloatAttr (_fdffd ,_aacfeg );
-default:_cf .Log .Debug ("\u0055\u006e\u0073\u0075\u0070\u0070o\u0072\u0074\u0065\u0064\u0020\u0062\u0061\u0063\u006b\u0067\u0072\u006f\u0075\u006e\u0064\u0020\u0061\u0074\u0074\u0072i\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073\u0060\u002e\u0020\u0053\u006bi\u0070p\u0069\u006e\u0067\u002e",_fdffd );
-};};return _baga ,nil ;};
-
-// NewImageFromGoImage creates an Image from a go image.Image data structure.
-func (_dgdd *Creator )NewImageFromGoImage (goimg _e .Image )(*Image ,error ){return _aefb (goimg )};
-
-// SetLineLevelOffset sets the amount of space an indentation level occupies
-// for all new lines of the table of contents.
-func (_fgcc *TOC )SetLineLevelOffset (levelOffset float64 ){_fgcc ._bgece =levelOffset };func (_gaa *Block )addContentsByString (_ff string )error {_bd :=_cd .NewContentStreamParser (_ff );_cab ,_dfc :=_bd .Parse ();if _dfc !=nil {return _dfc ;};_gaa ._egf .WrapIfNeeded ();
-_cab .WrapIfNeeded ();*_gaa ._egf =append (*_gaa ._egf ,*_cab ...);return nil ;};func (_fbeb *List )split (_geda DrawContext )(_aabg ,_ggaa *List ){var (_ecfb float64 ;_fabb ,_cefac []*listItem ;);_dbaa :=_geda .Width -_fbeb ._ccfa .Horizontal ()-_fbeb ._gbdd -_fbeb .markerWidth ();
-_bdbg :=_fbeb .markerWidth ();for _eedfa ,_dagde :=range _fbeb ._eccb {_gafg :=_dagde .ctxHeight (_dbaa );_ecfb +=_gafg ;if _ecfb <=_geda .Height {_fabb =append (_fabb ,_dagde );}else {switch _abff :=_dagde ._cafb .(type ){case *List :_fgade :=_geda ;_fgade .Height =_ee .Floor (_gafg -(_ecfb -_geda .Height ));
-_cfad ,_bbabc :=_abff .split (_fgade );if _cfad !=nil {_gccb :=_gddc ();_gccb ._ccbc =_dagde ._ccbc ;_gccb ._cafb =_cfad ;_fabb =append (_fabb ,_gccb );};if _bbabc !=nil {_dgfb :=_abff ._bdeb .Style .FontSize ;_defa ,_fcebc :=_abff ._bdeb .Style .Font .GetRuneMetrics (' ');
-if _fcebc {_dgfb =_abff ._bdeb .Style .FontSize *_defa .Wx *_abff ._bdeb .Style .horizontalScale ()/1000.0;};_gafae :=_eg .Repeat ("\u0020",int (_bdbg /_dgfb ));_eebcb :=_gddc ();_eebcb ._ccbc =*NewTextChunk (_gafae ,_abff ._bdeb .Style );_eebcb ._cafb =_bbabc ;
-_cefac =append (_cefac ,_eebcb );_cefac =append (_cefac ,_fbeb ._eccb [_eedfa +1:]...);};default:_cefac =_fbeb ._eccb [_eedfa :];};if len (_cefac )> 0{break ;};};};if len (_fabb )> 0{_aabg =_befc (_fbeb ._dgcbd );*_aabg =*_fbeb ;_aabg ._eccb =_fabb ;};
-if len (_cefac )> 0{_ggaa =_befc (_fbeb ._dgcbd );*_ggaa =*_fbeb ;_ggaa ._eccb =_cefac ;};return _aabg ,_ggaa ;};
-
-// LinearShading holds data for rendering a linear shading gradient.
-type LinearShading struct{_adbg *shading ;_cbba *_gf .PdfRectangle ;_cfbdg float64 ;};func (_bdad *templateProcessor )parseTextOverflowAttr (_ddabf ,_fdcdf string )TextOverflow {_cf .Log .Debug ("\u0050a\u0072\u0073i\u006e\u0067\u0020\u0074e\u0078\u0074\u0020o\u0076\u0065\u0072\u0066\u006c\u006f\u0077\u0020\u0061tt\u0072\u0069\u0062u\u0074\u0065:\u0020\u0028\u0060\u0025\u0073\u0060,\u0020\u0025s\u0029\u002e",_ddabf ,_fdcdf );
-_dcedb :=map[string ]TextOverflow {"\u0076i\u0073\u0069\u0062\u006c\u0065":TextOverflowVisible ,"\u0068\u0069\u0064\u0064\u0065\u006e":TextOverflowHidden }[_fdcdf ];return _dcedb ;};
-
-// SetPos sets the absolute position. Changes object positioning to absolute.
-func (_ffce *Image )SetPos (x ,y float64 ){_ffce ._ebff =PositionAbsolute ;_ffce ._ecadg =x ;_ffce ._ggbg =y ;};func (_ebcgd *Invoice )generateInformationBlocks (_egcfc DrawContext )([]*Block ,DrawContext ,error ){_defb :=_ebab (_ebcgd ._bagd );_defb .SetMargins (0,0,0,20);
-_gdgd :=_ebcgd .drawAddress (_ebcgd ._cedb );_gdgd =append (_gdgd ,_defb );_gdgd =append (_gdgd ,_ebcgd .drawAddress (_ebcgd ._bcdc )...);_cgce :=_cbb ();for _ ,_bece :=range _gdgd {_cgce .Add (_bece );};_fbda :=_ebcgd .drawInformation ();_cbac :=_afcfg (2);
-_cbac .SetMargins (0,0,25,0);_cabb :=_cbac .NewCell ();_cabb .SetIndent (0);_cabb .SetContent (_cgce );_cabb =_cbac .NewCell ();_cabb .SetContent (_fbda );return _cbac .GeneratePageBlocks (_egcfc );};type templateProcessor struct{creator *Creator ;_baaba []byte ;
-_cfae *TemplateOptions ;_gcfe componentRenderer ;};
-
-// New creates a new instance of the PDF Creator.
-func New ()*Creator {const _eff ="c\u0072\u0065\u0061\u0074\u006f\u0072\u002e\u004e\u0065\u0077";_fded :=&Creator {};_fded ._geac =[]*_gf .PdfPage {};_fded ._agf =map[*_gf .PdfPage ]*Block {};_fded ._abf =map[*_gf .PdfPage ]*pageTransformations {};_fded .SetPageSize (PageSizeLetter );
-_gfcc :=0.1*_fded ._bfda ;_fded ._fegd .Left =_gfcc ;_fded ._fegd .Right =_gfcc ;_fded ._fegd .Top =_gfcc ;_fded ._fegd .Bottom =_gfcc ;var _cffg error ;_fded ._bbd ,_cffg =_gf .NewStandard14Font (_gf .HelveticaName );if _cffg !=nil {_fded ._bbd =_gf .DefaultFont ();
-};_fded ._deca ,_cffg =_gf .NewStandard14Font (_gf .HelveticaBoldName );if _cffg !=nil {_fded ._bbd =_gf .DefaultFont ();};_fded ._cgfc =_fded .NewTOC ("\u0054\u0061\u0062\u006c\u0065\u0020\u006f\u0066\u0020\u0043\u006f\u006et\u0065\u006e\u0074\u0073");
-_fded .AddOutlines =true ;_fded ._dbfa =_gf .NewOutline ();_fgb .TrackUse (_eff );return _fded ;};
-
-// SetExtends specifies whether to extend the shading beyond the starting and ending points.
-//
-// Text extends is set to `[]bool{false, false}` by default.
-func (_ccgdd *shading )SetExtends (start bool ,end bool ){_ccgdd ._gfaae =[]bool {start ,end }};
-
-// GeneratePageBlocks implements drawable interface.
-func (_gef *border )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_agg :=NewBlock (ctx .PageWidth ,ctx .PageHeight );_ace :=_gef ._dae ;_fbf :=ctx .PageHeight -_gef ._deea ;if _gef ._cdda !=nil {_agaa :=_g .Rectangle {Opacity :1.0,X :_gef ._dae ,Y :ctx .PageHeight -_gef ._deea -_gef ._gce ,Height :_gef ._gce ,Width :_gef ._cdg };
-_agaa .FillEnabled =true ;_fga :=_dca (_gef ._cdda );_aebg :=_ggfba (_agg ,_fga ,_gef ._cdda ,func ()Rectangle {return Rectangle {_fgfd :_agaa .X ,_aedgf :_agaa .Y ,_adeb :_agaa .Width ,_dffef :_agaa .Height };});if _aebg !=nil {return nil ,ctx ,_aebg ;
-};_agaa .FillColor =_fga ;_agaa .BorderEnabled =false ;_bbc ,_ ,_aebg :=_agaa .Draw ("");if _aebg !=nil {return nil ,ctx ,_aebg ;};_aebg =_agg .addContentsByString (string (_bbc ));if _aebg !=nil {return nil ,ctx ,_aebg ;};};_dbgg :=_gef ._afed ;_gec :=_gef ._aac ;
-_cdf :=_gef ._bac ;_fgf :=_gef ._egg ;_ddd :=_gef ._afed ;if _gef ._cedf ==CellBorderStyleDouble {_ddd +=2*_dbgg ;};_fcd :=_gef ._aac ;if _gef ._fbb ==CellBorderStyleDouble {_fcd +=2*_gec ;};_fdg :=_gef ._bac ;if _gef ._ggd ==CellBorderStyleDouble {_fdg +=2*_cdf ;
-};_bdb :=_gef ._egg ;if _gef ._bceb ==CellBorderStyleDouble {_bdb +=2*_fgf ;};_bfc :=(_ddd -_fdg )/2;_aaca :=(_ddd -_bdb )/2;_fae :=(_fcd -_fdg )/2;_beg :=(_fcd -_bdb )/2;if _gef ._afed !=0{_fcab :=_ace ;_fag :=_fbf ;if _gef ._cedf ==CellBorderStyleDouble {_fag -=_dbgg ;
-_gfc :=_g .BasicLine {LineColor :_dca (_gef ._fdf ),Opacity :1.0,LineWidth :_gef ._afed ,LineStyle :_gef .LineStyle ,X1 :_fcab -_ddd /2+_bfc ,Y1 :_fag +2*_dbgg ,X2 :_fcab +_ddd /2-_aaca +_gef ._cdg ,Y2 :_fag +2*_dbgg };_egda ,_ ,_cgf :=_gfc .Draw ("");
-if _cgf !=nil {return nil ,ctx ,_cgf ;};_cgf =_agg .addContentsByString (string (_egda ));if _cgf !=nil {return nil ,ctx ,_cgf ;};};_ade :=_g .BasicLine {LineWidth :_gef ._afed ,Opacity :1.0,LineColor :_dca (_gef ._fdf ),LineStyle :_gef .LineStyle ,X1 :_fcab -_ddd /2+_bfc +(_fdg -_gef ._bac ),Y1 :_fag ,X2 :_fcab +_ddd /2-_aaca +_gef ._cdg -(_bdb -_gef ._egg ),Y2 :_fag };
-_fad ,_ ,_fcg :=_ade .Draw ("");if _fcg !=nil {return nil ,ctx ,_fcg ;};_fcg =_agg .addContentsByString (string (_fad ));if _fcg !=nil {return nil ,ctx ,_fcg ;};};if _gef ._aac !=0{_ead :=_ace ;_ecac :=_fbf -_gef ._gce ;if _gef ._fbb ==CellBorderStyleDouble {_ecac +=_gec ;
-_fab :=_g .BasicLine {LineWidth :_gef ._aac ,Opacity :1.0,LineColor :_dca (_gef ._egdf ),LineStyle :_gef .LineStyle ,X1 :_ead -_fcd /2+_fae ,Y1 :_ecac -2*_gec ,X2 :_ead +_fcd /2-_beg +_gef ._cdg ,Y2 :_ecac -2*_gec };_dga ,_ ,_ggdd :=_fab .Draw ("");if _ggdd !=nil {return nil ,ctx ,_ggdd ;
-};_ggdd =_agg .addContentsByString (string (_dga ));if _ggdd !=nil {return nil ,ctx ,_ggdd ;};};_deaf :=_g .BasicLine {LineWidth :_gef ._aac ,Opacity :1.0,LineColor :_dca (_gef ._egdf ),LineStyle :_gef .LineStyle ,X1 :_ead -_fcd /2+_fae +(_fdg -_gef ._bac ),Y1 :_ecac ,X2 :_ead +_fcd /2-_beg +_gef ._cdg -(_bdb -_gef ._egg ),Y2 :_ecac };
-_gcc ,_ ,_cgb :=_deaf .Draw ("");if _cgb !=nil {return nil ,ctx ,_cgb ;};_cgb =_agg .addContentsByString (string (_gcc ));if _cgb !=nil {return nil ,ctx ,_cgb ;};};if _gef ._bac !=0{_fgc :=_ace ;_dce :=_fbf ;if _gef ._ggd ==CellBorderStyleDouble {_fgc +=_cdf ;
-_bcg :=_g .BasicLine {LineWidth :_gef ._bac ,Opacity :1.0,LineColor :_dca (_gef ._agbc ),LineStyle :_gef .LineStyle ,X1 :_fgc -2*_cdf ,Y1 :_dce +_fdg /2+_bfc ,X2 :_fgc -2*_cdf ,Y2 :_dce -_fdg /2-_fae -_gef ._gce };_gaca ,_ ,_afdd :=_bcg .Draw ("");if _afdd !=nil {return nil ,ctx ,_afdd ;
-};_afdd =_agg .addContentsByString (string (_gaca ));if _afdd !=nil {return nil ,ctx ,_afdd ;};};_gacb :=_g .BasicLine {LineWidth :_gef ._bac ,Opacity :1.0,LineColor :_dca (_gef ._agbc ),LineStyle :_gef .LineStyle ,X1 :_fgc ,Y1 :_dce +_fdg /2+_bfc -(_ddd -_gef ._afed ),X2 :_fgc ,Y2 :_dce -_fdg /2-_fae -_gef ._gce +(_fcd -_gef ._aac )};
-_fcc ,_ ,_ccbe :=_gacb .Draw ("");if _ccbe !=nil {return nil ,ctx ,_ccbe ;};_ccbe =_agg .addContentsByString (string (_fcc ));if _ccbe !=nil {return nil ,ctx ,_ccbe ;};};if _gef ._egg !=0{_bbgf :=_ace +_gef ._cdg ;_ceb :=_fbf ;if _gef ._bceb ==CellBorderStyleDouble {_bbgf -=_fgf ;
-_cabd :=_g .BasicLine {LineWidth :_gef ._egg ,Opacity :1.0,LineColor :_dca (_gef ._aeg ),LineStyle :_gef .LineStyle ,X1 :_bbgf +2*_fgf ,Y1 :_ceb +_bdb /2+_aaca ,X2 :_bbgf +2*_fgf ,Y2 :_ceb -_bdb /2-_beg -_gef ._gce };_bbeg ,_ ,_fcb :=_cabd .Draw ("");if _fcb !=nil {return nil ,ctx ,_fcb ;
-};_fcb =_agg .addContentsByString (string (_bbeg ));if _fcb !=nil {return nil ,ctx ,_fcb ;};};_gfafa :=_g .BasicLine {LineWidth :_gef ._egg ,Opacity :1.0,LineColor :_dca (_gef ._aeg ),LineStyle :_gef .LineStyle ,X1 :_bbgf ,Y1 :_ceb +_bdb /2+_aaca -(_ddd -_gef ._afed ),X2 :_bbgf ,Y2 :_ceb -_bdb /2-_beg -_gef ._gce +(_fcd -_gef ._aac )};
-_cdcg ,_ ,_aef :=_gfafa .Draw ("");if _aef !=nil {return nil ,ctx ,_aef ;};_aef =_agg .addContentsByString (string (_cdcg ));if _aef !=nil {return nil ,ctx ,_aef ;};};return []*Block {_agg },ctx ,nil ;};
-
-// Angle returns the block rotation angle in degrees.
-func (_cfg *Block )Angle ()float64 {return _cfg ._eb };
-
-// SetTitleStyle sets the style properties of the invoice title.
-func (_dgae *Invoice )SetTitleStyle (style TextStyle ){_dgae ._dcgf =style };
+// Width returns the Block's width.
+func (_gfb *Block )Width ()float64 {return _gfb ._bab };
 
 // SetLineSeparator sets the separator for all new lines of the table of contents.
-func (_adga *TOC )SetLineSeparator (separator string ){_adga ._edddb =separator };func (_egedf *templateProcessor )loadImageFromSrc (_cbcdc string )(*Image ,error ){if _cbcdc ==""{_cf .Log .Error ("\u0049\u006d\u0061\u0067\u0065\u0020\u0060\u0073\u0072\u0063\u0060\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u0020\u0063\u0061n\u006e\u006f\u0074\u0020\u0062e\u0020\u0065m\u0070\u0074\u0079\u002e");
-return nil ,_gfeb ;};_adce :=_eg .Split (_cbcdc ,"\u002c");for _ ,_dfggf :=range _adce {_dfggf =_eg .TrimSpace (_dfggf );if _dfggf ==""{continue ;};_fccae ,_eadce :=_egedf ._cfae .ImageMap [_dfggf ];if _eadce {return _ddga (_fccae );};if _dgbb :=_egedf .parseAttrPropList (_dfggf );
-len (_dgbb )> 0{if _bbecc ,_gbbe :=_dgbb ["\u0070\u0061\u0074\u0068"];_gbbe {if _gfaef ,_gbab :=_fdcb (_bbecc );_gbab !=nil {_cf .Log .Debug ("\u0043\u006f\u0075\u006c\u0064\u0020\u006e\u006f\u0074\u0020l\u006f\u0061\u0064\u0020\u0069\u006d\u0061g\u0065\u0020\u0060\u0025\u0073\u0060\u003a\u0020\u0025\u0076\u002e",_bbecc ,_gbab );
-}else {return _gfaef ,nil ;};};};};_cf .Log .Error ("\u0043\u006ful\u0064\u0020\u006eo\u0074\u0020\u0066\u0069nd \u0069ma\u0067\u0065\u0020\u0072\u0065\u0073\u006fur\u0063\u0065\u003a\u0020\u0060\u0025\u0073`\u002e",_cbcdc );return nil ,_gfeb ;};
+func (_bageg *TOC )SetLineSeparator (separator string ){_bageg ._gabb =separator };
 
-// Polyline represents a slice of points that are connected as straight lines.
-// Implements the Drawable interface and can be rendered using the Creator.
-type Polyline struct{_cfdd *_g .Polyline ;_fbfe float64 ;};
-
-// String implements error interface.
-func (_fcce UnsupportedRuneError )Error ()string {return _fcce .Message };func (_gbcg *StyledParagraph )getMaxLineWidth ()float64 {if _gbcg ._cgfdg ==nil ||len (_gbcg ._cgfdg )==0{_gbcg .wrapText ();};var _aegfe float64 ;for _ ,_eabac :=range _gbcg ._cgfdg {_ffcf :=_gbcg .getTextLineWidth (_eabac );
-if _ffcf > _aegfe {_aegfe =_ffcf ;};};return _aegfe ;};
-
-// SetBackgroundColor set background color of the shading area.
-//
-// By default the background color is set to white.
-func (_ddgf *shading )SetBackgroundColor (backgroundColor Color ){_ddgf ._adddc =backgroundColor };
-
-// SetIncludeInTOC sets a flag to indicate whether or not to include in tOC.
-func (_dgg *Chapter )SetIncludeInTOC (includeInTOC bool ){_dgg ._aaaa =includeInTOC };func (_aff *Division )drawBackground (_gfag []*Block ,_fddd ,_efeee DrawContext ,_agdc bool )([]*Block ,error ){_gafa :=len (_gfag );if _gafa ==0||_aff ._dfea ==nil {return _gfag ,nil ;
-};_eae :=make ([]*Block ,0,len (_gfag ));for _cecb ,_fbbc :=range _gfag {var (_egcb =_aff ._dfea .BorderRadiusTopLeft ;_ffacf =_aff ._dfea .BorderRadiusTopRight ;_agba =_aff ._dfea .BorderRadiusBottomLeft ;_fdba =_aff ._dfea .BorderRadiusBottomRight ;);
-_bdag :=_fddd ;_bdag .Page +=_cecb ;if _cecb ==0{if _agdc {_eae =append (_eae ,_fbbc );continue ;};if _gafa ==1{_bdag .Height =_efeee .Y -_fddd .Y ;};}else {_bdag .X =_bdag .Margins .Left +_aff ._dcbe .Left ;_bdag .Y =_bdag .Margins .Top ;_bdag .Width =_bdag .PageWidth -_bdag .Margins .Left -_bdag .Margins .Right -_aff ._dcbe .Left -_aff ._dcbe .Right ;
-if _cecb ==_gafa -1{_bdag .Height =_efeee .Y -_bdag .Margins .Top -_aff ._dcbe .Top ;}else {_bdag .Height =_bdag .PageHeight -_bdag .Margins .Top -_bdag .Margins .Bottom ;};if !_agdc {_egcb =0;_ffacf =0;};};if _gafa > 1&&_cecb !=_gafa -1{_agba =0;_fdba =0;
-};_edba :=_bfeeg (_bdag .X ,_bdag .Y ,_bdag .Width ,_bdag .Height );_edba .SetFillColor (_aff ._dfea .FillColor );_edba .SetBorderColor (_aff ._dfea .BorderColor );_edba .SetBorderWidth (_aff ._dfea .BorderSize );_edba .SetBorderRadius (_egcb ,_ffacf ,_agba ,_fdba );
-_afdg ,_ ,_edcf :=_edba .GeneratePageBlocks (_bdag );if _edcf !=nil {return nil ,_edcf ;};if len (_afdg )==0{continue ;};_egfbg :=_afdg [0];if _edcf =_egfbg .mergeBlocks (_fbbc );_edcf !=nil {return nil ,_edcf ;};_eae =append (_eae ,_egfbg );};return _eae ,nil ;
-};
-
-// SetBorderOpacity sets the border opacity of the rectangle.
-func (_addgf *Rectangle )SetBorderOpacity (opacity float64 ){_addgf ._eeee =opacity };
-
-// PageSize represents the page size as a 2 element array representing the width and height in PDF document units (points).
-type PageSize [2]float64 ;func (_befdg *Table )wrapRow (_dadg int ,_baee DrawContext ,_fbbd float64 )(bool ,error ){if !_befdg ._bfbf {return false ,nil ;};var (_ddaf =_befdg ._fdde [_dadg ];_gbcdf =-1;_egbf []*TableCell ;_aaeaf float64 ;_eagb bool ;_dfgbf =make ([]float64 ,0,len (_befdg ._cdgf ));
-);_febee :=func (_bffb *TableCell ,_agbae VectorDrawable ,_gbdg bool )*TableCell {_cbaef :=*_bffb ;_cbaef ._afgda =_agbae ;if _gbdg {_cbaef ._gaddf ++;};return &_cbaef ;};_gbcdfb :=func (_gfbbe int ,_ggcbf VectorDrawable ){var _bggdd float64 =-1;if _ggcbf ==nil {if _gbfg :=_dfgbf [_gfbbe -_dadg ];
-_gbfg > _baee .Height {_ggcbf =_befdg ._fdde [_gfbbe ]._afgda ;_befdg ._fdde [_gfbbe ]._afgda =nil ;_dfgbf [_gfbbe -_dadg ]=0;_bggdd =_gbfg ;};};_bagda :=_febee (_befdg ._fdde [_gfbbe ],_ggcbf ,true );_egbf =append (_egbf ,_bagda );if _bggdd < 0{_bggdd =_bagda .height (_baee .Width );
-};if _bggdd > _aaeaf {_aaeaf =_bggdd ;};};for _ceccb :=_dadg ;_ceccb < len (_befdg ._fdde );_ceccb ++{_ddcac :=_befdg ._fdde [_ceccb ];if _ddaf ._gaddf !=_ddcac ._gaddf {_gbcdf =_ceccb ;break ;};_baee .Width =_ddcac .width (_befdg ._cdgf ,_fbbd );_egeae :=_ddcac .height (_baee .Width );
-var _ceca VectorDrawable ;switch _ebdbf :=_ddcac ._afgda .(type ){case *StyledParagraph :if _egeae > _baee .Height {_dbac :=_baee ;_dbac .Height =_ee .Floor (_baee .Height -_ebdbf ._gdfc .Top -_ebdbf ._gdfc .Bottom -0.5*_ebdbf .getTextHeight ());_bbdd ,_gebda ,_gdff :=_ebdbf .split (_dbac );
-if _gdff !=nil {return false ,_gdff ;};if _bbdd !=nil &&_gebda !=nil {_ebdbf =_bbdd ;_ddcac =_febee (_ddcac ,_bbdd ,false );_befdg ._fdde [_ceccb ]=_ddcac ;_ceca =_gebda ;_eagb =true ;};_egeae =_ddcac .height (_baee .Width );};case *Division :if _egeae > _baee .Height {_aecfg :=_baee ;
-_aecfg .Height =_ee .Floor (_baee .Height -_ebdbf ._dcbe .Top -_ebdbf ._dcbe .Bottom );_cgef ,_afdfa :=_ebdbf .split (_aecfg );if _cgef !=nil &&_afdfa !=nil {_ebdbf =_cgef ;_ddcac =_febee (_ddcac ,_cgef ,false );_befdg ._fdde [_ceccb ]=_ddcac ;_ceca =_afdfa ;
-_eagb =true ;if _cgef ._dfea !=nil {_cgef ._dfea .BorderRadiusBottomLeft =0;_cgef ._dfea .BorderRadiusBottomRight =0;};if _afdfa ._dfea !=nil {_afdfa ._dfea .BorderRadiusTopLeft =0;_afdfa ._dfea .BorderRadiusTopRight =0;};_egeae =_ddcac .height (_baee .Width );
-};};case *List :if _egeae > _baee .Height {_fcec :=_baee ;_fcec .Height =_ee .Floor (_baee .Height -_ebdbf ._ccfa .Vertical ());_fdad ,_facb :=_ebdbf .split (_fcec );if _fdad !=nil {_ebdbf =_fdad ;_ddcac =_febee (_ddcac ,_fdad ,false );_befdg ._fdde [_ceccb ]=_ddcac ;
-};if _facb !=nil {_ceca =_facb ;_eagb =true ;};_egeae =_ddcac .height (_baee .Width );};};_dfgbf =append (_dfgbf ,_egeae );if _eagb {if _egbf ==nil {_egbf =make ([]*TableCell ,0,len (_befdg ._cdgf ));for _aade :=_dadg ;_aade < _ceccb ;_aade ++{_gbcdfb (_aade ,nil );
-};};_gbcdfb (_ceccb ,_ceca );};};var _cefaf float64 ;for _ ,_cafd :=range _dfgbf {if _cafd > _cefaf {_cefaf =_cafd ;};};if _eagb &&_cefaf < _baee .Height {if _gbcdf < 0{_gbcdf =len (_befdg ._fdde );};_baagd :=_befdg ._fdde [_gbcdf -1]._gaddf +_befdg ._fdde [_gbcdf -1]._adfef -1;
-for _edcfd :=_gbcdf ;_edcfd < len (_befdg ._fdde );_edcfd ++{_befdg ._fdde [_edcfd ]._gaddf ++;};_befdg ._fdde =append (_befdg ._fdde [:_gbcdf ],append (_egbf ,_befdg ._fdde [_gbcdf :]...)...);_befdg ._gdgf =append (_befdg ._gdgf [:_baagd ],append ([]float64 {_aaeaf },_befdg ._gdgf [_baagd :]...)...);
-_befdg ._gdgf [_ddaf ._gaddf +_ddaf ._adfef -2]=_cefaf ;};return _eagb ,nil ;};
-
-// SetPos sets the Table's positioning to absolute mode and specifies the upper-left corner
-// coordinates as (x,y).
-// Note that this is only sensible to use when the table does not wrap over multiple pages.
-// TODO: Should be able to set width too (not just based on context/relative positioning mode).
-func (_ffcab *Table )SetPos (x ,y float64 ){_ffcab ._fcca =PositionAbsolute ;_ffcab ._beacg =x ;_ffcab ._bdae =y ;};var (ColorBlack =ColorRGBFromArithmetic (0,0,0);ColorWhite =ColorRGBFromArithmetic (1,1,1);ColorRed =ColorRGBFromArithmetic (1,0,0);ColorGreen =ColorRGBFromArithmetic (0,1,0);
-ColorBlue =ColorRGBFromArithmetic (0,0,1);ColorYellow =ColorRGBFromArithmetic (1,1,0););func _aaeb (_debfg ,_fecc ,_fede ,_egdab float64 )*Line {return &Line {_aecg :_debfg ,_cdbf :_fecc ,_badg :_fede ,_acba :_egdab ,_ebce :ColorBlack ,_cabc :1.0,_decc :1.0,_deaff :[]int64 {1,1},_fadc :PositionAbsolute };
-};func _cbfdfd (_adfbb *_bg .File )([]*_gf .PdfPage ,error ){_bcgef ,_afgcb :=_gf .NewPdfReader (_adfbb );if _afgcb !=nil {return nil ,_afgcb ;};_fggbe ,_afgcb :=_bcgef .GetNumPages ();if _afgcb !=nil {return nil ,_afgcb ;};var _ebcaa []*_gf .PdfPage ;
-for _gbcfc :=0;_gbcfc < _fggbe ;_gbcfc ++{_egcbb ,_acdb :=_bcgef .GetPage (_gbcfc +1);if _acdb !=nil {return nil ,_acdb ;};_ebcaa =append (_ebcaa ,_egcbb );};return _ebcaa ,nil ;};func _baccf (_ecgd float64 ,_bdaa float64 ,_dcgc float64 ,_bdegf float64 ,_gaeee []*ColorPoint )*RadialShading {return &RadialShading {_acce :&shading {_adddc :ColorWhite ,_dgdf :false ,_gfaae :[]bool {false ,false },_dfae :_gaeee },_edebb :_ecgd ,_bdbf :_bdaa ,_cfgd :_dcgc ,_ccfad :_bdegf ,_bdded :AnchorCenter };
-};var _cbead =map[string ]*templateTag {"\u0070a\u0072\u0061\u0067\u0072\u0061\u0070h":&templateTag {_ffbgf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{},"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{},"\u006ci\u0073\u0074\u002d\u0069\u0074\u0065m":struct{}{}},_bdec :_dfec },"\u0074\u0065\u0078\u0074\u002d\u0063\u0068\u0075\u006e\u006b":&templateTag {_ffbgf :map[string ]struct{}{"\u0070a\u0072\u0061\u0067\u0072\u0061\u0070h":struct{}{}},_bdec :_bggdgf },"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":&templateTag {_ffbgf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{},"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{},"\u006ci\u0073\u0074\u002d\u0069\u0074\u0065m":struct{}{}},_bdec :_abcf },"\u0074\u0061\u0062l\u0065":&templateTag {_ffbgf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{},"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{},"\u006ci\u0073\u0074\u002d\u0069\u0074\u0065m":struct{}{}},_bdec :_fdbfe },"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":&templateTag {_ffbgf :map[string ]struct{}{"\u0074\u0061\u0062l\u0065":struct{}{}},_bdec :_fbdbb },"\u006c\u0069\u006e\u0065":&templateTag {_ffbgf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{},"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{}},_bdec :_deegc },"\u0072e\u0063\u0074\u0061\u006e\u0067\u006ce":&templateTag {_ffbgf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{},"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{}},_bdec :_eagca },"\u0065l\u006c\u0069\u0070\u0073\u0065":&templateTag {_ffbgf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{},"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{}},_bdec :_cccec },"\u0069\u006d\u0061g\u0065":&templateTag {_ffbgf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{},"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{},"\u006ci\u0073\u0074\u002d\u0069\u0074\u0065m":struct{}{}},_bdec :_cbfbag },"\u0063h\u0061\u0070\u0074\u0065\u0072":&templateTag {_ffbgf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{}},_bdec :_ccdg },"\u0063h\u0061p\u0074\u0065\u0072\u002d\u0068\u0065\u0061\u0064\u0069\u006e\u0067":&templateTag {_ffbgf :map[string ]struct{}{"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{}},_bdec :_aafa },"\u0063\u0068\u0061r\u0074":&templateTag {_ffbgf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{},"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{}},_bdec :_eabb },"\u0070\u0061\u0067\u0065\u002d\u0062\u0072\u0065\u0061\u006b":&templateTag {_ffbgf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{}},_bdec :_bcddc },"\u0062\u0061\u0063\u006b\u0067\u0072\u006f\u0075\u006e\u0064":&templateTag {_ffbgf :map[string ]struct{}{"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{}},_bdec :_ebefb },"\u006c\u0069\u0073\u0074":&templateTag {_ffbgf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{},"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{},"\u006ci\u0073\u0074\u002d\u0069\u0074\u0065m":struct{}{}},_bdec :_bgaed },"\u006ci\u0073\u0074\u002d\u0069\u0074\u0065m":&templateTag {_ffbgf :map[string ]struct{}{"\u006c\u0069\u0073\u0074":struct{}{}},_bdec :_dbgfb },"l\u0069\u0073\u0074\u002d\u006d\u0061\u0072\u006b\u0065\u0072":&templateTag {_ffbgf :map[string ]struct{}{"\u006c\u0069\u0073\u0074":struct{}{},"\u006ci\u0073\u0074\u002d\u0069\u0074\u0065m":struct{}{}},_bdec :_fgge }};
-var PPI float64 =72;
-
-// SetSellerAddress sets the seller address of the invoice.
-func (_fffd *Invoice )SetSellerAddress (address *InvoiceAddress ){_fffd ._cedb =address };
-
-// InvoiceCellProps holds all style properties for an invoice cell.
-type InvoiceCellProps struct{TextStyle TextStyle ;Alignment CellHorizontalAlignment ;BackgroundColor Color ;BorderColor Color ;BorderWidth float64 ;BorderSides []CellBorderSide ;};
-
-// FilledCurve represents a closed path of Bezier curves with a border and fill.
-type FilledCurve struct{_agfb []_g .CubicBezierCurve ;FillEnabled bool ;_dfgb Color ;BorderEnabled bool ;BorderWidth float64 ;_afde Color ;};
-
-// GeneratePageBlocks generate the Page blocks. Multiple blocks are generated
-// if the contents wrap over multiple pages.
-func (_gdfg *Invoice )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_cfbc :=ctx ;_ecaea :=[]func (_dbbg DrawContext )([]*Block ,DrawContext ,error ){_gdfg .generateHeaderBlocks ,_gdfg .generateInformationBlocks ,_gdfg .generateLineBlocks ,_gdfg .generateTotalBlocks ,_gdfg .generateNoteBlocks };
-var _ggdc []*Block ;for _ ,_effg :=range _ecaea {_ceffe ,_cbeaf ,_agfd :=_effg (ctx );if _agfd !=nil {return _ggdc ,ctx ,_agfd ;};if len (_ggdc )==0{_ggdc =_ceffe ;}else if len (_ceffe )> 0{_ggdc [len (_ggdc )-1].mergeBlocks (_ceffe [0]);_ggdc =append (_ggdc ,_ceffe [1:]...);
-};ctx =_cbeaf ;};if _gdfg ._afce .IsRelative (){ctx .X =_cfbc .X ;};if _gdfg ._afce .IsAbsolute (){return _ggdc ,_cfbc ,nil ;};return _ggdc ,ctx ,nil ;};
-
-// GeneratePageBlocks generates the page blocks. Multiple blocks are generated
-// if the contents wrap over multiple pages. Implements the Drawable interface.
-func (_edeg *StyledParagraph )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_ceedd :=ctx ;var _bbffda []*Block ;_baabg :=NewBlock (ctx .PageWidth ,ctx .PageHeight );if _edeg ._cdcdd .IsRelative (){ctx .X +=_edeg ._gdfc .Left ;ctx .Y +=_edeg ._gdfc .Top ;
-ctx .Width -=_edeg ._gdfc .Left +_edeg ._gdfc .Right ;ctx .Height -=_edeg ._gdfc .Top ;_edeg .SetWidth (ctx .Width );}else {if int (_edeg ._bceed )<=0{_edeg .SetWidth (_edeg .getTextWidth ()/1000.0);};ctx .X =_edeg ._eaceb ;ctx .Y =_edeg ._gdgb ;};if _edeg ._adgb !=nil {_edeg ._adgb (_edeg ,ctx );
-};if _badbg :=_edeg .wrapText ();_badbg !=nil {return nil ,ctx ,_badbg ;};_afcde :=_edeg ._cgfdg ;for {_edbb ,_cceb ,_cfcg :=_gegf (_baabg ,_edeg ,_afcde ,ctx );if _cfcg !=nil {_cf .Log .Debug ("\u0045R\u0052\u004f\u0052\u003a\u0020\u0025v",_cfcg );return nil ,ctx ,_cfcg ;
-};ctx =_edbb ;_bbffda =append (_bbffda ,_baabg );if _afcde =_cceb ;len (_cceb )==0{break ;};_baabg =NewBlock (ctx .PageWidth ,ctx .PageHeight );ctx .Page ++;_edbb =ctx ;_edbb .Y =ctx .Margins .Top ;_edbb .X =ctx .Margins .Left +_edeg ._gdfc .Left ;_edbb .Height =ctx .PageHeight -ctx .Margins .Top -ctx .Margins .Bottom ;
-_edbb .Width =ctx .PageWidth -ctx .Margins .Left -ctx .Margins .Right -_edeg ._gdfc .Left -_edeg ._gdfc .Right ;ctx =_edbb ;};if _edeg ._cdcdd .IsRelative (){ctx .Y +=_edeg ._gdfc .Bottom ;ctx .Height -=_edeg ._gdfc .Bottom ;if !ctx .Inline {ctx .X =_ceedd .X ;
-ctx .Width =_ceedd .Width ;};return _bbffda ,ctx ,nil ;};return _bbffda ,_ceedd ,nil ;};
-
-// NewChapter creates a new chapter with the specified title as the heading.
-func (_eaf *Creator )NewChapter (title string )*Chapter {_eaf ._cgad ++;_cedc :=_eaf .NewTextStyle ();_cedc .FontSize =16;return _egdd (nil ,_eaf ._cgfc ,_eaf ._dbfa ,title ,_eaf ._cgad ,_cedc );};
-
-// Polygon represents a polygon shape.
-// Implements the Drawable interface and can be drawn on PDF using the Creator.
-type Polygon struct{_ffgbf *_g .Polygon ;_eegca float64 ;_ada float64 ;_egecd Color ;};const (TextOverflowVisible TextOverflow =iota ;TextOverflowHidden ;);
-
-// NewPageBreak create a new page break.
-func (_fdff *Creator )NewPageBreak ()*PageBreak {return _aeea ()};
-
-// AddInternalLink adds a new internal link to the paragraph.
-// The text parameter represents the text that is displayed.
-// The user is taken to the specified page, at the specified x and y
-// coordinates. Position 0, 0 is at the top left of the page.
-// The zoom of the destination page is controlled with the zoom
-// parameter. Pass in 0 to keep the current zoom value.
-func (_dffg *StyledParagraph )AddInternalLink (text string ,page int64 ,x ,y ,zoom float64 )*TextChunk {_debca :=NewTextChunk (text ,_dffg ._fcfd );_debca ._cacbg =_feab (page -1,x ,y ,zoom );return _dffg .appendChunk (_debca );};
-
-// NewPolyBezierCurve creates a new composite Bezier (polybezier) curve.
-func (_aebc *Creator )NewPolyBezierCurve (curves []_g .CubicBezierCurve )*PolyBezierCurve {return _ggba (curves );};
-
-// NewTOC creates a new table of contents.
-func (_fcad *Creator )NewTOC (title string )*TOC {_gafb :=_fcad .NewTextStyle ();_gafb .Font =_fcad ._deca ;return _cecag (title ,_fcad .NewTextStyle (),_gafb );};
+// SetColor sets the line color.
+func (_cfaa *Curve )SetColor (col Color ){_cfaa ._gabg =col };type templateTag struct{_gagf map[string ]struct{};_agdb func (*templateProcessor ,*templateNode )(interface{},error );};
 
 // ScaleToWidth scales the rectangle to the specified width. The height of
 // the rectangle is scaled so that the aspect ratio is maintained.
-func (_dbbdd *Rectangle )ScaleToWidth (w float64 ){_egedd :=_dbbdd ._dffef /_dbbdd ._adeb ;_dbbdd ._adeb =w ;_dbbdd ._dffef =w *_egedd ;};
-
-// SetForms adds an Acroform to a PDF file.  Sets the specified form for writing.
-func (_ddgg *Creator )SetForms (form *_gf .PdfAcroForm )error {_ddgg ._ffae =form ;return nil };
-
-// SetCoords sets the upper left corner coordinates of the rectangle.
-func (_cbcef *Rectangle )SetCoords (x ,y float64 ){_cbcef ._fgfd =x ;_cbcef ._aedgf =y };const (TextAlignmentLeft TextAlignment =iota ;TextAlignmentRight ;TextAlignmentCenter ;TextAlignmentJustify ;);
-
-// ConvertToBinary converts current image data into binary (Bi-level image) format.
-// If provided image is RGB or GrayScale the function converts it into binary image
-// using histogram auto threshold method.
-func (_efdb *Image )ConvertToBinary ()error {return _efdb ._afaf .ConvertToBinary ()};
-
-// Height returns the height of the graphic svg.
-func (_adecd *GraphicSVG )Height ()float64 {return _adecd ._febb .Height };
-
-// SetFillOpacity sets the fill opacity.
-func (_dfeb *CurvePolygon )SetFillOpacity (opacity float64 ){_dfeb ._ffcg =opacity };
-
-// Title returns the title of the invoice.
-func (_cfbfb *Invoice )Title ()string {return _cfbfb ._ggca };
-
-// TextOverflow determines the behavior of paragraph text which does
-// not fit in the available space.
-type TextOverflow int ;
-
-// ScaleToHeight sets the graphic svg scaling factor with the given height.
-func (_adecb *GraphicSVG )ScaleToHeight (h float64 ){_ecca :=_adecb ._febb .Width /_adecb ._febb .Height ;_adecb ._febb .Height =h ;_adecb ._febb .Width =h *_ecca ;_adecb ._febb .SetScaling (_ecca ,_ecca );};func (_cdbbg *Paragraph )getMaxLineWidth ()float64 {if _cdbbg ._edcc ==nil ||len (_cdbbg ._edcc )==0{_cdbbg .wrapText ();
-};var _bebb float64 ;for _ ,_eggd :=range _cdbbg ._edcc {_ceda :=_cdbbg .getTextLineWidth (_eggd );if _ceda > _bebb {_bebb =_ceda ;};};return _bebb ;};
-
-// GeneratePageBlocks draws the polyline on a new block representing the page.
-// Implements the Drawable interface.
-func (_ggga *Polyline )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_ebfe :=NewBlock (ctx .PageWidth ,ctx .PageHeight );_eafa ,_agac :=_ebfe .setOpacity (_ggga ._fbfe ,_ggga ._fbfe );if _agac !=nil {return nil ,ctx ,_agac ;};_bcddg :=_ggga ._cfdd .Points ;
-for _ececag :=range _bcddg {_fbggf :=&_bcddg [_ececag ];_fbggf .Y =ctx .PageHeight -_fbggf .Y ;};_bbgdg ,_ ,_agac :=_ggga ._cfdd .Draw (_eafa );if _agac !=nil {return nil ,ctx ,_agac ;};if _agac =_ebfe .addContentsByString (string (_bbgdg ));_agac !=nil {return nil ,ctx ,_agac ;
-};return []*Block {_ebfe },ctx ,nil ;};func (_dfee *Table )moveToNextAvailableCell ()int {_dfda :=(_dfee ._gfcae -1)%(_dfee ._eeecb )+1;for {if _dfda -1>=len (_dfee ._ebad ){if _dfee ._ebad [0]==0{return _dfda ;};_dfda =1;}else if _dfee ._ebad [_dfda -1]==0{return _dfda ;
-};_dfee ._gfcae ++;_dfee ._ebad [_dfda -1]--;_dfda ++;};};type cmykColor struct{_cadf ,_dfb ,_cgcf ,_efa float64 };
-
-// SetPos sets absolute positioning with specified coordinates.
-func (_bfef *Paragraph )SetPos (x ,y float64 ){_bfef ._dced =PositionAbsolute ;_bfef ._fgfe =x ;_bfef ._cfcdd =y ;};
-
-// SetLogo sets the logo of the invoice.
-func (_ecddg *Invoice )SetLogo (logo *Image ){_ecddg ._egae =logo };
-
-// DrawHeader sets a function to draw a header on created output pages.
-func (_dbee *Creator )DrawHeader (drawHeaderFunc func (_dccf *Block ,_deac HeaderFunctionArgs )){_dbee ._baag =drawHeaderFunc ;};
-
-// List represents a list of items.
-// The representation of a list item is as follows:
-//       [marker] [content]
-// e.g.:        • This is the content of the item.
-// The supported components to add content to list items are:
-// - Paragraph
-// - StyledParagraph
-// - List
-type List struct{_eccb []*listItem ;_ccfa Margins ;_bdeb TextChunk ;_gbdd float64 ;_egca bool ;_daeb Positioning ;_dgcbd TextStyle ;};
-
-// SetBackgroundColor set background color of the shading area.
-//
-// By default the background color is set to white.
-func (_cbfc *RadialShading )SetBackgroundColor (backgroundColor Color ){_cbfc ._acce .SetBackgroundColor (backgroundColor );};func _daad (_gega *_gf .PdfFont )TextStyle {return TextStyle {Color :ColorRGBFrom8bit (0,0,0),Font :_gega ,FontSize :10,OutlineSize :1,HorizontalScaling :DefaultHorizontalScaling ,UnderlineStyle :TextDecorationLineStyle {Offset :1,Thickness :1}};
-};
-
-// TextVerticalAlignment controls the vertical position of the text
-// in a styled paragraph.
-type TextVerticalAlignment int ;func (_bacdg *templateProcessor )run ()error {_fddec :=_a .NewDecoder (_fe .NewReader (_bacdg ._baaba ));var _cdbdg *templateNode ;for {_dabb ,_dabef :=_fddec .Token ();if _dabef !=nil {if _dabef ==_ag .EOF {return nil ;
-};return _dabef ;};if _dabb ==nil {break ;};switch _cgfdd :=_dabb .(type ){case _a .StartElement :_cf .Log .Debug ("\u0050\u0061\u0072\u0073\u0069\u006eg\u0020\u0074\u0065\u006d\u0070\u006c\u0061\u0074\u0065\u0020\u0073\u0074\u0061r\u0074\u0020\u0074\u0061\u0067\u003a\u0020`\u0025\u0073\u0060\u002e",_cgfdd .Name .Local );
-_daddb ,_bbef :=_cbead [_cgfdd .Name .Local ];if !_bbef {_cf .Log .Debug ("\u0055\u006es\u0075\u0070\u0070\u006f\u0072\u0074\u0065\u0064\u0020\u0074\u0065\u006d\u0070\u006c\u0061\u0074\u0065\u0020\u0074a\u0067\u003a\u0020\u0060\u0025\u0073`\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069\u006e\u0067\u002e\u0020\u004f\u0075t\u0070\u0075t\u0020\u006d\u0061\u0079 \u0062\u0065\u0020\u0069\u006ec\u006f\u0072\u0072\u0065\u0063\u0074\u002e",_cgfdd .Name .Local );
-continue ;};_cdbdg =&templateNode {_feaff :_cgfdd ,_edcee :_cdbdg };if _eada :=_daddb ._bdec ;_eada !=nil {_cdbdg ._aeeaa ,_dabef =_eada (_bacdg ,_cdbdg );if _dabef !=nil {return _dabef ;};};case _a .EndElement :_cf .Log .Debug ("\u0050\u0061\u0072s\u0069\u006e\u0067\u0020t\u0065\u006d\u0070\u006c\u0061\u0074\u0065 \u0065\u006e\u0064\u0020\u0074\u0061\u0067\u003a\u0020\u0060\u0025\u0073\u0060\u002e",_cgfdd .Name .Local );
-if _cdbdg !=nil {if _cdbdg ._aeeaa !=nil {if _gfbee :=_bacdg .renderNode (_cdbdg );_gfbee !=nil {return _gfbee ;};};_cdbdg =_cdbdg ._edcee ;};case _a .CharData :if _cdbdg !=nil &&_cdbdg ._aeeaa !=nil {if _cdfad :=_bacdg .addNodeText (_cdbdg ,string (_cgfdd ));
-_cdfad !=nil {return _cdfad ;};};case _a .Comment :_cf .Log .Debug ("\u0050\u0061\u0072s\u0069\u006e\u0067\u0020t\u0065\u006d\u0070\u006c\u0061\u0074\u0065 \u0063\u006f\u006d\u006d\u0065\u006e\u0074\u003a\u0020\u0060\u0025\u0073\u0060\u002e",string (_cgfdd ));
-};};return nil ;};
-
-// SetFillColor sets the fill color.
-func (_afcga *PolyBezierCurve )SetFillColor (color Color ){_afcga ._defeb =color ;_afcga ._debe .FillColor =_dca (color );};func _ggff (_ebc _ef .ChartRenderable )*Chart {return &Chart {_dde :_ebc ,_dddc :PositionRelative ,_fbfc :Margins {Top :10,Bottom :10}};
-};func (_ed *Block )setOpacity (_be float64 ,_bf float64 )(string ,error ){if (_be < 0||_be >=1.0)&&(_bf < 0||_bf >=1.0){return "",nil ;};_ga :=0;_db :=_agd .Sprintf ("\u0047\u0053\u0025\u0064",_ga );for _ed ._cff .HasExtGState (_acb .PdfObjectName (_db )){_ga ++;
-_db =_agd .Sprintf ("\u0047\u0053\u0025\u0064",_ga );};_cfb :=_acb .MakeDict ();if _be >=0&&_be < 1.0{_cfb .Set ("\u0063\u0061",_acb .MakeFloat (_be ));};if _bf >=0&&_bf < 1.0{_cfb .Set ("\u0043\u0041",_acb .MakeFloat (_bf ));};_egc :=_ed ._cff .AddExtGState (_acb .PdfObjectName (_db ),_cfb );
-if _egc !=nil {return "",_egc ;};return _db ,nil ;};
-
-// SetText replaces all the text of the paragraph with the specified one.
-func (_ddbe *StyledParagraph )SetText (text string )*TextChunk {_ddbe .Reset ();return _ddbe .Append (text );};func (_gdfbe *StyledParagraph )wrapWordChunks (){if !_gdfbe ._cfadd {return ;};var (_cbceg []*TextChunk ;_ggggc *_gf .PdfFont ;);for _ ,_cdccf :=range _gdfbe ._gdae {_dafed :=[]rune (_cdccf .Text );
-if _ggggc ==nil {_ggggc =_cdccf .Style .Font ;};if len (_cbceg )> 0{if len (_dafed )==1&&_dc .IsPunct (_dafed [0])&&_cdccf .Style .Font ==_ggggc {_ecdaf :=[]rune (_cbceg [len (_cbceg )-1].Text );_cbceg [len (_cbceg )-1].Text =string (append (_ecdaf ,_dafed [0]));
-continue ;}else {_ ,_gbgd :=_egd .Atoi (_cdccf .Text );if _gbgd ==nil {_bbffd :=[]rune (_cbceg [len (_cbceg )-1].Text );_bbfg :=len (_bbffd );if _bbfg >=2{_ ,_eefd :=_egd .Atoi (string (_bbffd [_bbfg -2]));if _eefd ==nil &&_dc .IsPunct (_bbffd [_bbfg -1]){_cbceg [len (_cbceg )-1].Text =string (append (_bbffd ,_dafed ...));
-continue ;};};};};};_bgbga ,_fffa :=_fgeee (_cdccf .Text );if _fffa !=nil {_cf .Log .Debug ("\u0045\u0052\u0052O\u0052\u003a\u0020\u0055\u006e\u0061\u0062\u006c\u0065\u0020\u0074\u006f\u0020\u0062\u0072\u0065\u0061\u006b\u0020\u0073\u0074\u0072\u0069\u006e\u0067\u0020\u0074\u006f\u0020w\u006f\u0072\u0064\u0073\u003a\u0020\u0025\u0076",_fffa );
-_bgbga =[]string {_cdccf .Text };};for _ ,_badcc :=range _bgbga {_bgbaa :=NewTextChunk (_badcc ,_cdccf .Style );_cbceg =append (_cbceg ,_bgbaa );};_ggggc =_cdccf .Style .Font ;};if len (_cbceg )> 0{_gdfbe ._gdae =_cbceg ;};};
-
-// SetBorderWidth sets the border width.
-func (_gaeg *PolyBezierCurve )SetBorderWidth (borderWidth float64 ){_gaeg ._debe .BorderWidth =borderWidth ;};func (_ggagc *templateProcessor )parseInt64Attr (_gdab ,_gdcfb string )int64 {_cf .Log .Debug ("\u0050\u0061rs\u0069\u006e\u0067 \u0069\u006e\u0074\u00364 a\u0074tr\u0069\u0062\u0075\u0074\u0065\u003a\u0020(`\u0025\u0073\u0060\u002c\u0020\u0025\u0073)\u002e",_gdab ,_gdcfb );
-_dbbb ,_ :=_egd .ParseInt (_gdcfb ,10,64);return _dbbb ;};
-
-// SetFillOpacity sets the fill opacity of the ellipse.
-func (_agce *Ellipse )SetFillOpacity (opacity float64 ){_agce ._acf =opacity };
-
-// SetLineStyle sets the style for all the line components: number, title,
-// separator, page. The style is applied only for new lines added to the
-// TOC component.
-func (_ceee *TOC )SetLineStyle (style TextStyle ){_ceee .SetLineNumberStyle (style );_ceee .SetLineTitleStyle (style );_ceee .SetLineSeparatorStyle (style );_ceee .SetLinePageStyle (style );};
-
-// SetLineNumberStyle sets the style for the numbers part of all new lines
-// of the table of contents.
-func (_bbegd *TOC )SetLineNumberStyle (style TextStyle ){_bbegd ._gbda =style };func (_ecaa *templateProcessor )parseRectangle (_cebeb *templateNode )(interface{},error ){_dfegg :=_ecaa .creator .NewRectangle (0,0,0,0);for _ ,_fcgg :=range _cebeb ._feaff .Attr {_dgfbd :=_fcgg .Value ;
-switch _aafcaf :=_fcgg .Name .Local ;_aafcaf {case "\u0078":_dfegg ._fgfd =_ecaa .parseFloatAttr (_aafcaf ,_dgfbd );case "\u0079":_dfegg ._aedgf =_ecaa .parseFloatAttr (_aafcaf ,_dgfbd );case "\u0077\u0069\u0064t\u0068":_dfegg .SetWidth (_ecaa .parseFloatAttr (_aafcaf ,_dgfbd ));
-case "\u0068\u0065\u0069\u0067\u0068\u0074":_dfegg .SetHeight (_ecaa .parseFloatAttr (_aafcaf ,_dgfbd ));case "\u0066\u0069\u006c\u006c\u002d\u0063\u006f\u006c\u006f\u0072":_dfegg .SetFillColor (_ecaa .parseColorAttr (_aafcaf ,_dgfbd ));case "\u0066\u0069\u006cl\u002d\u006f\u0070\u0061\u0063\u0069\u0074\u0079":_dfegg .SetFillOpacity (_ecaa .parseFloatAttr (_aafcaf ,_dgfbd ));
-case "\u0062\u006f\u0072d\u0065\u0072\u002d\u0063\u006f\u006c\u006f\u0072":_dfegg .SetBorderColor (_ecaa .parseColorAttr (_aafcaf ,_dgfbd ));case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u006f\u0070a\u0063\u0069\u0074\u0079":_dfegg .SetBorderOpacity (_ecaa .parseFloatAttr (_aafcaf ,_dgfbd ));
-case "\u0062\u006f\u0072d\u0065\u0072\u002d\u0077\u0069\u0064\u0074\u0068":_dfegg .SetBorderWidth (_ecaa .parseFloatAttr (_aafcaf ,_dgfbd ));case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u0072\u0061\u0064\u0069\u0075\u0073":_facg ,_caecb ,_ffbc ,_gadc :=_ecaa .parseBorderRadiusAttr (_aafcaf ,_dgfbd );
-_dfegg .SetBorderRadius (_facg ,_caecb ,_gadc ,_ffbc );case "\u0062\u006f\u0072\u0064er\u002d\u0074\u006f\u0070\u002d\u006c\u0065\u0066\u0074\u002d\u0072\u0061\u0064\u0069u\u0073":_dfegg ._bdcg =_ecaa .parseFloatAttr (_aafcaf ,_dgfbd );case "\u0062\u006f\u0072de\u0072\u002d\u0074\u006f\u0070\u002d\u0072\u0069\u0067\u0068\u0074\u002d\u0072\u0061\u0064\u0069\u0075\u0073":_dfegg ._eged =_ecaa .parseFloatAttr (_aafcaf ,_dgfbd );
-case "\u0062o\u0072\u0064\u0065\u0072-\u0062\u006f\u0074\u0074\u006fm\u002dl\u0065f\u0074\u002d\u0072\u0061\u0064\u0069\u0075s":_dfegg ._dbfc =_ecaa .parseFloatAttr (_aafcaf ,_dgfbd );case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u0062\u006f\u0074\u0074o\u006d\u002d\u0072\u0069\u0067\u0068\u0074\u002d\u0072\u0061d\u0069\u0075\u0073":_dfegg ._abca =_ecaa .parseFloatAttr (_aafcaf ,_dgfbd );
-case "\u0070\u006f\u0073\u0069\u0074\u0069\u006f\u006e":_dfegg .SetPositioning (_ecaa .parsePositioningAttr (_aafcaf ,_dgfbd ));case "\u0066\u0069\u0074\u002d\u006d\u006f\u0064\u0065":_dfegg .SetFitMode (_ecaa .parseFitModeAttr (_aafcaf ,_dgfbd ));case "\u006d\u0061\u0072\u0067\u0069\u006e":_eeeec :=_ecaa .parseMarginAttr (_aafcaf ,_dgfbd );
-_dfegg .SetMargins (_eeeec .Left ,_eeeec .Right ,_eeeec .Top ,_eeeec .Bottom );default:_cf .Log .Debug ("\u0055\u006e\u0073\u0075\u0070\u0070\u006f\u0072t\u0065\u0064\u0020re\u0063\u0074\u0061\u006e\u0067\u006ce\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073`\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069n\u0067\u002e",_aafcaf );
-};};return _dfegg ,nil ;};
-
-// Subtotal returns the invoice subtotal description and value cells.
-// The returned values can be used to customize the styles of the cells.
-func (_cfdee *Invoice )Subtotal ()(*InvoiceCell ,*InvoiceCell ){return _cfdee ._ecgfa [0],_cfdee ._ecgfa [1];};
-
-// NewEllipse creates a new ellipse with the center at (`xc`, `yc`),
-// having the specified width and height.
-// NOTE: In relative positioning mode, `xc` and `yc` are calculated using the
-// current context. Furthermore, when the fit mode is set to fill the available
-// space, the ellipse is scaled so that it occupies the entire context width
-// while maintaining the original aspect ratio.
-func (_faab *Creator )NewEllipse (xc ,yc ,width ,height float64 )*Ellipse {return _eedb (xc ,yc ,width ,height );};
-
-// SetText sets the text content of the Paragraph.
-func (_fdee *Paragraph )SetText (text string ){_fdee ._ccaac =text };
-
-// Height returns the height of the ellipse.
-func (_ecda *Ellipse )Height ()float64 {return _ecda ._ccae };
-
-// SetStyleBottom sets border style for bottom side.
-func (_gagd *border )SetStyleBottom (style CellBorderStyle ){_gagd ._fbb =style };
-
-// NewFilledCurve returns a instance of filled curve.
-func (_gdca *Creator )NewFilledCurve ()*FilledCurve {return _gggc ()};
-
-// ColorPoint is a pair of Color and a relative point where the color
-// would be rendered.
-type ColorPoint struct{_bebab Color ;_bdbeg float64 ;};
-
-// SetSideBorderStyle sets the cell's side border style.
-func (_edeff *TableCell )SetSideBorderStyle (side CellBorderSide ,style CellBorderStyle ){switch side {case CellBorderSideAll :_edeff ._cadag =style ;_edeff ._gfcgd =style ;_edeff ._cgafa =style ;_edeff ._febbf =style ;case CellBorderSideTop :_edeff ._cadag =style ;
-case CellBorderSideBottom :_edeff ._gfcgd =style ;case CellBorderSideLeft :_edeff ._cgafa =style ;case CellBorderSideRight :_edeff ._febbf =style ;};};
-
-// AddInfo is used to append a piece of invoice information in the template
-// information table.
-func (_dabe *Invoice )AddInfo (description ,value string )(*InvoiceCell ,*InvoiceCell ){_efbdc :=[2]*InvoiceCell {_dabe .newCell (description ,_dabe ._eedg ),_dabe .newCell (value ,_dabe ._eedg )};_dabe ._bca =append (_dabe ._bca ,_efbdc );return _efbdc [0],_efbdc [1];
-};
-
-// SetAngle sets Image rotation angle in degrees.
-func (_acada *Image )SetAngle (angle float64 ){_acada ._agebb =angle };var PPMM =float64 (72*1.0/25.4);
-
-// SetMargins sets the margins TOC line.
-func (_gefeb *TOCLine )SetMargins (left ,right ,top ,bottom float64 ){_gefeb ._gbed =left ;_dgce :=&_gefeb ._dfbba ._gdfc ;_dgce .Left =_gefeb ._gbed +float64 (_gefeb ._gfggc -1)*_gefeb ._edaee ;_dgce .Right =right ;_dgce .Top =top ;_dgce .Bottom =bottom ;
-};func (_cdbd *StyledParagraph )wrapChunks (_bffgf bool )error {if !_cdbd ._fbbcc ||int (_cdbd ._bceed )<=0{_cdbd ._cgfdg =[][]*TextChunk {_cdbd ._gdae };return nil ;};if _cdbd ._cfadd {_cdbd .wrapWordChunks ();};_cdbd ._cgfdg =[][]*TextChunk {};var _cbaf []*TextChunk ;
-var _afdee float64 ;_gadda :=_dc .IsSpace ;if !_bffgf {_gadda =func (rune )bool {return false };};_dcaa :=_egfbgg (_cdbd ._bceed *1000.0,0.000001);for _ ,_bfaf :=range _cdbd ._gdae {_dagc :=_bfaf .Style ;_ecdae :=_bfaf ._cacbg ;_cgde :=_bfaf .VerticalAlignment ;
-var (_cebb []rune ;_bdab []float64 ;);_ddcd :=_feebd (_bfaf .Text );for _ ,_caff :=range _bfaf .Text {if _caff =='\u000A'{if !_bffgf {_cebb =append (_cebb ,_caff );};_cbaf =append (_cbaf ,&TextChunk {Text :_eg .TrimRightFunc (string (_cebb ),_gadda ),Style :_dagc ,_cacbg :_adgfb (_ecdae ),VerticalAlignment :_cgde });
-_cdbd ._cgfdg =append (_cdbd ._cgfdg ,_cbaf );_cbaf =nil ;_afdee =0;_cebb =nil ;_bdab =nil ;continue ;};_bbgba :=_caff ==' ';_beegd ,_fgag :=_dagc .Font .GetRuneMetrics (_caff );if !_fgag {_cf .Log .Debug ("\u0052\u0075\u006e\u0065\u0020\u0063\u0068\u0061\u0072\u0020\u006d\u0065\u0074\u0072\u0069c\u0073 \u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064\u0021\u0020\u0025\u0076\u000a",_caff );
-return _d .New ("\u0067\u006c\u0079\u0070\u0068\u0020\u0063\u0068\u0061\u0072\u0020m\u0065\u0074\u0072\u0069\u0063\u0073\u0020\u006d\u0069\u0073s\u0069\u006e\u0067");};_ffdg :=_dagc .FontSize *_beegd .Wx *_dagc .horizontalScale ();_dggcb :=_ffdg ;if !_bbgba {_dggcb =_ffdg +_dagc .CharSpacing *1000.0;
-};if _afdee +_ffdg > _dcaa {_dcbc :=-1;if !_bbgba {for _gbcd :=len (_cebb )-1;_gbcd >=0;_gbcd --{if _cebb [_gbcd ]==' '{_dcbc =_gbcd ;break ;};};};if _cdbd ._cfadd {if len (_cbaf )> 0{_cdbd ._cgfdg =append (_cdbd ._cgfdg ,_cbaf );_cbaf =[]*TextChunk {};
-};_cebb =append (_cebb ,_caff );_bdab =append (_bdab ,_dggcb );if _dcbc >=0{_cebb =_cebb [_dcbc +1:];_bdab =_bdab [_dcbc +1:];};_afdee =0;for _ ,_efcb :=range _bdab {_afdee +=_efcb ;};if _afdee > _dcaa {_dddf :=string (_cebb [:len (_cebb )-1]);_dddf =_gdfbb (_dddf ,_ddcd );
-if !_bffgf &&_bbgba {_dddf +="\u0020";};_cbaf =append (_cbaf ,&TextChunk {Text :_eg .TrimRightFunc (_dddf ,_gadda ),Style :_dagc ,_cacbg :_adgfb (_ecdae ),VerticalAlignment :_cgde });_cdbd ._cgfdg =append (_cdbd ._cgfdg ,_cbaf );_cbaf =[]*TextChunk {};
-_cebb =[]rune {_caff };_bdab =[]float64 {_dggcb };_afdee =_dggcb ;};continue ;};_gccba :=string (_cebb );if _dcbc >=0{_gccba =string (_cebb [0:_dcbc +1]);_cebb =_cebb [_dcbc +1:];_cebb =append (_cebb ,_caff );_bdab =_bdab [_dcbc +1:];_bdab =append (_bdab ,_dggcb );
-_afdee =0;for _ ,_ffdbe :=range _bdab {_afdee +=_ffdbe ;};}else {if _bbgba {_afdee =0;_cebb =[]rune {};_bdab =[]float64 {};}else {_afdee =_dggcb ;_cebb =[]rune {_caff };_bdab =[]float64 {_dggcb };};};_gccba =_gdfbb (_gccba ,_ddcd );if !_bffgf &&_bbgba {_gccba +="\u0020";
-};_cbaf =append (_cbaf ,&TextChunk {Text :_eg .TrimRightFunc (_gccba ,_gadda ),Style :_dagc ,_cacbg :_adgfb (_ecdae ),VerticalAlignment :_cgde });_cdbd ._cgfdg =append (_cdbd ._cgfdg ,_cbaf );_cbaf =[]*TextChunk {};}else {_afdee +=_dggcb ;_cebb =append (_cebb ,_caff );
-_bdab =append (_bdab ,_dggcb );};};if len (_cebb )> 0{_cbfbab :=_gdfbb (string (_cebb ),_ddcd );_cbaf =append (_cbaf ,&TextChunk {Text :_cbfbab ,Style :_dagc ,_cacbg :_adgfb (_ecdae ),VerticalAlignment :_cgde });};};if len (_cbaf )> 0{_cdbd ._cgfdg =append (_cdbd ._cgfdg ,_cbaf );
-};return nil ;};
-
-// AddSubtable copies the cells of the subtable in the table, starting with the
-// specified position. The table row and column indices are 1-based, which
-// makes the position of the first cell of the first row of the table 1,1.
-// The table is automatically extended if the subtable exceeds its columns.
-// This can happen when the subtable has more columns than the table or when
-// one or more columns of the subtable starting from the specified position
-// exceed the last column of the table.
-func (_dbeebc *Table )AddSubtable (row ,col int ,subtable *Table ){for _ ,_ccede :=range subtable ._fdde {_aead :=&TableCell {};*_aead =*_ccede ;_aead ._bbcg =_dbeebc ;_aead ._bgege +=col -1;if _fbbba :=_dbeebc ._eeecb -(_aead ._bgege -1);_fbbba < _aead ._adcd {_dbeebc ._eeecb +=_aead ._adcd -_fbbba ;
-_dbeebc .resetColumnWidths ();_cf .Log .Debug ("\u0054a\u0062l\u0065\u003a\u0020\u0073\u0075\u0062\u0074\u0061\u0062\u006c\u0065 \u0065\u0078\u0063\u0065e\u0064\u0073\u0020\u0064\u0065s\u0074\u0069\u006e\u0061\u0074\u0069\u006f\u006e\u0020\u0074\u0061\u0062\u006c\u0065\u002e\u0020\u0045\u0078\u0070\u0061\u006e\u0064\u0069\u006e\u0067\u0020\u0074\u0061\u0062\u006c\u0065 \u0074\u006f\u0020\u0025\u0064\u0020\u0063\u006fl\u0075\u006d\u006e\u0073\u002e",_dbeebc ._eeecb );
-};_aead ._gaddf +=row -1;_gedd :=subtable ._gdgf [_ccede ._gaddf -1];if _aead ._gaddf > _dbeebc ._bacg {for _aead ._gaddf > _dbeebc ._bacg {_dbeebc ._bacg ++;_dbeebc ._gdgf =append (_dbeebc ._gdgf ,_dbeebc ._ddee );};_dbeebc ._gdgf [_aead ._gaddf -1]=_gedd ;
-}else {_dbeebc ._gdgf [_aead ._gaddf -1]=_ee .Max (_dbeebc ._gdgf [_aead ._gaddf -1],_gedd );};_dbeebc ._fdde =append (_dbeebc ._fdde ,_aead );};_aa .Slice (_dbeebc ._fdde ,func (_bgbe ,_aegbfc int )bool {_eedc :=_dbeebc ._fdde [_bgbe ]._gaddf ;_befac :=_dbeebc ._fdde [_aegbfc ]._gaddf ;
-if _eedc < _befac {return true ;};if _eedc > _befac {return false ;};return _dbeebc ._fdde [_bgbe ]._bgege < _dbeebc ._fdde [_aegbfc ]._bgege ;});};
-
-// SetColumns overwrites any columns in the line items table. This should be
-// called before AddLine.
-func (_cgeg *Invoice )SetColumns (cols []*InvoiceCell ){_cgeg ._bacc =cols };func _bggdgf (_bdaab *templateProcessor ,_fbafb *templateNode )(interface{},error ){return _bdaab .parseTextChunk (_fbafb ,nil );};
-
-// SetPageLabels adds the specified page labels to the PDF file generated
-// by the creator. See section 12.4.2 "Page Labels" (p. 382 PDF32000_2008).
-// NOTE: for existing PDF files, the page label ranges object can be obtained
-// using the model.PDFReader's GetPageLabels method.
-func (_gcd *Creator )SetPageLabels (pageLabels _acb .PdfObject ){_gcd ._dadc =pageLabels };
-
-// TemplateOptions contains options and resources to use when rendering
-// a template with a Creator instance.
-// All the resources in the map fields can be referenced by their
-// name/key in the template which is rendered using the options instance.
-type TemplateOptions struct{
-
-// HelperFuncMap is used to define functions which can be accessed
-// inside the rendered templates by their assigned names.
-HelperFuncMap _f .FuncMap ;
-
-// SubtemplateMap contains templates which can be rendered alongside
-// the main template. They can be accessed using their assigned names
-// in the main template or in the other subtemplates.
-// Subtemplates defined inside the subtemplates specified in the map
-// can be accessed directly.
-// All resources available to the main template are also available
-// to the subtemplates.
-SubtemplateMap map[string ]_ag .Reader ;
-
-// FontMap contains pre-loaded fonts which can be accessed
-// inside the rendered templates by their assigned names.
-FontMap map[string ]*_gf .PdfFont ;
-
-// ImageMap contains pre-loaded images which can be accessed
-// inside the rendered templates by their assigned names.
-ImageMap map[string ]*_gf .Image ;
-
-// ColorMap contains colors which can be accessed
-// inside the rendered templates by their assigned names.
-ColorMap map[string ]Color ;
-
-// ChartMap contains charts which can be accessed
-// inside the rendered templates by their assigned names.
-ChartMap map[string ]_ef .ChartRenderable ;};func _gggc ()*FilledCurve {_agbf :=FilledCurve {};_agbf ._agfb =[]_g .CubicBezierCurve {};return &_agbf ;};
-
-// SetPdfWriterAccessFunc sets a PdfWriter access function/hook.
-// Exposes the PdfWriter just prior to writing the PDF.  Can be used to encrypt the output PDF, etc.
-//
-// Example of encrypting with a user/owner password "password"
-// Prior to calling c.WriteFile():
-//
-//	c.SetPdfWriterAccessFunc(func(w *model.PdfWriter) error {
-//		userPass := []byte("password")
-//		ownerPass := []byte("password")
-//		err := w.Encrypt(userPass, ownerPass, nil)
-//		return err
-//	})
-func (_gdb *Creator )SetPdfWriterAccessFunc (pdfWriterAccessFunc func (_gff *_gf .PdfWriter )error ){_gdb ._bfb =pdfWriterAccessFunc ;};
-
-// SetWidthTop sets border width for top.
-func (_fbbg *border )SetWidthTop (bw float64 ){_fbbg ._afed =bw };
-
-// SetLevelOffset sets the amount of space an indentation level occupies.
-func (_cffd *TOCLine )SetLevelOffset (levelOffset float64 ){_cffd ._edaee =levelOffset ;_cffd ._dfbba ._gdfc .Left =_cffd ._gbed +float64 (_cffd ._gfggc -1)*_cffd ._edaee ;};func _ggba (_ffgf []_g .CubicBezierCurve )*PolyBezierCurve {return &PolyBezierCurve {_debe :&_g .PolyBezierCurve {Curves :_ffgf ,BorderColor :_gf .NewPdfColorDeviceRGB (0,0,0),BorderWidth :1.0},_bcbcf :1.0,_cbec :1.0};
-};
-
-// AddressStyle returns the style properties used to render the content of
-// the invoice address sections.
-func (_befd *Invoice )AddressStyle ()TextStyle {return _befd ._cfgg };
-
-// SetMargins sets the Paragraph's margins.
-func (_cbabg *StyledParagraph )SetMargins (left ,right ,top ,bottom float64 ){_cbabg ._gdfc .Left =left ;_cbabg ._gdfc .Right =right ;_cbabg ._gdfc .Top =top ;_cbabg ._gdfc .Bottom =bottom ;};const (CellBorderSideLeft CellBorderSide =iota ;CellBorderSideRight ;
-CellBorderSideTop ;CellBorderSideBottom ;CellBorderSideAll ;);
-
-// SetFillColor sets the fill color for the path.
-func (_cbeaa *FilledCurve )SetFillColor (color Color ){_cbeaa ._dfgb =color };
-
-// Write output of creator to io.Writer interface.
-func (_ebae *Creator )Write (ws _ag .Writer )error {if _afba :=_ebae .Finalize ();_afba !=nil {return _afba ;};_bge :=_gf .NewPdfWriter ();_bge .SetOptimizer (_ebae ._aae );if _ebae ._ffae !=nil {_addbf :=_bge .SetForms (_ebae ._ffae );if _addbf !=nil {_cf .Log .Debug ("F\u0061\u0069\u006c\u0075\u0072\u0065\u003a\u0020\u0025\u0076",_addbf );
-return _addbf ;};};if _ebae ._fece !=nil {_bge .AddOutlineTree (_ebae ._fece );}else if _ebae ._dbfa !=nil &&_ebae .AddOutlines {_bge .AddOutlineTree (&_ebae ._dbfa .ToPdfOutline ().PdfOutlineTreeNode );};if _ebae ._dadc !=nil {if _ebgc :=_bge .SetPageLabels (_ebae ._dadc );
-_ebgc !=nil {_cf .Log .Debug ("\u0045\u0052RO\u0052\u003a\u0020C\u006f\u0075\u006c\u0064 no\u0074 s\u0065\u0074\u0020\u0070\u0061\u0067\u0065 l\u0061\u0062\u0065\u006c\u0073\u003a\u0020%\u0076",_ebgc );return _ebgc ;};};if _ebae ._bgcg !=nil {for _ ,_eddd :=range _ebae ._bgcg {_fdbd :=_eddd .SubsetRegistered ();
-if _fdbd !=nil {_cf .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0043\u006f\u0075\u006c\u0064\u0020\u006e\u006ft\u0020s\u0075\u0062\u0073\u0065\u0074\u0020\u0066\u006f\u006e\u0074\u003a\u0020\u0025\u0076",_fdbd );return _fdbd ;};};};if _ebae ._bfb !=nil {_bggcd :=_ebae ._bfb (&_bge );
-if _bggcd !=nil {_cf .Log .Debug ("F\u0061\u0069\u006c\u0075\u0072\u0065\u003a\u0020\u0025\u0076",_bggcd );return _bggcd ;};};for _ ,_cfe :=range _ebae ._geac {_dafb :=_bge .AddPage (_cfe );if _dafb !=nil {_cf .Log .Error ("\u0046\u0061\u0069\u006ced\u0020\u0074\u006f\u0020\u0061\u0064\u0064\u0020\u0050\u0061\u0067\u0065\u003a\u0020%\u0076",_dafb );
-return _dafb ;};};_efgf :=_bge .Write (ws );if _efgf !=nil {return _efgf ;};return nil ;};
-
-// SetTextVerticalAlignment sets the vertical alignment of the text within the
-// bounds of the styled paragraph.
-//
-// Note: Currently Styled Paragraph doesn't support TextVerticalAlignmentBottom
-// as that option only used for aligning text chunks.
-//
-// In order to change the vertical alignment of individual text chunks, use TextChunk.VerticalAlignment.
-func (_dgbg *StyledParagraph )SetTextVerticalAlignment (align TextVerticalAlignment ){_dgbg ._ccceb =align ;};
-
-// TOC returns the table of contents component of the creator.
-func (_aeag *Creator )TOC ()*TOC {return _aeag ._cgfc };
-
-// Draw draws the drawable d on the block.
-// Note that the drawable must not wrap, i.e. only return one block. Otherwise an error is returned.
-func (_ffc *Block )Draw (d Drawable )error {_cfa :=DrawContext {};_cfa .Width =_ffc ._fgd ;_cfa .Height =_ffc ._ce ;_cfa .PageWidth =_ffc ._fgd ;_cfa .PageHeight =_ffc ._ce ;_cfa .X =0;_cfa .Y =0;_eaa ,_ ,_afd :=d .GeneratePageBlocks (_cfa );if _afd !=nil {return _afd ;
-};if len (_eaa )!=1{return _d .New ("\u0074\u006f\u006f\u0020ma\u006e\u0079\u0020\u006f\u0075\u0074\u0070\u0075\u0074\u0020\u0062\u006c\u006f\u0063k\u0073");};for _ ,_agb :=range _eaa {if _fea :=_ffc .mergeBlocks (_agb );_fea !=nil {return _fea ;};};return nil ;
-};
-
-// PageFinalize sets a function to be called for each page before finalization
-// (i.e. the last stage of page processing before they get written out).
-// The callback function allows final touch-ups for each page, and it
-// provides information that might not be known at other stages of designing
-// the document (e.g. the total number of pages). Unlike the header/footer
-// functions, which are limited to the top/bottom margins of the page, the
-// finalize function can be used draw components anywhere on the current page.
-func (_fged *Creator )PageFinalize (pageFinalizeFunc func (_cbc PageFinalizeFunctionArgs )error ){_fged ._eefg =pageFinalizeFunc ;};
-
-// NewStyledParagraph creates a new styled paragraph.
-// Default attributes:
-// Font: Helvetica,
-// Font size: 10
-// Encoding: WinAnsiEncoding
-// Wrap: enabled
-// Text color: black
-func (_aaeac *Creator )NewStyledParagraph ()*StyledParagraph {return _ebab (_aaeac .NewTextStyle ())};
-
-// RotateDeg rotates the current active page by angle degrees.  An error is returned on failure,
-// which can be if there is no currently active page, or the angleDeg is not a multiple of 90 degrees.
-func (_egff *Creator )RotateDeg (angleDeg int64 )error {_adfe :=_egff .getActivePage ();if _adfe ==nil {_cf .Log .Debug ("F\u0061\u0069\u006c\u0020\u0074\u006f\u0020\u0072\u006f\u0074\u0061\u0074\u0065\u003a\u0020\u006e\u006f\u0020p\u0061\u0067\u0065\u0020\u0063\u0075\u0072\u0072\u0065\u006etl\u0079\u0020\u0061c\u0074i\u0076\u0065");
-return _d .New ("\u006e\u006f\u0020\u0070\u0061\u0067\u0065\u0020\u0061c\u0074\u0069\u0076\u0065");};if angleDeg %90!=0{_cf .Log .Debug ("E\u0052\u0052\u004f\u0052\u003a\u0020\u0050\u0061\u0067e\u0020\u0072\u006f\u0074\u0061\u0074\u0069on\u0020\u0061\u006e\u0067l\u0065\u0020\u006e\u006f\u0074\u0020\u0061\u0020\u006dul\u0074\u0069p\u006c\u0065\u0020\u006f\u0066\u0020\u0039\u0030");
-return _d .New ("\u0072\u0061\u006e\u0067\u0065\u0020\u0063\u0068\u0065\u0063\u006b\u0020e\u0072\u0072\u006f\u0072");};var _gaec int64 ;if _adfe .Rotate !=nil {_gaec =*(_adfe .Rotate );};_gaec +=angleDeg ;_adfe .Rotate =&_gaec ;return nil ;};
-
-// Ellipse defines an ellipse with a center at (xc,yc) and a specified width and height.  The ellipse can have a colored
-// fill and/or border with a specified width.
-// Implements the Drawable interface and can be drawn on PDF using the Creator.
-type Ellipse struct{_gecd float64 ;_abbb float64 ;_bcce float64 ;_ccae float64 ;_ceeb Positioning ;_agfc Color ;_acf float64 ;_geba Color ;_aged float64 ;_deaa float64 ;_eac Margins ;_dgbc FitMode ;};
-
-// SetLineWidth sets the line width.
-func (_ffaf *Polyline )SetLineWidth (lineWidth float64 ){_ffaf ._cfdd .LineWidth =lineWidth };
-
-// SetOutlineTree adds the specified outline tree to the PDF file generated
-// by the creator. Adding an external outline tree disables the automatic
-// generation of outlines done by the creator for the relevant components.
-func (_baab *Creator )SetOutlineTree (outlineTree *_gf .PdfOutlineTreeNode ){_baab ._fece =outlineTree };
-
-// TextChunk represents a chunk of text along with a particular style.
-type TextChunk struct{
-
-// The text that is being rendered in the PDF.
-Text string ;
-
-// The style of the text being rendered.
-Style TextStyle ;_cacbg *_gf .PdfAnnotation ;_dgefd bool ;
-
-// The vertical alignment of the text chunk.
-VerticalAlignment TextVerticalAlignment ;};
-
-// GetMargins returns the Image's margins: left, right, top, bottom.
-func (_efaf *Image )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _efaf ._gbeae .Left ,_efaf ._gbeae .Right ,_efaf ._gbeae .Top ,_efaf ._gbeae .Bottom ;};
-
-// GetIndent get the cell's left indent.
-func (_cefg *TableCell )GetIndent ()float64 {return _cefg ._bcgf };
-
-// SetAntiAlias enables anti alias config.
-//
-// Anti alias is disabled by default.
-func (_gacf *shading )SetAntiAlias (enable bool ){_gacf ._dgdf =enable };func (_fba *Creator )getActivePage ()*_gf .PdfPage {if _fba ._bgc ==nil {if len (_fba ._geac )==0{return nil ;};return _fba ._geac [len (_fba ._geac )-1];};return _fba ._bgc ;};
-
-// Background contains properties related to the background of a component.
-type Background struct{FillColor Color ;BorderColor Color ;BorderSize float64 ;BorderRadiusTopLeft float64 ;BorderRadiusTopRight float64 ;BorderRadiusBottomLeft float64 ;BorderRadiusBottomRight float64 ;};
-
-// SetWidth sets the the Paragraph width. This is essentially the wrapping width,
-// i.e. the width the text can extend to prior to wrapping over to next line.
-func (_fbcef *StyledParagraph )SetWidth (width float64 ){_fbcef ._bceed =width ;_fbcef .wrapText ()};
-
-// GetMargins returns the Paragraph's margins: left, right, top, bottom.
-func (_aadfg *Paragraph )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _aadfg ._eddc .Left ,_aadfg ._eddc .Right ,_aadfg ._eddc .Top ,_aadfg ._eddc .Bottom ;};
-
-// SetFillColor sets background color for border.
-func (_bbe *border )SetFillColor (col Color ){_bbe ._cdda =col };
-
-// InsertColumn inserts a column in the line items table at the specified index.
-func (_abdg *Invoice )InsertColumn (index uint ,description string )*InvoiceCell {_gcab :=uint (len (_abdg ._bacc ));if index > _gcab {index =_gcab ;};_gfe :=_abdg .NewColumn (description );_abdg ._bacc =append (_abdg ._bacc [:index ],append ([]*InvoiceCell {_gfe },_abdg ._bacc [index :]...)...);
-return _gfe ;};func (_dab *Chapter )headingText ()string {_aege :=_dab ._gfbfc ;if _cdfd :=_dab .headingNumber ();_cdfd !=""{_aege =_agd .Sprintf ("\u0025\u0073\u0020%\u0073",_cdfd ,_aege );};return _aege ;};
-
-// NewTable create a new Table with a specified number of columns.
-func (_gfd *Creator )NewTable (cols int )*Table {return _afcfg (cols )};type listItem struct{_cafb VectorDrawable ;_ccbc TextChunk ;};
-
-// SetMargins sets the margins of the component. The margins are applied
-// around the division.
-func (_bafff *Division )SetMargins (left ,right ,top ,bottom float64 ){_bafff ._dcbe .Left =left ;_bafff ._dcbe .Right =right ;_bafff ._dcbe .Top =top ;_bafff ._dcbe .Bottom =bottom ;};func (_cgcg *Invoice )drawInformation ()*Table {_cced :=_afcfg (2);
-_bgdf :=append ([][2]*InvoiceCell {_cgcg ._cfgb ,_cgcg ._bggdg ,_cgcg ._acgf },_cgcg ._bca ...);for _ ,_aabe :=range _bgdf {_ggbda ,_egef :=_aabe [0],_aabe [1];if _egef .Value ==""{continue ;};_dafe :=_cced .NewCell ();_dafe .SetBackgroundColor (_ggbda .BackgroundColor );
-_cgcg .setCellBorder (_dafe ,_ggbda );_aaed :=_ebab (_ggbda .TextStyle );_aaed .Append (_ggbda .Value );_aaed .SetMargins (0,0,2,1);_dafe .SetContent (_aaed );_dafe =_cced .NewCell ();_dafe .SetBackgroundColor (_egef .BackgroundColor );_cgcg .setCellBorder (_dafe ,_egef );
-_aaed =_ebab (_egef .TextStyle );_aaed .Append (_egef .Value );_aaed .SetMargins (0,0,2,1);_dafe .SetContent (_aaed );};return _cced ;};
-
-// SetLineOpacity sets the line opacity.
-func (_cegg *Polyline )SetLineOpacity (opacity float64 ){_cegg ._fbfe =opacity };func _edef (_effge string ,_dbbd TextStyle )*Paragraph {_cfeed :=&Paragraph {_ccaac :_effge ,_befba :_dbbd .Font ,_dgfa :_dbbd .FontSize ,_dbdc :1.0,_bedd :true ,_fecaa :true ,_ebdd :TextAlignmentLeft ,_cegag :0,_abfcg :1,_gcbc :1,_dced :PositionRelative };
-_cfeed .SetColor (_dbbd .Color );return _cfeed ;};type pageTransformations struct{_caab *_fg .Matrix ;_abfg bool ;_dgbe bool ;};
-
-// SetBorderRadius sets the radius of the background corners.
-func (_da *Background )SetBorderRadius (topLeft ,topRight ,bottomLeft ,bottomRight float64 ){_da .BorderRadiusTopLeft =topLeft ;_da .BorderRadiusTopRight =topRight ;_da .BorderRadiusBottomLeft =bottomLeft ;_da .BorderRadiusBottomRight =bottomRight ;};
-
-// CellBorderSide defines the table cell's border side.
-type CellBorderSide int ;
-
-// SetInline sets the inline mode of the division.
-func (_gaaf *Division )SetInline (inline bool ){_gaaf ._bgbcc =inline };func _fbdbb (_gffe *templateProcessor ,_fdfb *templateNode )(interface{},error ){return _gffe .parseTableCell (_fdfb );};
-
-// GeneratePageBlocks draws the ellipse on a new block representing the page.
-func (_feef *Ellipse )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){var (_ebfg []*Block ;_dfgd =NewBlock (ctx .PageWidth ,ctx .PageHeight );_cgae =ctx ;);_dac :=_feef ._ceeb .IsRelative ();if _dac {_feef .applyFitMode (ctx .Width );
-ctx .X +=_feef ._eac .Left ;ctx .Y +=_feef ._eac .Top ;ctx .Width -=_feef ._eac .Left +_feef ._eac .Right ;ctx .Height -=_feef ._eac .Top +_feef ._eac .Bottom ;if _feef ._ccae > ctx .Height {_ebfg =append (_ebfg ,_dfgd );_dfgd =NewBlock (ctx .PageWidth ,ctx .PageHeight );
-ctx .Page ++;_bbb :=ctx ;_bbb .Y =ctx .Margins .Top +_feef ._eac .Top ;_bbb .X =ctx .Margins .Left +_feef ._eac .Left ;_bbb .Height =ctx .PageHeight -ctx .Margins .Top -ctx .Margins .Bottom -_feef ._eac .Top -_feef ._eac .Bottom ;_bbb .Width =ctx .PageWidth -ctx .Margins .Left -ctx .Margins .Right -_feef ._eac .Left -_feef ._eac .Right ;
-ctx =_bbb ;};}else {ctx .X =_feef ._gecd -_feef ._bcce /2;ctx .Y =_feef ._abbb -_feef ._ccae /2;};_gaee :=_g .Circle {X :ctx .X ,Y :ctx .PageHeight -ctx .Y -_feef ._ccae ,Width :_feef ._bcce ,Height :_feef ._ccae ,BorderWidth :_feef ._aged ,Opacity :1.0};
-if _feef ._agfc !=nil {_gaee .FillEnabled =true ;_dcca :=_dca (_feef ._agfc );_ebed :=_ggfba (_dfgd ,_dcca ,_feef ._agfc ,func ()Rectangle {return Rectangle {_fgfd :_gaee .X ,_aedgf :_gaee .Y ,_adeb :_gaee .Width ,_dffef :_gaee .Height };});if _ebed !=nil {return nil ,ctx ,_ebed ;
-};_gaee .FillColor =_dcca ;};if _feef ._geba !=nil {_gaee .BorderEnabled =false ;if _feef ._aged > 0{_gaee .BorderEnabled =true ;};_gaee .BorderColor =_dca (_feef ._geba );_gaee .BorderWidth =_feef ._aged ;};_bdc ,_accc :=_dfgd .setOpacity (_feef ._acf ,_feef ._deaa );
-if _accc !=nil {return nil ,ctx ,_accc ;};_gcda ,_ ,_accc :=_gaee .Draw (_bdc );if _accc !=nil {return nil ,ctx ,_accc ;};_accc =_dfgd .addContentsByString (string (_gcda ));if _accc !=nil {return nil ,ctx ,_accc ;};if _dac {ctx .X =_cgae .X ;ctx .Width =_cgae .Width ;
-ctx .Y +=_feef ._ccae +_feef ._eac .Bottom ;ctx .Height -=_feef ._ccae ;}else {ctx =_cgae ;};_ebfg =append (_ebfg ,_dfgd );return _ebfg ,ctx ,nil ;};func (_aefd *StyledParagraph )getLineMetrics (_cfdg int )(_eacda ,_fbgc ,_eabc float64 ){if _aefd ._cgfdg ==nil ||len (_aefd ._cgfdg )==0{_aefd .wrapText ();
-};if _cfdg < 0||_cfdg > len (_aefd ._cgfdg )-1{_cf .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0069\u006e\u0076\u0061\u006c\u0069\u0064\u0020p\u0061\u0072\u0061\u0067\u0072\u0061\u0070\u0068\u0020\u006c\u0069\u006e\u0065 \u0069\u006e\u0064\u0065\u0078\u0020\u0025\u0064\u002e\u0020\u0052\u0065tu\u0072\u006e\u0069\u006e\u0067\u0020\u0030\u002c\u0020\u0030",_cfdg );
-return 0,0,0;};_egea :=_aefd ._cgfdg [_cfdg ];for _ ,_bbgcc :=range _egea {_beca :=_bccf (_bbgcc .Style .Font ,_bbgcc .Style .FontSize );if _beca ._eegac > _eacda {_eacda =_beca ._eegac ;};if _beca ._gbfbe < _eabc {_eabc =_beca ._gbfbe ;};if _ccfc :=_bbgcc .Style .FontSize ;
-_ccfc > _fbgc {_fbgc =_ccfc ;};};return _eacda ,_fbgc ,_eabc ;};
-
-// Block contains a portion of PDF Page contents. It has a width and a position and can
-// be placed anywhere on a Page.  It can even contain a whole Page, and is used in the creator
-// where each Drawable object can output one or more blocks, each representing content for separate pages
-// (typically needed when Page breaks occur).
-type Block struct{_egf *_cd .ContentStreamOperations ;_cff *_gf .PdfPageResources ;_ad Positioning ;_adc ,_ec float64 ;_fgd float64 ;_ce float64 ;_eb float64 ;_ced Margins ;_egb []*_gf .PdfAnnotation ;};
-
-// SetSubtotal sets the subtotal of the invoice.
-func (_gacc *Invoice )SetSubtotal (value string ){_gacc ._ecgfa [1].Value =value };
+func (_bdca *Rectangle )ScaleToWidth (w float64 ){_eacf :=_bdca ._abfd /_bdca ._bfddd ;_bdca ._bfddd =w ;_bdca ._abfd =w *_eacf ;};type pageTransformations struct{_gbgd *_bc .Matrix ;_ceeg bool ;_agc bool ;};
+
+// SetTerms sets the terms and conditions section of the invoice.
+func (_edaa *Invoice )SetTerms (title ,content string ){_edaa ._bfda =[2]string {title ,content }};func (_gecd *Invoice )drawAddress (_gfacdc *InvoiceAddress )[]*StyledParagraph {var _eacd []*StyledParagraph ;if _gfacdc .Heading !=""{_ebfd :=_dccc (_gecd ._dbbf );
+_ebfd .SetMargins (0,0,0,7);_ebfd .Append (_gfacdc .Heading );_eacd =append (_eacd ,_ebfd );};_degag :=_dccc (_gecd ._bdbg );_degag .SetLineHeight (1.2);_adbf :=_gfacdc .Separator ;if _adbf ==""{_adbf =_gecd ._eafaf ;};_febg :=_gfacdc .City ;if _gfacdc .State !=""{if _febg !=""{_febg +=_adbf ;
+};_febg +=_gfacdc .State ;};if _gfacdc .Zip !=""{if _febg !=""{_febg +=_adbf ;};_febg +=_gfacdc .Zip ;};if _gfacdc .Name !=""{_degag .Append (_gfacdc .Name +"\u000a");};if _gfacdc .Street !=""{_degag .Append (_gfacdc .Street +"\u000a");};if _gfacdc .Street2 !=""{_degag .Append (_gfacdc .Street2 +"\u000a");
+};if _febg !=""{_degag .Append (_febg +"\u000a");};if _gfacdc .Country !=""{_degag .Append (_gfacdc .Country +"\u000a");};_fcfg :=_dccc (_gecd ._bdbg );_fcfg .SetLineHeight (1.2);_fcfg .SetMargins (0,0,7,0);if _gfacdc .Phone !=""{_fcfg .Append (_gfacdc .fmtLine (_gfacdc .Phone ,"\u0050h\u006f\u006e\u0065\u003a\u0020",_gfacdc .HidePhoneLabel ));
+};if _gfacdc .Email !=""{_fcfg .Append (_gfacdc .fmtLine (_gfacdc .Email ,"\u0045m\u0061\u0069\u006c\u003a\u0020",_gfacdc .HideEmailLabel ));};_eacd =append (_eacd ,_degag ,_fcfg );return _eacd ;};func _abcbd (_acdba ,_eaafc ,_ecbaf float64 )(_eegf ,_bfee ,_cefff ,_bfge float64 ){if _ecbaf ==0{return 0,0,_acdba ,_eaafc ;
+};_afcae :=_bg .Path {Points :[]_bg .Point {_bg .NewPoint (0,0).Rotate (_ecbaf ),_bg .NewPoint (_acdba ,0).Rotate (_ecbaf ),_bg .NewPoint (0,_eaafc ).Rotate (_ecbaf ),_bg .NewPoint (_acdba ,_eaafc ).Rotate (_ecbaf )}}.GetBoundingBox ();return _afcae .X ,_afcae .Y ,_afcae .Width ,_afcae .Height ;
+};func (_afce *Image )makeXObject ()error {_bgee :=_afce ._fcgd ;if _bgee ==nil {_bgee =_dd .NewFlateEncoder ();};_eafd ,_fdff :=_fee .NewXObjectImageFromImage (_afce ._dgaec ,nil ,_bgee );if _fdff !=nil {_da .Log .Error ("\u0046\u0061\u0069le\u0064\u0020\u0074\u006f\u0020\u0063\u0072\u0065\u0061t\u0065 \u0078o\u0062j\u0065\u0063\u0074\u0020\u0069\u006d\u0061\u0067\u0065\u003a\u0020\u0025\u0073",_fdff );
+return _fdff ;};_afce ._aaae =_eafd ;return nil ;};func _edae (_cgfg string )(*Image ,error ){_gcfd ,_bdba :=_fd .Open (_cgfg );if _bdba !=nil {return nil ,_bdba ;};defer _gcfd .Close ();_bdbaa ,_bdba :=_fee .ImageHandling .Read (_gcfd );if _bdba !=nil {_da .Log .Error ("\u0045\u0072\u0072or\u0020\u006c\u006f\u0061\u0064\u0069\u006e\u0067\u0020\u0069\u006d\u0061\u0067\u0065\u003a\u0020\u0025\u0073",_bdba );
+return nil ,_bdba ;};return _gccg (_bdbaa );};var PPMM =float64 (72*1.0/25.4);func (_bbe *Block )addContentsByString (_fgd string )error {_fba :=_ebc .NewContentStreamParser (_fgd );_cg ,_bbbb :=_fba .Parse ();if _bbbb !=nil {return _bbbb ;};_bbe ._db .WrapIfNeeded ();
+_cg .WrapIfNeeded ();*_bbe ._db =append (*_bbe ._db ,*_cg ...);return nil ;};
+
+// BuyerAddress returns the buyer address used in the invoice template.
+func (_ebad *Invoice )BuyerAddress ()*InvoiceAddress {return _ebad ._aedg };type border struct{_bgg float64 ;_ebg float64 ;_dgda float64 ;_aed float64 ;_aeea Color ;_ege Color ;_bbd float64 ;_beed Color ;_eec float64 ;_ecba Color ;_cee float64 ;_bfgc Color ;
+_gab float64 ;LineStyle _bg .LineStyle ;_ece CellBorderStyle ;_eccg CellBorderStyle ;_cffc CellBorderStyle ;_beb CellBorderStyle ;};
+
+// GetCoords returns the upper left corner coordinates of the rectangle (`x`, `y`).
+func (_caaa *Rectangle )GetCoords ()(float64 ,float64 ){return _caaa ._cfbab ,_caaa ._cffbf };
 
 // MultiRowCell makes a new cell with the specified row span and inserts it
 // into the table at the current position.
-func (_eeagc *Table )MultiRowCell (rowspan int )*TableCell {return _eeagc .MultiCell (rowspan ,1)};
+func (_aeccg *Table )MultiRowCell (rowspan int )*TableCell {return _aeccg .MultiCell (rowspan ,1)};func (_cbaf *templateProcessor )run ()error {_fegb :=_e .NewDecoder (_c .NewReader (_cbaf ._ffcd ));var _fegcd *templateNode ;for {_adbae ,_agcg :=_fegb .Token ();
+if _agcg !=nil {if _agcg ==_fg .EOF {return nil ;};return _agcg ;};if _adbae ==nil {break ;};switch _ecfe :=_adbae .(type ){case _e .StartElement :_da .Log .Debug ("\u0050\u0061\u0072\u0073\u0069\u006eg\u0020\u0074\u0065\u006d\u0070\u006c\u0061\u0074\u0065\u0020\u0073\u0074\u0061r\u0074\u0020\u0074\u0061\u0067\u003a\u0020`\u0025\u0073\u0060\u002e",_ecfe .Name .Local );
+_gaecc ,_fdfbe :=_accae [_ecfe .Name .Local ];if !_fdfbe {_da .Log .Debug ("\u0055\u006es\u0075\u0070\u0070\u006f\u0072\u0074\u0065\u0064\u0020\u0074\u0065\u006d\u0070\u006c\u0061\u0074\u0065\u0020\u0074a\u0067\u003a\u0020\u0060\u0025\u0073`\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069\u006e\u0067\u002e\u0020\u004f\u0075t\u0070\u0075t\u0020\u006d\u0061\u0079 \u0062\u0065\u0020\u0069\u006ec\u006f\u0072\u0072\u0065\u0063\u0074\u002e",_ecfe .Name .Local );
+continue ;};_fegcd =&templateNode {_bdbga :_ecfe ,_bdgb :_fegcd };if _dfegb :=_gaecc ._agdb ;_dfegb !=nil {_fegcd ._bdced ,_agcg =_dfegb (_cbaf ,_fegcd );if _agcg !=nil {return _agcg ;};};case _e .EndElement :_da .Log .Debug ("\u0050\u0061\u0072s\u0069\u006e\u0067\u0020t\u0065\u006d\u0070\u006c\u0061\u0074\u0065 \u0065\u006e\u0064\u0020\u0074\u0061\u0067\u003a\u0020\u0060\u0025\u0073\u0060\u002e",_ecfe .Name .Local );
+if _fegcd !=nil {if _fegcd ._bdced !=nil {if _babbf :=_cbaf .renderNode (_fegcd );_babbf !=nil {return _babbf ;};};_fegcd =_fegcd ._bdgb ;};case _e .CharData :if _fegcd !=nil &&_fegcd ._bdced !=nil {if _cfcb :=_cbaf .addNodeText (_fegcd ,string (_ecfe ));
+_cfcb !=nil {return _cfcb ;};};case _e .Comment :_da .Log .Debug ("\u0050\u0061\u0072s\u0069\u006e\u0067\u0020t\u0065\u006d\u0070\u006c\u0061\u0074\u0065 \u0063\u006f\u006d\u006d\u0065\u006e\u0074\u003a\u0020\u0060\u0025\u0073\u0060\u002e",string (_ecfe ));
+};};return nil ;};
 
-// AddShadingResource adds shading dictionary inside the resources dictionary.
-func (_defab *RadialShading )AddShadingResource (block *Block )(_dfbae _acb .PdfObjectName ,_dagg error ){_dedf :=1;_dfbae =_acb .PdfObjectName ("\u0053\u0068"+_egd .Itoa (_dedf ));for block ._cff .HasShadingByName (_dfbae ){_dedf ++;_dfbae =_acb .PdfObjectName ("\u0053\u0068"+_egd .Itoa (_dedf ));
-};if _aadd :=block ._cff .SetShadingByName (_dfbae ,_defab .shadingModel ().ToPdfObject ());_aadd !=nil {return "",_aadd ;};return _dfbae ,nil ;};
+// SetWidth sets line width.
+func (_affcb *Curve )SetWidth (width float64 ){_affcb ._cgfc =width };
 
-// Table allows organizing content in an rows X columns matrix, which can spawn across multiple pages.
-type Table struct{_bacg int ;_eeecb int ;_gfcae int ;_cdgf []float64 ;_gdgf []float64 ;_ddee float64 ;_fdde []*TableCell ;_ebad []int ;_fcca Positioning ;_beacg ,_bdae float64 ;_bbfa Margins ;_eabace bool ;_gfagg int ;_cedbc int ;_bfbf bool ;_cfdga bool ;
+// SetFillOpacity sets the fill opacity of the rectangle.
+func (_gbef *Rectangle )SetFillOpacity (opacity float64 ){_gbef ._ffdfg =opacity };
+
+// Opacity returns the opacity of the line.
+func (_dfeg *Line )Opacity ()float64 {return _dfeg ._dcfe };func (_fece *Invoice )newColumn (_ecbgd string ,_bbbf CellHorizontalAlignment )*InvoiceCell {_bagb :=&InvoiceCell {_fece ._ggee ,_ecbgd };_bagb .Alignment =_bbbf ;return _bagb ;};
+
+// FitMode returns the fit mode of the rectangle.
+func (_dgeb *Rectangle )FitMode ()FitMode {return _dgeb ._fefc };
+
+// AddressStyle returns the style properties used to render the content of
+// the invoice address sections.
+func (_ddcc *Invoice )AddressStyle ()TextStyle {return _ddcc ._bdbg };
+
+// FillColor returns the fill color of the rectangle.
+func (_cdbc *Rectangle )FillColor ()Color {return _cdbc ._cdgf };
+
+// SetBorderRadius sets the radius of the rectangle corners.
+func (_dfed *Rectangle )SetBorderRadius (topLeft ,topRight ,bottomLeft ,bottomRight float64 ){_dfed ._egdce =topLeft ;_dfed ._edac =topRight ;_dfed ._cdfge =bottomLeft ;_dfed ._cfef =bottomRight ;};func (_accg *templateProcessor )parseLinearGradientAttr (creator *Creator ,_afgc string )Color {_efaac :=ColorBlack ;
+if _afgc ==""{return _efaac ;};_fafcc :=creator .NewLinearGradientColor ([]*ColorPoint {});_fafcc .SetExtends (true ,true );var (_defg =_cf .Split (_afgc [16:len (_afgc )-1],"\u002c");_cbced =_cf .TrimSpace (_defg [0]););if _cf .HasSuffix (_cbced ,"\u0064\u0065\u0067"){_fgda ,_efag :=_fe .ParseFloat (_cbced [:len (_cbced )-3],64);
+if _efag !=nil {_da .Log .Debug ("\u0046\u0061\u0069\u006c\u0065\u0064 \u0070\u0061\u0072\u0073\u0069\u006e\u0067\u0020\u0067\u0072\u0061\u0064\u0069e\u006e\u0074\u0020\u0061\u006e\u0067\u006ce\u003a\u0020\u0025\u0076",_efag );}else {_fafcc .SetAngle (_fgda );
+};_defg =_defg [1:];};_bedeed ,_babd :=_accg .processGradientColorPair (_defg );if _bedeed ==nil ||_babd ==nil {return _efaac ;};for _facg :=0;_facg < len (_bedeed );_facg ++{_fafcc .AddColorStop (_bedeed [_facg ],_babd [_facg ]);};return _fafcc ;};
+
+// SetFillColor sets the fill color of the rectangle.
+func (_adee *Rectangle )SetFillColor (col Color ){_adee ._cdgf =col };
+
+// SetColor sets the color of the Paragraph text.
+//
+// Example:
+//
+//  1. p := NewParagraph("Red paragraph")
+//     // Set to red color with a hex code:
+//     p.SetColor(creator.ColorRGBFromHex("#ff0000"))
+//
+//  2. Make Paragraph green with 8-bit rgb values (0-255 each component)
+//     p.SetColor(creator.ColorRGBFrom8bit(0, 255, 0)
+//
+//  3. Make Paragraph blue with arithmetic (0-1) rgb components.
+//     p.SetColor(creator.ColorRGBFromArithmetic(0, 0, 1.0)
+func (_dbec *Paragraph )SetColor (col Color ){_dbec ._cfae =col };func (_cabb *TOCLine )prepareParagraph (_dcfdg *StyledParagraph ,_efgdd DrawContext ){_cdcgf :=_cabb .Title .Text ;if _cabb .Number .Text !=""{_cdcgf ="\u0020"+_cdcgf ;};_cdcgf +="\u0020";
+_dabaf :=_cabb .Page .Text ;if _dabaf !=""{_dabaf ="\u0020"+_dabaf ;};_dcfdg ._adeb =[]*TextChunk {{Text :_cabb .Number .Text ,Style :_cabb .Number .Style ,_beebgd :_cabb .getLineLink ()},{Text :_cdcgf ,Style :_cabb .Title .Style ,_beebgd :_cabb .getLineLink ()},{Text :_dabaf ,Style :_cabb .Page .Style ,_beebgd :_cabb .getLineLink ()}};
+_dcfdg .wrapText ();_abcd :=len (_dcfdg ._cfcf );if _abcd ==0{return ;};_afabg :=_efgdd .Width *1000-_dcfdg .getTextLineWidth (_dcfdg ._cfcf [_abcd -1]);_edfe :=_dcfdg .getTextLineWidth ([]*TextChunk {&_cabb .Separator });_afga :=int (_afabg /_edfe );_bacef :=_cf .Repeat (_cabb .Separator .Text ,_afga );
+_cfeg :=_cabb .Separator .Style ;_eegga :=_dcfdg .Insert (2,_bacef );_eegga .Style =_cfeg ;_eegga ._beebgd =_cabb .getLineLink ();_afabg =_afabg -float64 (_afga )*_edfe ;if _afabg > 500{_acbcc ,_cgcc :=_cfeg .Font .GetRuneMetrics (' ');if _cgcc &&_afabg > _acbcc .Wx {_abdeb :=int (_afabg /_acbcc .Wx );
+if _abdeb > 0{_cfege :=_cfeg ;_cfege .FontSize =1;_eegga =_dcfdg .Insert (2,_cf .Repeat ("\u0020",_abdeb ));_eegga .Style =_cfege ;_eegga ._beebgd =_cabb .getLineLink ();};};};};func _fgbc (_bccc *_fee .PdfRectangle ,_eadc _bc .Matrix )*_fee .PdfRectangle {var _fgfb _fee .PdfRectangle ;
+_fgfb .Llx ,_fgfb .Lly =_eadc .Transform (_bccc .Llx ,_bccc .Lly );_fgfb .Urx ,_fgfb .Ury =_eadc .Transform (_bccc .Urx ,_bccc .Ury );_fgfb .Normalize ();return &_fgfb ;};func (_gccc *templateProcessor )parseCellBorderStyleAttr (_bcada ,_dbfb string )CellBorderStyle {_da .Log .Debug ("\u0050\u0061\u0072\u0073\u0069\u006e\u0067\u0020c\u0065\u006c\u006c b\u006f\u0072\u0064\u0065\u0072\u0020s\u0074\u0079\u006c\u0065\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a \u0028\u0060\u0025\u0073\u0060\u002c\u0020\u0025s\u0029\u002e",_bcada ,_dbfb );
+_bgaeg :=map[string ]CellBorderStyle {"\u006e\u006f\u006e\u0065":CellBorderStyleNone ,"\u0073\u0069\u006e\u0067\u006c\u0065":CellBorderStyleSingle ,"\u0064\u006f\u0075\u0062\u006c\u0065":CellBorderStyleDouble }[_dbfb ];return _bgaeg ;};
+
+// SetFillColor sets the fill color.
+func (_ffce *Polygon )SetFillColor (color Color ){_ffce ._ecad =color ;_ffce ._ebdcd .FillColor =_cfd (color );};func _gcabd (_dgedd *templateProcessor ,_fcdcf *templateNode )(interface{},error ){return _dgedd .parseList (_fcdcf );};func (_gcef *Line )computeCoords (_bfga DrawContext )(_gbbg ,_fggc ,_edec ,_aaec float64 ){_gbbg =_bfga .X ;
+_edec =_gbbg +_gcef ._ecec -_gcef ._bcgf ;_dddb :=_gcef ._bdfc ;if _gcef ._bcgf ==_gcef ._ecec {_dddb /=2;};if _gcef ._fgba < _gcef ._daac {_fggc =_bfga .PageHeight -_bfga .Y -_dddb ;_aaec =_fggc -_gcef ._daac +_gcef ._fgba ;}else {_aaec =_bfga .PageHeight -_bfga .Y -_dddb ;
+_fggc =_aaec -_gcef ._fgba +_gcef ._daac ;};switch _gcef ._fgcc {case FitModeFillWidth :_edec =_gbbg +_bfga .Width ;};return _gbbg ,_fggc ,_edec ,_aaec ;};func (_abbb *templateProcessor )parseTextAlignmentAttr (_dfgfg ,_bafbf string )TextAlignment {_da .Log .Debug ("\u0050a\u0072\u0073i\u006e\u0067\u0020t\u0065\u0078\u0074\u0020\u0061\u006c\u0069g\u006e\u006d\u0065\u006e\u0074\u0020a\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0028`\u0025\u0073\u0060\u002c\u0020\u0025\u0073\u0029\u002e",_dfgfg ,_bafbf );
+_gbfcf :=map[string ]TextAlignment {"\u006c\u0065\u0066\u0074":TextAlignmentLeft ,"\u0072\u0069\u0067h\u0074":TextAlignmentRight ,"\u0063\u0065\u006e\u0074\u0065\u0072":TextAlignmentCenter ,"\u006au\u0073\u0074\u0069\u0066\u0079":TextAlignmentJustify }[_bafbf ];
+return _gbfcf ;};func (_agbe *Table )wrapRow (_begga int ,_aeebfc DrawContext ,_ggeed float64 )(bool ,error ){if !_agbe ._cfbac {return false ,nil ;};var (_fega =_agbe ._afbaa [_begga ];_dcbeg =-1;_aedd []*TableCell ;_bcade float64 ;_aedb bool ;_egcfe =make ([]float64 ,0,len (_agbe ._fadgg ));
+);_daea :=func (_badd *TableCell ,_eegg VectorDrawable ,_cdga bool )*TableCell {_bcdbg :=*_badd ;_bcdbg ._cfdd =_eegg ;if _cdga {_bcdbg ._eeadc ++;};return &_bcdbg ;};_aaffa :=func (_bffaeg int ,_bafce VectorDrawable ){var _bcgcb float64 =-1;if _bafce ==nil {if _aadf :=_egcfe [_bffaeg -_begga ];
+_aadf > _aeebfc .Height {_bafce =_agbe ._afbaa [_bffaeg ]._cfdd ;_agbe ._afbaa [_bffaeg ]._cfdd =nil ;_egcfe [_bffaeg -_begga ]=0;_bcgcb =_aadf ;};};_cggf :=_daea (_agbe ._afbaa [_bffaeg ],_bafce ,true );_aedd =append (_aedd ,_cggf );if _bcgcb < 0{_bcgcb =_cggf .height (_aeebfc .Width );
+};if _bcgcb > _bcade {_bcade =_bcgcb ;};};for _dfff :=_begga ;_dfff < len (_agbe ._afbaa );_dfff ++{_ccfc :=_agbe ._afbaa [_dfff ];if _fega ._eeadc !=_ccfc ._eeadc {_dcbeg =_dfff ;break ;};_aeebfc .Width =_ccfc .width (_agbe ._fadgg ,_ggeed );_ccdb :=_ccfc .height (_aeebfc .Width );
+var _bcgfc VectorDrawable ;switch _cgbfd :=_ccfc ._cfdd .(type ){case *StyledParagraph :if _ccdb > _aeebfc .Height {_bdgda :=_aeebfc ;_bdgda .Height =_fa .Floor (_aeebfc .Height -_cgbfd ._eebag .Top -_cgbfd ._eebag .Bottom -0.5*_cgbfd .getTextHeight ());
+_fafbd ,_dfae ,_cdeag :=_cgbfd .split (_bdgda );if _cdeag !=nil {return false ,_cdeag ;};if _fafbd !=nil &&_dfae !=nil {_cgbfd =_fafbd ;_ccfc =_daea (_ccfc ,_fafbd ,false );_agbe ._afbaa [_dfff ]=_ccfc ;_bcgfc =_dfae ;_aedb =true ;};_ccdb =_ccfc .height (_aeebfc .Width );
+};case *Division :if _ccdb > _aeebfc .Height {_abbd :=_aeebfc ;_abbd .Height =_fa .Floor (_aeebfc .Height -_cgbfd ._ceeba .Top -_cgbfd ._ceeba .Bottom );_fgga ,_caafe :=_cgbfd .split (_abbd );if _fgga !=nil &&_caafe !=nil {_cgbfd =_fgga ;_ccfc =_daea (_ccfc ,_fgga ,false );
+_agbe ._afbaa [_dfff ]=_ccfc ;_bcgfc =_caafe ;_aedb =true ;if _fgga ._dgce !=nil {_fgga ._dgce .BorderRadiusBottomLeft =0;_fgga ._dgce .BorderRadiusBottomRight =0;};if _caafe ._dgce !=nil {_caafe ._dgce .BorderRadiusTopLeft =0;_caafe ._dgce .BorderRadiusTopRight =0;
+};_ccdb =_ccfc .height (_aeebfc .Width );};};case *List :if _ccdb > _aeebfc .Height {_aefagb :=_aeebfc ;_aefagb .Height =_fa .Floor (_aeebfc .Height -_cgbfd ._bffg .Vertical ());_bfdgd ,_aefgf :=_cgbfd .split (_aefagb );if _bfdgd !=nil {_cgbfd =_bfdgd ;
+_ccfc =_daea (_ccfc ,_bfdgd ,false );_agbe ._afbaa [_dfff ]=_ccfc ;};if _aefgf !=nil {_bcgfc =_aefgf ;_aedb =true ;};_ccdb =_ccfc .height (_aeebfc .Width );};};_egcfe =append (_egcfe ,_ccdb );if _aedb {if _aedd ==nil {_aedd =make ([]*TableCell ,0,len (_agbe ._fadgg ));
+for _fgbab :=_begga ;_fgbab < _dfff ;_fgbab ++{_aaffa (_fgbab ,nil );};};_aaffa (_dfff ,_bcgfc );};};var _gcbg float64 ;for _ ,_ggbfg :=range _egcfe {if _ggbfg > _gcbg {_gcbg =_ggbfg ;};};if _aedb &&_gcbg < _aeebfc .Height {if _dcbeg < 0{_dcbeg =len (_agbe ._afbaa );
+};_ffdfa :=_agbe ._afbaa [_dcbeg -1]._eeadc +_agbe ._afbaa [_dcbeg -1]._dbbfc -1;for _beeaf :=_dcbeg ;_beeaf < len (_agbe ._afbaa );_beeaf ++{_agbe ._afbaa [_beeaf ]._eeadc ++;};_agbe ._afbaa =append (_agbe ._afbaa [:_dcbeg ],append (_aedd ,_agbe ._afbaa [_dcbeg :]...)...);
+_agbe ._agda =append (_agbe ._agda [:_ffdfa ],append ([]float64 {_bcade },_agbe ._agda [_ffdfa :]...)...);_agbe ._agda [_fega ._eeadc +_fega ._dbbfc -2]=_gcbg ;};return _aedb ,nil ;};func _ceab (_ffea []_bg .Point )*Polyline {return &Polyline {_dadfd :&_bg .Polyline {Points :_ffea ,LineColor :_fee .NewPdfColorDeviceRGB (0,0,0),LineWidth :1.0},_eadf :1.0};
 };
-
-// ToPdfShadingPattern generates a new model.PdfShadingPatternType3 object.
-func (_gegc *RadialShading )ToPdfShadingPattern ()*_gf .PdfShadingPatternType3 {_eagc ,_adcg ,_edbg :=_gegc ._acce ._adddc .ToRGB ();_debed :=_gegc .shadingModel ();_debed .PdfShading .Background =_acb .MakeArrayFromFloats ([]float64 {_eagc ,_adcg ,_edbg });
-_gfga :=_gf .NewPdfShadingPatternType3 ();_gfga .Shading =_debed ;return _gfga ;};
-
-// NewCurve returns new instance of Curve between points (x1,y1) and (x2, y2) with control point (cx,cy).
-func (_ede *Creator )NewCurve (x1 ,y1 ,cx ,cy ,x2 ,y2 float64 )*Curve {return _cdfae (x1 ,y1 ,cx ,cy ,x2 ,y2 );};
-
-// GeneratePageBlocks draws the block contents on a template Page block.
-// Implements the Drawable interface.
-func (_dd *Block )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_fd :=_cd .NewContentCreator ();_fdb ,_gee :=_dd .Width (),_dd .Height ();if _dd ._ad .IsRelative (){_fd .Translate (ctx .X ,ctx .PageHeight -ctx .Y -_gee );}else {_fd .Translate (_dd ._adc ,ctx .PageHeight -_dd ._ec -_gee );
-};_afa :=_gee ;if _dd ._eb !=0{_fd .Translate (_fdb /2,_gee /2);_fd .RotateDeg (_dd ._eb );_fd .Translate (-_fdb /2,-_gee /2);_ ,_afa =_dd .RotatedSize ();};if _dd ._ad .IsRelative (){ctx .Y +=_afa ;};_afc :=_dd .duplicate ();_eed :=append (*_fd .Operations (),*_afc ._egf ...);
-_eed .WrapIfNeeded ();_afc ._egf =&_eed ;return []*Block {_afc },ctx ,nil ;};
-
-// Color interface represents colors in the PDF creator.
-type Color interface{ToRGB ()(float64 ,float64 ,float64 );};
-
-// SetTOC sets the table of content component of the creator.
-// This method should be used when building a custom table of contents.
-func (_gebc *Creator )SetTOC (toc *TOC ){if toc ==nil {return ;};_gebc ._cgfc =toc ;};
-
-// BorderColor returns the border color of the ellipse.
-func (_fgg *Ellipse )BorderColor ()Color {return _fgg ._geba };
-
-// AddTextItem appends a new item with the specified text to the list.
-// The method creates a styled paragraph with the specified text and returns
-// it so that the item style can be customized.
-// The method also returns the marker used for the newly added item.
-// The marker object can be used to change the text and style of the marker
-// for the current item.
-func (_dbbf *List )AddTextItem (text string )(*StyledParagraph ,*TextChunk ,error ){_eaba :=_ebab (_dbbf ._dgcbd );_eaba .Append (text );_ffbb ,_ebgaa :=_dbbf .Add (_eaba );return _eaba ,_ffbb ,_ebgaa ;};func _cccec (_gcaa *templateProcessor ,_ebabe *templateNode )(interface{},error ){return _gcaa .parseEllipse (_ebabe );
-};func _abcf (_agbec *templateProcessor ,_febeb *templateNode )(interface{},error ){return _agbec .parseDivision (_febeb );};
-
-// NewCellProps returns the default properties of an invoice cell.
-func (_bddbe *Invoice )NewCellProps ()InvoiceCellProps {_feca :=ColorRGBFrom8bit (255,255,255);return InvoiceCellProps {TextStyle :_bddbe ._bagd ,Alignment :CellHorizontalAlignmentLeft ,BackgroundColor :_feca ,BorderColor :_feca ,BorderWidth :1,BorderSides :[]CellBorderSide {CellBorderSideAll }};
-};
-
-// ToRGB implements interface Color.
-// Note: It's not directly used since shading color works differently than regular color.
-func (_fbbf *LinearShading )ToRGB ()(float64 ,float64 ,float64 ){return 0,0,0};
-
-// NewTextChunk returns a new text chunk instance.
-func NewTextChunk (text string ,style TextStyle )*TextChunk {return &TextChunk {Text :text ,Style :style ,VerticalAlignment :TextVerticalAlignmentBaseline };};
-
-// SetTextOverflow controls the behavior of paragraph text which
-// does not fit in the available space.
-func (_eeaea *StyledParagraph )SetTextOverflow (textOverflow TextOverflow ){_eeaea ._gffa =textOverflow ;};func (_efdac *TableCell )cloneProps (_fgcb VectorDrawable )*TableCell {_beeb :=*_efdac ;_beeb ._afgda =_fgcb ;return &_beeb ;};func _aeca (_ceg ,_ecab *_gf .PdfPageResources )error {_aaac ,_ :=_ceg .GetColorspaces ();
-if _aaac !=nil &&len (_aaac .Colorspaces )> 0{for _def ,_baa :=range _aaac .Colorspaces {_aea :=*_acb .MakeName (_def );if _ecab .HasColorspaceByName (_aea ){continue ;};_cg :=_ecab .SetColorspaceByName (_aea ,_baa );if _cg !=nil {return _cg ;};};};return nil ;
-};
-
-// Heading returns the heading component of the table of contents.
-func (_ggbde *TOC )Heading ()*StyledParagraph {return _ggbde ._faef };func (_dfbdc *StyledParagraph )getTextHeight ()float64 {var _ebca float64 ;for _ ,_fcbbg :=range _dfbdc ._gdae {_decd :=_fcbbg .Style .FontSize *_dfbdc ._edccf ;if _decd > _ebca {_ebca =_decd ;
-};};return _ebca ;};
-
-// SetBorderLineStyle sets border style (currently dashed or plain).
-func (_abgc *TableCell )SetBorderLineStyle (style _g .LineStyle ){_abgc ._bdbd =style };
-
-// GetMargins returns the Chapter's margin: left, right, top, bottom.
-func (_ffaa *Chapter )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _ffaa ._fbcg .Left ,_ffaa ._fbcg .Right ,_ffaa ._fbcg .Top ,_ffaa ._fbcg .Bottom ;};
-
-// GetMargins returns the margins of the TOC line: left, right, top, bottom.
-func (_bdfae *TOCLine )GetMargins ()(float64 ,float64 ,float64 ,float64 ){_bbddg :=&_bdfae ._dfbba ._gdfc ;return _bdfae ._gbed ,_bbddg .Right ,_bbddg .Top ,_bbddg .Bottom ;};
 
 // EnableRowWrap controls whether rows are wrapped across pages.
 // NOTE: Currently, row wrapping is supported for rows using StyledParagraphs.
-func (_ecgfb *Table )EnableRowWrap (enable bool ){_ecgfb ._bfbf =enable };
-
-// AddShadingResource adds shading dictionary inside the resources dictionary.
-func (_egaa *LinearShading )AddShadingResource (block *Block )(_fafd _acb .PdfObjectName ,_dcfg error ){_ecga :=1;_fafd =_acb .PdfObjectName ("\u0053\u0068"+_egd .Itoa (_ecga ));for block ._cff .HasShadingByName (_fafd ){_ecga ++;_fafd =_acb .PdfObjectName ("\u0053\u0068"+_egd .Itoa (_ecga ));
-};if _ffbeb :=block ._cff .SetShadingByName (_fafd ,_egaa .shadingModel ().ToPdfObject ());_ffbeb !=nil {return "",_ffbeb ;};return _fafd ,nil ;};func (_eddg *templateProcessor )parseBorderRadiusAttr (_fdfg ,_bdbge string )(_acede ,_deacf ,_gacaa ,_gbaed float64 ){_cf .Log .Debug ("\u0050a\u0072\u0073i\u006e\u0067\u0020\u0062o\u0072\u0064\u0065r\u0020\u0072\u0061\u0064\u0069\u0075\u0073\u0020\u0061tt\u0072\u0069\u0062u\u0074\u0065:\u0020\u0028\u0060\u0025\u0073\u0060,\u0020\u0025s\u0029\u002e",_fdfg ,_bdbge );
-switch _dfgg :=_eg .Fields (_bdbge );len (_dfgg ){case 1:_acede ,_ =_egd .ParseFloat (_dfgg [0],64);_deacf =_acede ;_gacaa =_acede ;_gbaed =_acede ;case 2:_acede ,_ =_egd .ParseFloat (_dfgg [0],64);_gacaa =_acede ;_deacf ,_ =_egd .ParseFloat (_dfgg [1],64);
-_gbaed =_deacf ;case 3:_acede ,_ =_egd .ParseFloat (_dfgg [0],64);_deacf ,_ =_egd .ParseFloat (_dfgg [1],64);_gbaed =_deacf ;_gacaa ,_ =_egd .ParseFloat (_dfgg [2],64);case 4:_acede ,_ =_egd .ParseFloat (_dfgg [0],64);_deacf ,_ =_egd .ParseFloat (_dfgg [1],64);
-_gacaa ,_ =_egd .ParseFloat (_dfgg [2],64);_gbaed ,_ =_egd .ParseFloat (_dfgg [3],64);};return _acede ,_deacf ,_gacaa ,_gbaed ;};func (_cde *TableCell )width (_fbca []float64 ,_gbbge float64 )float64 {_agae :=float64 (0.0);for _bace :=0;_bace < _cde ._adcd ;
-_bace ++{_agae +=_fbca [_cde ._bgege +_bace -1];};return _agae *_gbbge ;};
-
-// ScaleToWidth sets the graphic svg scaling factor with the given width.
-func (_cabda *GraphicSVG )ScaleToWidth (w float64 ){_cecf :=_cabda ._febb .Height /_cabda ._febb .Width ;_cabda ._febb .Width =w ;_cabda ._febb .Height =w *_cecf ;_cabda ._febb .SetScaling (_cecf ,_cecf );};
-
-// SetLinePageStyle sets the style for the page part of all new lines
-// of the table of contents.
-func (_fgae *TOC )SetLinePageStyle (style TextStyle ){_fgae ._daadg =style };
-
-// SetTitle sets the title of the invoice.
-func (_ecbg *Invoice )SetTitle (title string ){_ecbg ._ggca =title };func _bgfg (_eec string ,_gfaf _acb .PdfObject ,_gfb *_gf .PdfPageResources )_acb .PdfObjectName {_bbg :=_eg .TrimRightFunc (_eg .TrimSpace (_eec ),func (_fce rune )bool {return _dc .IsNumber (_fce )});
-if _bbg ==""{_bbg ="\u0046\u006f\u006e\u0074";};_dbb :=0;_cac :=_acb .PdfObjectName (_eec );for {_bfee ,_ffac :=_gfb .GetFontByName (_cac );if !_ffac ||_bfee ==_gfaf {break ;};_dbb ++;_cac =_acb .PdfObjectName (_agd .Sprintf ("\u0025\u0073\u0025\u0064",_bbg ,_dbb ));
-};return _cac ;};
-
-// SetAngle sets the rotation angle in degrees.
-func (_adca *Block )SetAngle (angleDeg float64 ){_adca ._eb =angleDeg };
-
-// NewBlock creates a new Block with specified width and height.
-func NewBlock (width float64 ,height float64 )*Block {_cea :=&Block {};_cea ._egf =&_cd .ContentStreamOperations {};_cea ._cff =_gf .NewPdfPageResources ();_cea ._fgd =width ;_cea ._ce =height ;return _cea ;};func (_eaegg *templateProcessor )parseImage (_fcgcd *templateNode )(interface{},error ){var _dddb string ;
-for _ ,_ecgcd :=range _fcgcd ._feaff .Attr {_abae :=_ecgcd .Value ;switch _fadda :=_ecgcd .Name .Local ;_fadda {case "\u0073\u0072\u0063":_dddb =_abae ;};};_egfed ,_defea :=_eaegg .loadImageFromSrc (_dddb );if _defea !=nil {return nil ,_defea ;};for _ ,_bfcfb :=range _fcgcd ._feaff .Attr {_bggae :=_bfcfb .Value ;
-switch _cgdf :=_bfcfb .Name .Local ;_cgdf {case "\u0061\u006c\u0069g\u006e":_egfed .SetHorizontalAlignment (_eaegg .parseHorizontalAlignmentAttr (_cgdf ,_bggae ));case "\u006fp\u0061\u0063\u0069\u0074\u0079":_egfed .SetOpacity (_eaegg .parseFloatAttr (_cgdf ,_bggae ));
-case "\u006d\u0061\u0072\u0067\u0069\u006e":_fcadg :=_eaegg .parseMarginAttr (_cgdf ,_bggae );_egfed .SetMargins (_fcadg .Left ,_fcadg .Right ,_fcadg .Top ,_fcadg .Bottom );case "\u0066\u0069\u0074\u002d\u006d\u006f\u0064\u0065":_egfed .SetFitMode (_eaegg .parseFitModeAttr (_cgdf ,_bggae ));
-case "\u0078":_egfed .SetPos (_eaegg .parseFloatAttr (_cgdf ,_bggae ),_egfed ._ggbg );case "\u0079":_egfed .SetPos (_egfed ._ecadg ,_eaegg .parseFloatAttr (_cgdf ,_bggae ));case "\u0077\u0069\u0064t\u0068":_egfed .SetWidth (_eaegg .parseFloatAttr (_cgdf ,_bggae ));
-case "\u0068\u0065\u0069\u0067\u0068\u0074":_egfed .SetHeight (_eaegg .parseFloatAttr (_cgdf ,_bggae ));case "\u0061\u006e\u0067l\u0065":_egfed .SetAngle (_eaegg .parseFloatAttr (_cgdf ,_bggae ));case "\u0073\u0072\u0063":break ;default:_cf .Log .Debug ("\u0055n\u0073\u0075p\u0070\u006f\u0072\u0074e\u0064\u0020\u0069m\u0061\u0067\u0065\u0020\u0061\u0074\u0074\u0072\u0069bu\u0074\u0065\u003a \u0060\u0025s\u0060\u002e\u0020\u0053\u006b\u0069p\u0070\u0069n\u0067\u002e",_cgdf );
-};};return _egfed ,nil ;};
-
-// Height returns the height of the chart.
-func (_dfe *Chart )Height ()float64 {return float64 (_dfe ._dde .Height ())};func _gbffc (_cfbg *Block ,_ecbc *Image ,_abfb DrawContext )(DrawContext ,error ){_fef :=_abfb ;_gcec :=1;_bbec :=_acb .PdfObjectName (_agd .Sprintf ("\u0049\u006d\u0067%\u0064",_gcec ));
-for _cfbg ._cff .HasXObjectByName (_bbec ){_gcec ++;_bbec =_acb .PdfObjectName (_agd .Sprintf ("\u0049\u006d\u0067%\u0064",_gcec ));};_eece :=_cfbg ._cff .SetXObjectImageByName (_bbec ,_ecbc ._ddec );if _eece !=nil {return _abfb ,_eece ;};_agab :=0;_dbba :=_acb .PdfObjectName (_agd .Sprintf ("\u0047\u0053\u0025\u0064",_agab ));
-for _cfbg ._cff .HasExtGState (_dbba ){_agab ++;_dbba =_acb .PdfObjectName (_agd .Sprintf ("\u0047\u0053\u0025\u0064",_agab ));};_fgeb :=_acb .MakeDict ();_fgeb .Set ("\u0042\u004d",_acb .MakeName ("\u004e\u006f\u0072\u006d\u0061\u006c"));if _ecbc ._cbfe < 1.0{_fgeb .Set ("\u0043\u0041",_acb .MakeFloat (_ecbc ._cbfe ));
-_fgeb .Set ("\u0063\u0061",_acb .MakeFloat (_ecbc ._cbfe ));};_eece =_cfbg ._cff .AddExtGState (_dbba ,_acb .MakeIndirectObject (_fgeb ));if _eece !=nil {return _abfb ,_eece ;};_beba :=_ecbc .Width ();_eafc :=_ecbc .Height ();_ ,_acfc :=_ecbc .rotatedSize ();
-_debf :=_abfb .X ;_acfg :=_abfb .PageHeight -_abfb .Y -_eafc ;if _ecbc ._ebff .IsRelative (){_acfg -=(_acfc -_eafc )/2;switch _ecbc ._fddg {case HorizontalAlignmentCenter :_debf +=(_abfb .Width -_beba )/2;case HorizontalAlignmentRight :_debf =_abfb .PageWidth -_abfb .Margins .Right -_ecbc ._gbeae .Right -_beba ;
-};};_cefe :=_ecbc ._agebb ;_gad :=_cd .NewContentCreator ();_gad .Add_gs (_dbba );_gad .Translate (_debf ,_acfg );if _cefe !=0{_gad .Translate (_beba /2,_eafc /2);_gad .RotateDeg (_cefe );_gad .Translate (-_beba /2,-_eafc /2);};_gad .Scale (_beba ,_eafc ).Add_Do (_bbec );
-_fcbd :=_gad .Operations ();_fcbd .WrapIfNeeded ();_cfbg .addContents (_fcbd );if _ecbc ._ebff .IsRelative (){_abfb .Y +=_acfc ;_abfb .Height -=_acfc ;return _abfb ,nil ;};return _fef ,nil ;};
-
-// Margins represents page margins or margins around an element.
-type Margins struct{Left float64 ;Right float64 ;Top float64 ;Bottom float64 ;};
-
-// SetTextAlignment sets the horizontal alignment of the text within the space provided.
-func (_adgf *StyledParagraph )SetTextAlignment (align TextAlignment ){_adgf ._cbcbb =align };
-
-// AddPatternResource adds pattern dictionary inside the resources dictionary.
-func (_agfcb *LinearShading )AddPatternResource (block *Block )(_cfce _acb .PdfObjectName ,_egfae error ){_aaef :=1;_cdff :=_acb .PdfObjectName ("\u0050"+_egd .Itoa (_aaef ));for block ._cff .HasPatternByName (_cdff ){_aaef ++;_cdff =_acb .PdfObjectName ("\u0050"+_egd .Itoa (_aaef ));
-};if _eeec :=block ._cff .SetPatternByName (_cdff ,_agfcb .ToPdfShadingPattern ().ToPdfObject ());_eeec !=nil {return "",_eeec ;};return _cdff ,nil ;};
-
-// NewColumn returns a new column for the line items invoice table.
-func (_gaaba *Invoice )NewColumn (description string )*InvoiceCell {return _gaaba .newColumn (description ,CellHorizontalAlignmentLeft );};
-
-// SetBorderWidth sets the border width of the ellipse.
-func (_gfbg *Ellipse )SetBorderWidth (bw float64 ){_gfbg ._aged =bw };
-
-// AddPage adds the specified page to the creator.
-// NOTE: If the page has a Rotate flag, the creator will take care of
-// transforming the contents to maintain the correct orientation.
-func (_gda *Creator )AddPage (page *_gf .PdfPage )error {_afbga ,_ddgbe :=page .GetMediaBox ();if _ddgbe !=nil {_cf .Log .Debug ("\u0046\u0061\u0069l\u0065\u0064\u0020\u0074o\u0020\u0067\u0065\u0074\u0020\u0070\u0061g\u0065\u0020\u006d\u0065\u0064\u0069\u0061\u0062\u006f\u0078\u003a\u0020\u0025\u0076",_ddgbe );
-return _ddgbe ;};_afbga .Normalize ();_ggce ,_fagb :=_afbga .Llx ,_afbga .Lly ;_ecdb :=_afbga ;if _dcf :=page .CropBox ;_dcf !=nil &&*_dcf !=*_afbga {_dcf .Normalize ();_ggce ,_fagb =_dcf .Llx ,_dcf .Lly ;_ecdb =_dcf ;};_cbe :=_fg .IdentityMatrix ();_bggc ,_ddgbe :=page .GetRotate ();
-if _ddgbe !=nil {_cf .Log .Debug ("\u0045\u0052R\u004f\u0052\u003a\u0020\u0025\u0073\u0020\u002d\u0020\u0069\u0067\u006e\u006f\u0072\u0069\u006e\u0067\u0020\u0061\u006e\u0064\u0020\u0061\u0073\u0073\u0075\u006d\u0069\u006e\u0067\u0020\u006e\u006f\u0020\u0072\u006f\u0074\u0061\u0074\u0069\u006f\u006e\u000a",_ddgbe .Error ());
-};_dafc :=_bggc %360!=0&&_bggc %90==0;if _dafc {_beaa :=float64 ((360+_bggc %360)%360);if _beaa ==90{_cbe =_cbe .Translate (_ecdb .Width (),0);}else if _beaa ==180{_cbe =_cbe .Translate (_ecdb .Width (),_ecdb .Height ());}else if _beaa ==270{_cbe =_cbe .Translate (0,_ecdb .Height ());
-};_cbe =_cbe .Mult (_fg .RotationMatrix (_beaa *_ee .Pi /180));_cbe =_cbe .Round (0.000001);_bcc :=_aadc (_ecdb ,_cbe );_ecdb =_bcc ;_ecdb .Normalize ();};if _ggce !=0||_fagb !=0{_cbe =_fg .TranslationMatrix (_ggce ,_fagb ).Mult (_cbe );};if !_cbe .Identity (){_cbe =_cbe .Round (0.000001);
-_gda ._abf [page ]=&pageTransformations {_caab :&_cbe };};_gda ._bfda =_ecdb .Width ();_gda ._fbe =_ecdb .Height ();_gda .initContext ();_gda ._geac =append (_gda ._geac ,page );_gda ._fagd .Page ++;return nil ;};
-
-// SetLineSeparatorStyle sets the style for the separator part of all new
-// lines of the table of contents.
-func (_dggdb *TOC )SetLineSeparatorStyle (style TextStyle ){_dggdb ._fadbf =style };
-
-// DashPattern returns the dash pattern of the line.
-func (_beegg *Line )DashPattern ()(_decf []int64 ,_bfcf int64 ){return _beegg ._deaff ,_beegg ._gdcae };
-
-// Height returns the total height of all rows.
-func (_eead *Table )Height ()float64 {_cdgce :=float64 (0.0);for _ ,_eeegg :=range _eead ._gdgf {_cdgce +=_eeegg ;};return _cdgce ;};
-
-// SetStyle sets the style of the line (solid or dashed).
-func (_eace *Line )SetStyle (style _g .LineStyle ){_eace ._fggb =style };
-
-// SetTerms sets the terms and conditions section of the invoice.
-func (_cdae *Invoice )SetTerms (title ,content string ){_cdae ._cdgd =[2]string {title ,content }};type marginDrawable interface{VectorDrawable ;GetMargins ()(float64 ,float64 ,float64 ,float64 );};func (_cfbf *pageTransformations )transformBlock (_badcb *Block ){if _cfbf ._caab !=nil {_badcb .transform (*_cfbf ._caab );
-};};
-
-// SetHorizontalAlignment sets the cell's horizontal alignment of content.
-// Can be one of:
-// - CellHorizontalAlignmentLeft
-// - CellHorizontalAlignmentCenter
-// - CellHorizontalAlignmentRight
-func (_eegcc *TableCell )SetHorizontalAlignment (halign CellHorizontalAlignment ){_eegcc ._efed =halign ;};
-
-// ScaleToHeight scales the rectangle to the specified height. The width of
-// the rectangle is scaled so that the aspect ratio is maintained.
-func (_cggbg *Rectangle )ScaleToHeight (h float64 ){_aegbf :=_cggbg ._adeb /_cggbg ._dffef ;_cggbg ._dffef =h ;_cggbg ._adeb =h *_aegbf ;};func _deegc (_feea *templateProcessor ,_ceage *templateNode )(interface{},error ){return _feea .parseLine (_ceage );
-};func (_bebg *Invoice )generateNoteBlocks (_ccfg DrawContext )([]*Block ,DrawContext ,error ){_ebgg :=_cbb ();_ddca :=append ([][2]string {_bebg ._gedg ,_bebg ._cdgd },_bebg ._ecff ...);for _ ,_cgdc :=range _ddca {if _cgdc [1]!=""{_afeead :=_bebg .drawSection (_cgdc [0],_cgdc [1]);
-for _ ,_cffa :=range _afeead {_ebgg .Add (_cffa );};_cecbc :=_ebab (_bebg ._bagd );_cecbc .SetMargins (0,0,10,0);_ebgg .Add (_cecbc );};};return _ebgg .GeneratePageBlocks (_ccfg );};func _ccbb (_cbab ,_effa TextStyle )*Invoice {_dfcdf :=&Invoice {_ggca :"\u0049N\u0056\u004f\u0049\u0043\u0045",_cfee :"\u002c\u0020",_bagd :_cbab ,_geea :_effa };
-_dfcdf ._cedb =&InvoiceAddress {Separator :_dfcdf ._cfee };_dfcdf ._bcdc =&InvoiceAddress {Heading :"\u0042i\u006c\u006c\u0020\u0074\u006f",Separator :_dfcdf ._cfee };_eegc :=ColorRGBFrom8bit (245,245,245);_cbagb :=ColorRGBFrom8bit (155,155,155);_dfcdf ._dcgf =_effa ;
-_dfcdf ._dcgf .Color =_cbagb ;_dfcdf ._dcgf .FontSize =20;_dfcdf ._cfgg =_cbab ;_dfcdf ._dfbb =_effa ;_dfcdf ._bggdb =_cbab ;_dfcdf ._cggf =_effa ;_dfcdf ._eedg =_dfcdf .NewCellProps ();_dfcdf ._eedg .BackgroundColor =_eegc ;_dfcdf ._eedg .TextStyle =_effa ;
-_dfcdf ._ebcb =_dfcdf .NewCellProps ();_dfcdf ._ebcb .TextStyle =_effa ;_dfcdf ._ebcb .BackgroundColor =_eegc ;_dfcdf ._ebcb .BorderColor =_eegc ;_dfcdf ._aed =_dfcdf .NewCellProps ();_dfcdf ._aed .BorderColor =_eegc ;_dfcdf ._aed .BorderSides =[]CellBorderSide {CellBorderSideBottom };
-_dfcdf ._aed .Alignment =CellHorizontalAlignmentRight ;_dfcdf ._facf =_dfcdf .NewCellProps ();_dfcdf ._facf .Alignment =CellHorizontalAlignmentRight ;_dfcdf ._cfgb =[2]*InvoiceCell {_dfcdf .newCell ("\u0049\u006e\u0076\u006f\u0069\u0063\u0065\u0020\u006eu\u006d\u0062\u0065\u0072",_dfcdf ._eedg ),_dfcdf .newCell ("",_dfcdf ._eedg )};
-_dfcdf ._bggdg =[2]*InvoiceCell {_dfcdf .newCell ("\u0044\u0061\u0074\u0065",_dfcdf ._eedg ),_dfcdf .newCell ("",_dfcdf ._eedg )};_dfcdf ._acgf =[2]*InvoiceCell {_dfcdf .newCell ("\u0044\u0075\u0065\u0020\u0044\u0061\u0074\u0065",_dfcdf ._eedg ),_dfcdf .newCell ("",_dfcdf ._eedg )};
-_dfcdf ._ecgfa =[2]*InvoiceCell {_dfcdf .newCell ("\u0053\u0075\u0062\u0074\u006f\u0074\u0061\u006c",_dfcdf ._facf ),_dfcdf .newCell ("",_dfcdf ._facf )};_fafg :=_dfcdf ._facf ;_fafg .TextStyle =_effa ;_fafg .BackgroundColor =_eegc ;_fafg .BorderColor =_eegc ;
-_dfcdf ._aefbg =[2]*InvoiceCell {_dfcdf .newCell ("\u0054\u006f\u0074a\u006c",_fafg ),_dfcdf .newCell ("",_fafg )};_dfcdf ._gedg =[2]string {"\u004e\u006f\u0074e\u0073",""};_dfcdf ._cdgd =[2]string {"T\u0065r\u006d\u0073\u0020\u0061\u006e\u0064\u0020\u0063o\u006e\u0064\u0069\u0074io\u006e\u0073",""};
-_dfcdf ._bacc =[]*InvoiceCell {_dfcdf .newColumn ("D\u0065\u0073\u0063\u0072\u0069\u0070\u0074\u0069\u006f\u006e",CellHorizontalAlignmentLeft ),_dfcdf .newColumn ("\u0051\u0075\u0061\u006e\u0074\u0069\u0074\u0079",CellHorizontalAlignmentRight ),_dfcdf .newColumn ("\u0055\u006e\u0069\u0074\u0020\u0070\u0072\u0069\u0063\u0065",CellHorizontalAlignmentRight ),_dfcdf .newColumn ("\u0041\u006d\u006f\u0075\u006e\u0074",CellHorizontalAlignmentRight )};
-return _dfcdf ;};
-
-// SetBorder sets the cell's border style.
-func (_cgdb *TableCell )SetBorder (side CellBorderSide ,style CellBorderStyle ,width float64 ){if style ==CellBorderStyleSingle &&side ==CellBorderSideAll {_cgdb ._cgafa =CellBorderStyleSingle ;_cgdb ._cefdc =width ;_cgdb ._gfcgd =CellBorderStyleSingle ;
-_cgdb ._ggbc =width ;_cgdb ._febbf =CellBorderStyleSingle ;_cgdb ._dadga =width ;_cgdb ._cadag =CellBorderStyleSingle ;_cgdb ._ebbbd =width ;}else if style ==CellBorderStyleDouble &&side ==CellBorderSideAll {_cgdb ._cgafa =CellBorderStyleDouble ;_cgdb ._cefdc =width ;
-_cgdb ._gfcgd =CellBorderStyleDouble ;_cgdb ._ggbc =width ;_cgdb ._febbf =CellBorderStyleDouble ;_cgdb ._dadga =width ;_cgdb ._cadag =CellBorderStyleDouble ;_cgdb ._ebbbd =width ;}else if (style ==CellBorderStyleSingle ||style ==CellBorderStyleDouble )&&side ==CellBorderSideLeft {_cgdb ._cgafa =style ;
-_cgdb ._cefdc =width ;}else if (style ==CellBorderStyleSingle ||style ==CellBorderStyleDouble )&&side ==CellBorderSideBottom {_cgdb ._gfcgd =style ;_cgdb ._ggbc =width ;}else if (style ==CellBorderStyleSingle ||style ==CellBorderStyleDouble )&&side ==CellBorderSideRight {_cgdb ._febbf =style ;
-_cgdb ._dadga =width ;}else if (style ==CellBorderStyleSingle ||style ==CellBorderStyleDouble )&&side ==CellBorderSideTop {_cgdb ._cadag =style ;_cgdb ._ebbbd =width ;};};func (_ceecb *RadialShading )shadingModel ()*_gf .PdfShadingType3 {_cbeae ,_dfeg ,_egdac :=_ceecb ._acce ._adddc .ToRGB ();
-var _aced _g .Point ;switch _ceecb ._bdded {case AnchorBottomLeft :_aced =_g .Point {X :_ceecb ._bbgb .Llx ,Y :_ceecb ._bbgb .Lly };case AnchorBottomRight :_aced =_g .Point {X :_ceecb ._bbgb .Urx ,Y :_ceecb ._bbgb .Ury -_ceecb ._bbgb .Height ()};case AnchorTopLeft :_aced =_g .Point {X :_ceecb ._bbgb .Llx ,Y :_ceecb ._bbgb .Lly +_ceecb ._bbgb .Height ()};
-case AnchorTopRight :_aced =_g .Point {X :_ceecb ._bbgb .Urx ,Y :_ceecb ._bbgb .Ury };case AnchorLeft :_aced =_g .Point {X :_ceecb ._bbgb .Llx ,Y :_ceecb ._bbgb .Lly +_ceecb ._bbgb .Height ()/2};case AnchorTop :_aced =_g .Point {X :_ceecb ._bbgb .Llx +_ceecb ._bbgb .Width ()/2,Y :_ceecb ._bbgb .Ury };
-case AnchorRight :_aced =_g .Point {X :_ceecb ._bbgb .Urx ,Y :_ceecb ._bbgb .Lly +_ceecb ._bbgb .Height ()/2};case AnchorBottom :_aced =_g .Point {X :_ceecb ._bbgb .Urx +_ceecb ._bbgb .Width ()/2,Y :_ceecb ._bbgb .Lly };default:_aced =_g .NewPoint (_ceecb ._bbgb .Llx +_ceecb ._bbgb .Width ()/2,_ceecb ._bbgb .Lly +_ceecb ._bbgb .Height ()/2);
-};_bddbef :=_ceecb ._cfgd ;_cfdbc :=_ceecb ._ccfad ;_cadfb :=_aced .X +_ceecb ._edebb ;_egdec :=_aced .Y +_ceecb ._bdbf ;if _bddbef ==-1.0{_bddbef =0.0;};if _cfdbc ==-1.0{var _egbcg []float64 ;_cegge :=_ee .Pow (_cadfb -_ceecb ._bbgb .Llx ,2)+_ee .Pow (_egdec -_ceecb ._bbgb .Lly ,2);
-_egbcg =append (_egbcg ,_ee .Abs (_cegge ));_bfdb :=_ee .Pow (_cadfb -_ceecb ._bbgb .Llx ,2)+_ee .Pow (_ceecb ._bbgb .Lly +_ceecb ._bbgb .Height ()-_egdec ,2);_egbcg =append (_egbcg ,_ee .Abs (_bfdb ));_bebga :=_ee .Pow (_ceecb ._bbgb .Urx -_cadfb ,2)+_ee .Pow (_egdec -_ceecb ._bbgb .Ury -_ceecb ._bbgb .Height (),2);
-_egbcg =append (_egbcg ,_ee .Abs (_bebga ));_dacf :=_ee .Pow (_ceecb ._bbgb .Urx -_cadfb ,2)+_ee .Pow (_ceecb ._bbgb .Ury -_egdec ,2);_egbcg =append (_egbcg ,_ee .Abs (_dacf ));_aa .Slice (_egbcg ,func (_dedbg ,_eadc int )bool {return _dedbg > _eadc });
-_cfdbc =_ee .Sqrt (_egbcg [0]);};_egbg :=&_gf .PdfRectangle {Llx :_cadfb -_cfdbc ,Lly :_egdec -_cfdbc ,Urx :_cadfb +_cfdbc ,Ury :_egdec +_cfdbc };_cegaf :=_gf .NewPdfShadingType3 ();_cegaf .PdfShading .ShadingType =_acb .MakeInteger (3);_cegaf .PdfShading .ColorSpace =_gf .NewPdfColorspaceDeviceRGB ();
-_cegaf .PdfShading .Background =_acb .MakeArrayFromFloats ([]float64 {_cbeae ,_dfeg ,_egdac });_cegaf .PdfShading .BBox =_egbg ;_cegaf .PdfShading .AntiAlias =_acb .MakeBool (_ceecb ._acce ._dgdf );_cegaf .Coords =_acb .MakeArrayFromFloats ([]float64 {_cadfb ,_egdec ,_bddbef ,_cadfb ,_egdec ,_cfdbc });
-_cegaf .Domain =_acb .MakeArrayFromFloats ([]float64 {0.0,1.0});_cegaf .Extend =_acb .MakeArray (_acb .MakeBool (_ceecb ._acce ._gfaae [0]),_acb .MakeBool (_ceecb ._acce ._gfaae [1]));_cegaf .Function =_ceecb ._acce .generatePdfFunctions ();return _cegaf ;
-};func (_dcead *templateProcessor )parseHorizontalAlignmentAttr (_adbgg ,_fbcge string )HorizontalAlignment {_cf .Log .Debug ("\u0050\u0061\u0072\u0073\u0069n\u0067\u0020\u0068\u006f\u0072\u0069\u007a\u006f\u006e\u0074\u0061\u006c\u0020a\u006c\u0069\u0067\u006e\u006d\u0065\u006e\u0074\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0028\u0060\u0025\u0073\u0060\u002c\u0020\u0025\u0073\u0029.",_adbgg ,_fbcge );
-_accga :=map[string ]HorizontalAlignment {"\u006c\u0065\u0066\u0074":HorizontalAlignmentLeft ,"\u0063\u0065\u006e\u0074\u0065\u0072":HorizontalAlignmentCenter ,"\u0072\u0069\u0067h\u0074":HorizontalAlignmentRight }[_fbcge ];return _accga ;};
-
-// Height returns the current page height.
-func (_aece *Creator )Height ()float64 {return _aece ._fbe };var (_gbbcd =_c .MustCompile ("\u0028[\u005cw\u002d\u005d\u002b\u0029\u005c(\u0027\u0028.\u002b\u0029\u0027\u005c\u0029");_fgadg =_d .New ("\u0069\u006e\u0076\u0061\u006c\u0069d\u0020\u0074\u0065\u006d\u0070\u006c\u0061\u0074\u0065\u0020\u0063\u0072\u0065a\u0074\u006f\u0072\u0020\u0069\u006e\u0073t\u0061\u006e\u0063\u0065");
-_gbcf =_d .New ("\u0069\u006e\u0076\u0061l\u0069\u0064\u0020\u0074\u0065\u006d\u0070\u006c\u0061\u0074e\u0020p\u0061\u0072\u0065\u006e\u0074\u0020\u006eo\u0064\u0065");_adebg =_d .New ("i\u006e\u0076\u0061\u006c\u0069\u0064 \u0074\u0065\u006d\u0070\u006c\u0061\u0074\u0065\u0020c\u0068\u0069\u006cd\u0020n\u006f\u0064\u0065");
-_gfeb =_d .New ("\u0069n\u0076\u0061\u006c\u0069d\u0020\u0074\u0065\u006d\u0070l\u0061t\u0065 \u0072\u0065\u0073\u006f\u0075\u0072\u0063e"););
-
-// ColorCMYKFromArithmetic creates a Color from arithmetic color values (0-1).
-// Example:
-//   green := ColorCMYKFromArithmetic(1.0, 0.0, 1.0, 0.0)
-func ColorCMYKFromArithmetic (c ,m ,y ,k float64 )Color {return cmykColor {_cadf :_ee .Max (_ee .Min (c ,1.0),0.0),_dfb :_ee .Max (_ee .Min (m ,1.0),0.0),_cgcf :_ee .Max (_ee .Min (y ,1.0),0.0),_efa :_ee .Max (_ee .Min (k ,1.0),0.0)};};func (_edccg *templateProcessor )parseTextVerticalAlignmentAttr (_ddfb ,_fecec string )TextVerticalAlignment {_cf .Log .Debug ("\u0050\u0061\u0072\u0073\u0069\u006e\u0067\u0020\u0074\u0065\u0078\u0074\u0020\u0076\u0065r\u0074\u0069\u0063\u0061\u006c\u0020\u0061\u006c\u0069\u0067\u006e\u006d\u0065n\u0074\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a (\u0060\u0025\u0073\u0060\u002c\u0020\u0025\u0073\u0029\u002e",_ddfb ,_fecec );
-_gggcb :=map[string ]TextVerticalAlignment {"\u0062\u0061\u0073\u0065\u006c\u0069\u006e\u0065":TextVerticalAlignmentBaseline ,"\u0063\u0065\u006e\u0074\u0065\u0072":TextVerticalAlignmentCenter }[_fecec ];return _gggcb ;};func _egdd (_agdbf *Chapter ,_gaf *TOC ,_gde *_gf .Outline ,_gdg string ,_defd int ,_bbgc TextStyle )*Chapter {var _baf uint =1;
-if _agdbf !=nil {_baf =_agdbf ._dba +1;};_ggg :=&Chapter {_fagg :_defd ,_gfbfc :_gdg ,_agbcd :true ,_aaaa :true ,_bcgb :_agdbf ,_acc :_gaf ,_ffffg :_gde ,_cgc :[]Drawable {},_dba :_baf };_abc :=_edef (_ggg .headingText (),_bbgc );_abc .SetFont (_bbgc .Font );
-_abc .SetFontSize (_bbgc .FontSize );_ggg ._agdbe =_abc ;return _ggg ;};
-
-// NewImage create a new image from a unidoc image (model.Image).
-func (_bbff *Creator )NewImage (img *_gf .Image )(*Image ,error ){return _ddga (img )};
-
-// Width returns the Block's width.
-func (_bgg *Block )Width ()float64 {return _bgg ._fgd };
+func (_agaee *Table )EnableRowWrap (enable bool ){_agaee ._cfbac =enable };
 
 // ColorRGBFromHex converts color hex code to rgb color for using with creator.
 // NOTE: If there is a problem interpreting the string, then will use black color and log a debug message.
 // Example hex code: #ffffff -> (1,1,1) white.
-func ColorRGBFromHex (hexStr string )Color {_cdfa :=rgbColor {};if (len (hexStr )!=4&&len (hexStr )!=7)||hexStr [0]!='#'{_cf .Log .Debug ("I\u006ev\u0061\u006c\u0069\u0064\u0020\u0068\u0065\u0078 \u0063\u006f\u0064\u0065: \u0025\u0073",hexStr );return _cdfa ;
-};var _acgg ,_dcgab ,_cbfd int ;if len (hexStr )==4{var _fbce ,_ddgbb ,_gbfb int ;_dgcb ,_cdcc :=_agd .Sscanf (hexStr ,"\u0023\u0025\u0031\u0078\u0025\u0031\u0078\u0025\u0031\u0078",&_fbce ,&_ddgbb ,&_gbfb );if _cdcc !=nil {_cf .Log .Debug ("\u0049\u006e\u0076a\u006c\u0069\u0064\u0020h\u0065\u0078\u0020\u0063\u006f\u0064\u0065:\u0020\u0025\u0073\u002c\u0020\u0065\u0072\u0072\u006f\u0072\u003a\u0020\u0025\u0076",hexStr ,_cdcc );
-return _cdfa ;};if _dgcb !=3{_cf .Log .Debug ("I\u006ev\u0061\u006c\u0069\u0064\u0020\u0068\u0065\u0078 \u0063\u006f\u0064\u0065: \u0025\u0073",hexStr );return _cdfa ;};_acgg =_fbce *16+_fbce ;_dcgab =_ddgbb *16+_ddgbb ;_cbfd =_gbfb *16+_gbfb ;}else {_dagdf ,_bdeea :=_agd .Sscanf (hexStr ,"\u0023\u0025\u0032\u0078\u0025\u0032\u0078\u0025\u0032\u0078",&_acgg ,&_dcgab ,&_cbfd );
-if _bdeea !=nil {_cf .Log .Debug ("I\u006ev\u0061\u006c\u0069\u0064\u0020\u0068\u0065\u0078 \u0063\u006f\u0064\u0065: \u0025\u0073",hexStr );return _cdfa ;};if _dagdf !=3{_cf .Log .Debug ("\u0049\u006e\u0076\u0061\u006c\u0069d\u0020\u0068\u0065\u0078\u0020\u0063\u006f\u0064\u0065\u003a\u0020\u0025\u0073,\u0020\u006e\u0020\u0021\u003d\u0020\u0033 \u0028\u0025\u0064\u0029",hexStr ,_dagdf );
-return _cdfa ;};};_fcdb :=float64 (_acgg )/255.0;_bba :=float64 (_dcgab )/255.0;_efga :=float64 (_cbfd )/255.0;_cdfa ._bef =_fcdb ;_cdfa ._gdcb =_bba ;_cdfa ._dbf =_efga ;return _cdfa ;};func (_effgf *templateProcessor )parseTable (_adebga *templateNode )(interface{},error ){var _bcddgd int64 ;
-for _ ,_fdda :=range _adebga ._feaff .Attr {_ffdec :=_fdda .Value ;switch _bfefa :=_fdda .Name .Local ;_bfefa {case "\u0063o\u006c\u0075\u006d\u006e\u0073":_bcddgd =_effgf .parseInt64Attr (_bfefa ,_ffdec );};};if _bcddgd <=0{_cf .Log .Debug ("\u0049\u006e\u0076\u0061\u006c\u0069\u0064\u0020\u006eu\u006d\u0062e\u0072\u0020\u006f\u0066\u0020\u0074\u0061\u0062\u006ce\u0020\u0063\u006f\u006cu\u006d\u006e\u0073\u003a\u0020\u0025\u0064\u002e\u0020\u0053\u0065\u0074\u0074\u0069\u006e\u0067\u0020\u0074\u006f\u0020\u0031\u002e\u0020\u004f\u0075\u0074\u0070\u0075\u0074\u0020m\u0061\u0079\u0020b\u0065\u0020\u0069\u006e\u0063\u006f\u0072\u0072\u0065\u0063\u0074\u002e",_bcddgd );
-_bcddgd =1;};_edff :=_effgf .creator .NewTable (int (_bcddgd ));for _ ,_dfca :=range _adebga ._feaff .Attr {_gagdc :=_dfca .Value ;switch _fdcee :=_dfca .Name .Local ;_fdcee {case "\u0063\u006f\u006c\u0075\u006d\u006e\u002d\u0077\u0069\u0064\u0074\u0068\u0073":_edff .SetColumnWidths (_effgf .parseFloatArray (_fdcee ,_gagdc )...);
-case "\u006d\u0061\u0072\u0067\u0069\u006e":_fcecf :=_effgf .parseMarginAttr (_fdcee ,_gagdc );_edff .SetMargins (_fcecf .Left ,_fcecf .Right ,_fcecf .Top ,_fcecf .Bottom );case "\u0078":_edff .SetPos (_effgf .parseFloatAttr (_fdcee ,_gagdc ),_edff ._bdae );
-case "\u0079":_edff .SetPos (_edff ._beacg ,_effgf .parseFloatAttr (_fdcee ,_gagdc ));case "\u0068\u0065a\u0064\u0065\u0072-\u0073\u0074\u0061\u0072\u0074\u002d\u0072\u006f\u0077":_edff ._gfagg =int (_effgf .parseInt64Attr (_fdcee ,_gagdc ));case "\u0068\u0065\u0061\u0064\u0065\u0072\u002d\u0065\u006ed\u002d\u0072\u006f\u0077":_edff ._cedbc =int (_effgf .parseInt64Attr (_fdcee ,_gagdc ));
-case "\u0065n\u0061b\u006c\u0065\u002d\u0072\u006f\u0077\u002d\u0077\u0072\u0061\u0070":_edff .EnableRowWrap (_effgf .parseBoolAttr (_fdcee ,_gagdc ));case "\u0065\u006ea\u0062\u006c\u0065-\u0070\u0061\u0067\u0065\u002d\u0077\u0072\u0061\u0070":_edff .EnablePageWrap (_effgf .parseBoolAttr (_fdcee ,_gagdc ));
-case "\u0063o\u006c\u0075\u006d\u006e\u0073":break ;default:_cf .Log .Debug ("\u0055n\u0073\u0075p\u0070\u006f\u0072\u0074e\u0064\u0020\u0074a\u0062\u006c\u0065\u0020\u0061\u0074\u0074\u0072\u0069bu\u0074\u0065\u003a \u0060\u0025s\u0060\u002e\u0020\u0053\u006b\u0069p\u0070\u0069n\u0067\u002e",_fdcee );
-};};if _edff ._gfagg !=0&&_edff ._cedbc !=0{_cfaa :=_edff .SetHeaderRows (_edff ._gfagg ,_edff ._cedbc );if _cfaa !=nil {_cf .Log .Debug ("\u0043\u006ful\u0064\u0020\u006eo\u0074\u0020\u0073\u0065t t\u0061bl\u0065\u0020\u0068\u0065\u0061\u0064\u0065r \u0072\u006f\u0077\u0073\u003a\u0020\u0025v\u002e",_cfaa );
-};}else {_edff ._gfagg =0;_edff ._cedbc =0;};return _edff ,nil ;};func (_cccd *templateProcessor )parseEllipse (_cbbaf *templateNode )(interface{},error ){_ebdee :=_cccd .creator .NewEllipse (0,0,0,0);for _ ,_ebbc :=range _cbbaf ._feaff .Attr {_gada :=_ebbc .Value ;
-switch _bade :=_ebbc .Name .Local ;_bade {case "\u0063\u0078":_ebdee ._gecd =_cccd .parseFloatAttr (_bade ,_gada );case "\u0063\u0079":_ebdee ._abbb =_cccd .parseFloatAttr (_bade ,_gada );case "\u0077\u0069\u0064t\u0068":_ebdee .SetWidth (_cccd .parseFloatAttr (_bade ,_gada ));
-case "\u0068\u0065\u0069\u0067\u0068\u0074":_ebdee .SetHeight (_cccd .parseFloatAttr (_bade ,_gada ));case "\u0066\u0069\u006c\u006c\u002d\u0063\u006f\u006c\u006f\u0072":_ebdee .SetFillColor (_cccd .parseColorAttr (_bade ,_gada ));case "\u0066\u0069\u006cl\u002d\u006f\u0070\u0061\u0063\u0069\u0074\u0079":_ebdee .SetFillOpacity (_cccd .parseFloatAttr (_bade ,_gada ));
-case "\u0062\u006f\u0072d\u0065\u0072\u002d\u0063\u006f\u006c\u006f\u0072":_ebdee .SetBorderColor (_cccd .parseColorAttr (_bade ,_gada ));case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u006f\u0070a\u0063\u0069\u0074\u0079":_ebdee .SetBorderOpacity (_cccd .parseFloatAttr (_bade ,_gada ));
-case "\u0062\u006f\u0072d\u0065\u0072\u002d\u0077\u0069\u0064\u0074\u0068":_ebdee .SetBorderWidth (_cccd .parseFloatAttr (_bade ,_gada ));case "\u0070\u006f\u0073\u0069\u0074\u0069\u006f\u006e":_ebdee .SetPositioning (_cccd .parsePositioningAttr (_bade ,_gada ));
-case "\u0066\u0069\u0074\u002d\u006d\u006f\u0064\u0065":_ebdee .SetFitMode (_cccd .parseFitModeAttr (_bade ,_gada ));case "\u006d\u0061\u0072\u0067\u0069\u006e":_gbgdd :=_cccd .parseMarginAttr (_bade ,_gada );_ebdee .SetMargins (_gbgdd .Left ,_gbgdd .Right ,_gbgdd .Top ,_gbgdd .Bottom );
-default:_cf .Log .Debug ("\u0055\u006es\u0075\u0070\u0070\u006f\u0072\u0074\u0065\u0064\u0020\u0065\u006c\u006c\u0069\u0070\u0073\u0065\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073\u0060\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069\u006e\u0067\u002e",_bade );
-};};return _ebdee ,nil ;};func _ggfba (_aeaf *Block ,_aebd _gf .PdfColor ,_eeaedc Color ,_beac func ()Rectangle )error {switch _gcge :=_aebd .(type ){case *_gf .PdfColorPatternType2 :_dacae ,_cbfdfa :=_eeaedc .(*LinearShading );if !_cbfdfa {return _agd .Errorf ("\u0043\u006f\u006c\u006f\u0072\u0020\u0069\u0073\u0020\u006e\u006ft\u0020\u004c\u0069\u006e\u0065\u0061\u0072\u0053\u0068\u0061d\u0069\u006e\u0067");
-};_gedcf :=_beac ();_dacae .SetBoundingBox (_gedcf ._fgfd ,_gedcf ._aedgf ,_gedcf ._adeb ,_gedcf ._dffef );_cbd ,_acfeg :=_dacae .AddPatternResource (_aeaf );if _acfeg !=nil {return _agd .Errorf ("\u0066\u0061\u0069\u006c\u0065\u0064\u0020\u0061\u0064\u0064\u0069\u006e\u0067\u0020\u0070\u0061\u0074\u0074\u0065\u0072\u006e\u0020\u0074\u006f \u0072\u0065\u0073\u006f\u0075r\u0063\u0065s\u003a\u0020\u0025\u0076",_acfeg );
-};_gcge .PatternName =_cbd ;case *_gf .PdfColorPatternType3 :_efeb ,_faaa :=_eeaedc .(*RadialShading );if !_faaa {return _agd .Errorf ("\u0043\u006f\u006c\u006f\u0072\u0020\u0069\u0073\u0020\u006e\u006ft\u0020\u0052\u0061\u0064\u0069\u0061\u006c\u0053\u0068\u0061d\u0069\u006e\u0067");
-};_edec :=_beac ();_efeb .SetBoundingBox (_edec ._fgfd ,_edec ._aedgf ,_edec ._adeb ,_edec ._dffef );_ffdb ,_dbgb :=_efeb .AddPatternResource (_aeaf );if _dbgb !=nil {return _agd .Errorf ("\u0066\u0061\u0069\u006c\u0065\u0064\u0020\u0061\u0064\u0064\u0069\u006e\u0067\u0020\u0070\u0061\u0074\u0074\u0065\u0072\u006e\u0020\u0074\u006f \u0072\u0065\u0073\u006f\u0075r\u0063\u0065s\u003a\u0020\u0025\u0076",_dbgb );
-};_gcge .PatternName =_ffdb ;};return nil ;};type containerDrawable interface{Drawable ;
+func ColorRGBFromHex (hexStr string )Color {_eggg :=rgbColor {};if (len (hexStr )!=4&&len (hexStr )!=7)||hexStr [0]!='#'{_da .Log .Debug ("I\u006ev\u0061\u006c\u0069\u0064\u0020\u0068\u0065\u0078 \u0063\u006f\u0064\u0065: \u0025\u0073",hexStr );return _eggg ;
+};var _fdbd ,_debc ,_cegc int ;if len (hexStr )==4{var _aabd ,_gcgaf ,_bfeb int ;_bcee ,_edc :=_fb .Sscanf (hexStr ,"\u0023\u0025\u0031\u0078\u0025\u0031\u0078\u0025\u0031\u0078",&_aabd ,&_gcgaf ,&_bfeb );if _edc !=nil {_da .Log .Debug ("\u0049\u006e\u0076a\u006c\u0069\u0064\u0020h\u0065\u0078\u0020\u0063\u006f\u0064\u0065:\u0020\u0025\u0073\u002c\u0020\u0065\u0072\u0072\u006f\u0072\u003a\u0020\u0025\u0076",hexStr ,_edc );
+return _eggg ;};if _bcee !=3{_da .Log .Debug ("I\u006ev\u0061\u006c\u0069\u0064\u0020\u0068\u0065\u0078 \u0063\u006f\u0064\u0065: \u0025\u0073",hexStr );return _eggg ;};_fdbd =_aabd *16+_aabd ;_debc =_gcgaf *16+_gcgaf ;_cegc =_bfeb *16+_bfeb ;}else {_fec ,_dega :=_fb .Sscanf (hexStr ,"\u0023\u0025\u0032\u0078\u0025\u0032\u0078\u0025\u0032\u0078",&_fdbd ,&_debc ,&_cegc );
+if _dega !=nil {_da .Log .Debug ("I\u006ev\u0061\u006c\u0069\u0064\u0020\u0068\u0065\u0078 \u0063\u006f\u0064\u0065: \u0025\u0073",hexStr );return _eggg ;};if _fec !=3{_da .Log .Debug ("\u0049\u006e\u0076\u0061\u006c\u0069d\u0020\u0068\u0065\u0078\u0020\u0063\u006f\u0064\u0065\u003a\u0020\u0025\u0073,\u0020\u006e\u0020\u0021\u003d\u0020\u0033 \u0028\u0025\u0064\u0029",hexStr ,_fec );
+return _eggg ;};};_fbge :=float64 (_fdbd )/255.0;_faa :=float64 (_debc )/255.0;_dfgd :=float64 (_cegc )/255.0;_eggg ._ade =_fbge ;_eggg ._fcc =_faa ;_eggg ._fbe =_dfgd ;return _eggg ;};
 
-// ContainerComponent checks if the component is allowed to be added into provided 'container' and returns
-// preprocessed copy of itself. If the component is not changed it is allowed to return itself in a callback way.
-// If the component is not compatible with provided container this method should return an error.
-ContainerComponent (_eefa Drawable )(Drawable ,error );};func (_bagc *Ellipse )applyFitMode (_cebg float64 ){_cebg -=_bagc ._eac .Left +_bagc ._eac .Right ;switch _bagc ._dgbc {case FitModeFillWidth :_bagc .ScaleToWidth (_cebg );};};
+// ScaleToHeight scale Image to a specified height h, maintaining the aspect ratio.
+func (_fcgc *Image )ScaleToHeight (h float64 ){_fcce :=_fcgc ._edda /_fcgc ._eega ;_fcgc ._eega =h ;_fcgc ._edda =h *_fcce ;};func (_adeff *Rectangle )applyFitMode (_bbgb float64 ){_bbgb -=_adeff ._gcag .Left +_adeff ._gcag .Right +_adeff ._egde ;switch _adeff ._fefc {case FitModeFillWidth :_adeff .ScaleToWidth (_bbgb );
+};};type shading struct{_bbcfd Color ;_fbfeg bool ;_gcefb []bool ;_ccff []*ColorPoint ;};
 
-// SetHeight sets the height of the rectangle.
-func (_eceb *Rectangle )SetHeight (height float64 ){_eceb ._dffef =height };
+// SetFitMode sets the fit mode of the image.
+// NOTE: The fit mode is only applied if relative positioning is used.
+func (_eede *Image )SetFitMode (fitMode FitMode ){_eede ._eged =fitMode };
+
+// MoveTo moves the drawing context to absolute coordinates (x, y).
+func (_bcab *Creator )MoveTo (x ,y float64 ){_bcab ._ddd .X =x ;_bcab ._ddd .Y =y };
+
+// GeneratePageBlocks generates the page blocks. Multiple blocks are generated
+// if the contents wrap over multiple pages. Implements the Drawable interface.
+func (_bcgde *StyledParagraph )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_degf :=ctx ;var _aefg []*Block ;_acgd :=NewBlock (ctx .PageWidth ,ctx .PageHeight );if _bcgde ._eege .IsRelative (){ctx .X +=_bcgde ._eebag .Left ;ctx .Y +=_bcgde ._eebag .Top ;
+ctx .Width -=_bcgde ._eebag .Left +_bcgde ._eebag .Right ;ctx .Height -=_bcgde ._eebag .Top ;_bcgde .SetWidth (ctx .Width );}else {if int (_bcgde ._cdba )<=0{_bcgde .SetWidth (_bcgde .getTextWidth ()/1000.0);};ctx .X =_bcgde ._fggg ;ctx .Y =_bcgde ._gaba ;
+};if _bcgde ._dbff !=nil {_bcgde ._dbff (_bcgde ,ctx );};if _edaaa :=_bcgde .wrapText ();_edaaa !=nil {return nil ,ctx ,_edaaa ;};_eegad :=_bcgde ._cfcf ;for {_daccd ,_bdfeg ,_cbgef :=_fadcf (_acgd ,_bcgde ,_eegad ,ctx );if _cbgef !=nil {_da .Log .Debug ("\u0045R\u0052\u004f\u0052\u003a\u0020\u0025v",_cbgef );
+return nil ,ctx ,_cbgef ;};ctx =_daccd ;_aefg =append (_aefg ,_acgd );if _eegad =_bdfeg ;len (_bdfeg )==0{break ;};_acgd =NewBlock (ctx .PageWidth ,ctx .PageHeight );ctx .Page ++;_daccd =ctx ;_daccd .Y =ctx .Margins .Top ;_daccd .X =ctx .Margins .Left +_bcgde ._eebag .Left ;
+_daccd .Height =ctx .PageHeight -ctx .Margins .Top -ctx .Margins .Bottom ;_daccd .Width =ctx .PageWidth -ctx .Margins .Left -ctx .Margins .Right -_bcgde ._eebag .Left -_bcgde ._eebag .Right ;ctx =_daccd ;};if _bcgde ._eege .IsRelative (){ctx .Y +=_bcgde ._eebag .Bottom ;
+ctx .Height -=_bcgde ._eebag .Bottom ;if !ctx .Inline {ctx .X =_degf .X ;ctx .Width =_degf .Width ;};return _aefg ,ctx ,nil ;};return _aefg ,_degf ,nil ;};
+
+// GeneratePageBlocks generate the Page blocks.  Multiple blocks are generated if the contents wrap
+// over multiple pages.
+func (_ggbg *Chapter )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_cbeb :=ctx ;if _ggbg ._cfeb .IsRelative (){ctx .X +=_ggbg ._bcbb .Left ;ctx .Y +=_ggbg ._bcbb .Top ;ctx .Width -=_ggbg ._bcbb .Left +_ggbg ._bcbb .Right ;ctx .Height -=_ggbg ._bcbb .Top ;
+};_cfb ,_abde ,_bdgc :=_ggbg ._ddc .GeneratePageBlocks (ctx );if _bdgc !=nil {return _cfb ,ctx ,_bdgc ;};ctx =_abde ;_agaa :=ctx .X ;_dfa :=ctx .Y -_ggbg ._ddc .Height ();_bgf :=int64 (ctx .Page );_fbgd :=_ggbg .headingNumber ();_edd :=_ggbg .headingText ();
+if _ggbg ._bge {_bfa :=_ggbg ._ede .Add (_fbgd ,_ggbg ._cdb ,_fe .FormatInt (_bgf ,10),_ggbg ._gfacd );if _ggbg ._ede ._ffag {_bfa .SetLink (_bgf ,_agaa ,_dfa );};};if _ggbg ._ddfg ==nil {_ggbg ._ddfg =_fee .NewOutlineItem (_edd ,_fee .NewOutlineDest (_bgf -1,_agaa ,_dfa ));
+if _ggbg ._deea !=nil {_ggbg ._deea ._ddfg .Add (_ggbg ._ddfg );}else {_ggbg ._ecga .Add (_ggbg ._ddfg );};}else {_ega :=&_ggbg ._ddfg .Dest ;_ega .Page =_bgf -1;_ega .X =_agaa ;_ega .Y =_dfa ;};for _ ,_ddgf :=range _ggbg ._cbf {_cdef ,_egaf ,_ddee :=_ddgf .GeneratePageBlocks (ctx );
+if _ddee !=nil {return _cfb ,ctx ,_ddee ;};if len (_cdef )< 1{continue ;};_cfb [len (_cfb )-1].mergeBlocks (_cdef [0]);_cfb =append (_cfb ,_cdef [1:]...);ctx =_egaf ;};if _ggbg ._cfeb .IsRelative (){ctx .X =_cbeb .X ;};if _ggbg ._cfeb .IsAbsolute (){return _cfb ,_cbeb ,nil ;
+};return _cfb ,ctx ,nil ;};
+
+// BorderColor returns the border color of the rectangle.
+func (_gcgff *Rectangle )BorderColor ()Color {return _gcgff ._eggbc };
+
+// NewList creates a new list.
+func (_ebgc *Creator )NewList ()*List {return _egcf (_ebgc .NewTextStyle ())};
+
+// SkipOver skips over a specified number of rows and cols.
+func (_acfg *Table )SkipOver (rows ,cols int ){_dgge :=rows *_acfg ._fcfd +cols -1;if _dgge < 0{_da .Log .Debug ("\u0054\u0061\u0062\u006c\u0065:\u0020\u0063\u0061\u006e\u006e\u006f\u0074\u0020\u0073\u006b\u0069\u0070\u0020b\u0061\u0063\u006b\u0020\u0074\u006f\u0020\u0070\u0072\u0065\u0076\u0069\u006f\u0075\u0073\u0020\u0063\u0065\u006c\u006c\u0073");
+return ;};_acfg ._gacbf +=_dgge ;};
 
 // GeneratePageBlocks generates the table page blocks. Multiple blocks are
 // generated if the contents wrap over multiple pages.
 // Implements the Drawable interface.
-func (_ddff *Table )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_gefgg :=_ddff ;if _ddff ._bfbf {_gefgg =_ddff .clone ();};return _edfb (_gefgg ,ctx );};
+func (_edge *Table )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_geegc :=_edge ;if _edge ._cfbac {_geegc =_edge .clone ();};return _fffdc (_geegc ,ctx );};
 
-// NewImageFromFile creates an Image from a file.
-func (_afbac *Creator )NewImageFromFile (path string )(*Image ,error ){return _fdcb (path )};func (_feccb *templateProcessor )parseBoolAttr (_gage ,_gfcee string )bool {_cf .Log .Debug ("P\u0061\u0072\u0073\u0069\u006e\u0067 \u0062\u006f\u006f\u006c\u0020\u0061t\u0074\u0072\u0069\u0062\u0075\u0074\u0065:\u0020\u0028\u0060\u0025\u0073\u0060\u002c\u0020\u0025\u0073)\u002e",_gage ,_gfcee );
-_ggee ,_ :=_egd .ParseBool (_gfcee );return _gfcee ==""||_ggee ;};
+// GetMargins returns the margins of the TOC line: left, right, top, bottom.
+func (_aceaa *TOCLine )GetMargins ()(float64 ,float64 ,float64 ,float64 ){_babf :=&_aceaa ._dabee ._eebag ;return _aceaa ._gfgb ,_babf .Right ,_babf .Top ,_babf .Bottom ;};func (_gbgeg *TableCell )height (_agbgg float64 )float64 {var _eaae float64 ;switch _bedgd :=_gbgeg ._cfdd .(type ){case *Paragraph :if _bedgd ._ccee {_bedgd .SetWidth (_agbgg -_gbgeg ._bdff -_bedgd ._efbg .Left -_bedgd ._efbg .Right );
+};_eaae =_bedgd .Height ()+_bedgd ._efbg .Top +_bedgd ._efbg .Bottom +0.5*_bedgd ._bgef *_bedgd ._adgg ;case *StyledParagraph :if _bedgd ._egge {_bedgd .SetWidth (_agbgg -_gbgeg ._bdff -_bedgd ._eebag .Left -_bedgd ._eebag .Right );};_eaae =_bedgd .Height ()+_bedgd ._eebag .Top +_bedgd ._eebag .Bottom +0.5*_bedgd .getTextHeight ();
+case *Image :_bedgd .applyFitMode (_agbgg -_gbgeg ._bdff );_eaae =_bedgd .Height ()+_bedgd ._dgb .Top +_bedgd ._dgb .Bottom ;case *Table :_bedgd .updateRowHeights (_agbgg -_gbgeg ._bdff -_bedgd ._dceg .Left -_bedgd ._dceg .Right );_eaae =_bedgd .Height ()+_bedgd ._dceg .Top +_bedgd ._dceg .Bottom ;
+case *List :_eaae =_bedgd .ctxHeight (_agbgg -_gbgeg ._bdff )+_bedgd ._bffg .Top +_bedgd ._bffg .Bottom ;case *Division :_eaae =_bedgd .ctxHeight (_agbgg -_gbgeg ._bdff )+_bedgd ._ceeba .Top +_bedgd ._ceeba .Bottom +_bedgd ._deca .Top +_bedgd ._deca .Bottom ;
+case *Chart :_eaae =_bedgd .Height ()+_bedgd ._cgc .Top +_bedgd ._cgc .Bottom ;case *Rectangle :_bedgd .applyFitMode (_agbgg -_gbgeg ._bdff );_eaae =_bedgd .Height ()+_bedgd ._gcag .Top +_bedgd ._gcag .Bottom +_bedgd ._egde ;case *Ellipse :_bedgd .applyFitMode (_agbgg -_gbgeg ._bdff );
+_eaae =_bedgd .Height ()+_bedgd ._fbed .Top +_bedgd ._fbed .Bottom ;case *Line :_eaae =_bedgd .Height ()+_bedgd ._cfdcg .Top +_bedgd ._cfdcg .Bottom ;};return _eaae ;};func _ddbc (_ffeff *templateProcessor ,_dagaf *templateNode )(interface{},error ){return _ffeff .parseStyledParagraph (_dagaf );
+};
 
-// GetCoords returns the (x1, y1), (x2, y2) points defining the Line.
-func (_fcbb *Line )GetCoords ()(float64 ,float64 ,float64 ,float64 ){return _fcbb ._aecg ,_fcbb ._cdbf ,_fcbb ._badg ,_fcbb ._acba ;};
-
-// Positioning returns the type of positioning the rectangle is set to use.
-func (_eeaed *Rectangle )Positioning ()Positioning {return _eeaed ._bcgca };
-
-// SetSideBorderWidth sets the cell's side border width.
-func (_fcgb *TableCell )SetSideBorderWidth (side CellBorderSide ,width float64 ){switch side {case CellBorderSideAll :_fcgb ._ebbbd =width ;_fcgb ._ggbc =width ;_fcgb ._cefdc =width ;_fcgb ._dadga =width ;case CellBorderSideTop :_fcgb ._ebbbd =width ;case CellBorderSideBottom :_fcgb ._ggbc =width ;
-case CellBorderSideLeft :_fcgb ._cefdc =width ;case CellBorderSideRight :_fcgb ._dadga =width ;};};func (_eaaaf *TextChunk )clone ()*TextChunk {_ggfbg :=*_eaaaf ;_ggfbg ._cacbg =_adgfb (_eaaaf ._cacbg );return &_ggfbg ;};
-
-// Width returns Image's document width.
-func (_adg *Image )Width ()float64 {return _adg ._gebf };
-
-// SetPositioning sets the positioning of the ellipse (absolute or relative).
-func (_egce *Ellipse )SetPositioning (position Positioning ){_egce ._ceeb =position };
-
-// SetMargins sets the Chapter margins: left, right, top, bottom.
-// Typically not needed as the creator's page margins are used.
-func (_bcbc *Chapter )SetMargins (left ,right ,top ,bottom float64 ){_bcbc ._fbcg .Left =left ;_bcbc ._fbcg .Right =right ;_bcbc ._fbcg .Top =top ;_bcbc ._fbcg .Bottom =bottom ;};
+// SetSideBorderColor sets the cell's side border color.
+func (_cfgdc *TableCell )SetSideBorderColor (side CellBorderSide ,col Color ){switch side {case CellBorderSideAll :_cfgdc ._gcac =col ;_cfgdc ._fcgg =col ;_cfgdc ._gefeb =col ;_cfgdc ._fgdgg =col ;case CellBorderSideTop :_cfgdc ._gcac =col ;case CellBorderSideBottom :_cfgdc ._fcgg =col ;
+case CellBorderSideLeft :_cfgdc ._gefeb =col ;case CellBorderSideRight :_cfgdc ._fgdgg =col ;};};
 
 // TextStyle is a collection of properties that can be assigned to a text chunk.
 type TextStyle struct{
@@ -2181,7 +1271,7 @@ Color Color ;
 OutlineColor Color ;
 
 // Font represents the font the text will use.
-Font *_gf .PdfFont ;
+Font *_fee .PdfFont ;
 
 // FontSize represents the size of the font.
 FontSize float64 ;
@@ -2210,143 +1300,521 @@ UnderlineStyle TextDecorationLineStyle ;
 // drawing subscripts/superscripts. A positive text rise value will
 // produce superscript text, while a negative one will result in
 // subscript text.
-TextRise float64 ;};func _afbgeg (_daaa string )(*GraphicSVG ,error ){_gbde ,_fced :=_bga .ParseFromString (_daaa );if _fced !=nil {return nil ,_fced ;};return _daca (_gbde );};func _ecf (_dffc []byte )(*Image ,error ){_dccdd :=_fe .NewReader (_dffc );
-_ggbd ,_daff :=_gf .ImageHandling .Read (_dccdd );if _daff !=nil {_cf .Log .Error ("\u0045\u0072\u0072or\u0020\u006c\u006f\u0061\u0064\u0069\u006e\u0067\u0020\u0069\u006d\u0061\u0067\u0065\u003a\u0020\u0025\u0073",_daff );return nil ,_daff ;};return _ddga (_ggbd );
+TextRise float64 ;};
+
+// SetWidthTop sets border width for top.
+func (_cgb *border )SetWidthTop (bw float64 ){_cgb ._gab =bw };
+
+// RadialShading holds information that will be used to render a radial shading.
+type RadialShading struct{_ecef *shading ;_aaecd *_fee .PdfRectangle ;_egaae AnchorPoint ;_cbbeee float64 ;_gbfb float64 ;_cgfcf float64 ;_bbdd float64 ;};
+
+// TitleStyle returns the style properties used to render the invoice title.
+func (_eeca *Invoice )TitleStyle ()TextStyle {return _eeca ._effe };
+
+// Width returns the cell's width based on the input draw context.
+func (_fdbdc *TableCell )Width (ctx DrawContext )float64 {_gaabe :=float64 (0.0);for _cfbb :=0;_cfbb < _fdbdc ._cdefg ;_cfbb ++{_gaabe +=_fdbdc ._fagfd ._fadgg [_fdbdc ._faga +_cfbb -1];};_dcge :=ctx .Width *_gaabe ;return _dcge ;};
+
+// AddSection adds a new content section at the end of the invoice.
+func (_fdbb *Invoice )AddSection (title ,content string ){_fdbb ._eeda =append (_fdbb ._eeda ,[2]string {title ,content });};
+
+// SetFillColor sets the fill color.
+func (_gggg *PolyBezierCurve )SetFillColor (color Color ){_gggg ._dcfb =color ;_gggg ._cceb .FillColor =_cfd (color );};func (_eddg *List )markerWidth ()float64 {var _eggb float64 ;for _ ,_gdba :=range _eddg ._fegg {_gfee :=_dccc (_eddg ._bdbe );_gfee .SetEnableWrap (false );
+_gfee .SetTextAlignment (TextAlignmentRight );_gfee .Append (_gdba ._aeaf .Text ).Style =_gdba ._aeaf .Style ;_faag :=_gfee .getTextWidth ()/1000.0;if _eggb < _faag {_eggb =_faag ;};};return _eggb ;};
+
+// GeneratePageBlocks draws the rectangle on a new block representing the page. Implements the Drawable interface.
+func (_aebf *Rectangle )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){var (_gabc []*Block ;_gafab =NewBlock (ctx .PageWidth ,ctx .PageHeight );_gcded =ctx ;_begce =_aebf ._egde /2;);_gbgef :=_aebf ._fgaa .IsRelative ();if _gbgef {_aebf .applyFitMode (ctx .Width );
+ctx .X +=_aebf ._gcag .Left +_begce ;ctx .Y +=_aebf ._gcag .Top +_begce ;ctx .Width -=_aebf ._gcag .Left +_aebf ._gcag .Right ;ctx .Height -=_aebf ._gcag .Top +_aebf ._gcag .Bottom ;if _aebf ._abfd > ctx .Height {_gabc =append (_gabc ,_gafab );_gafab =NewBlock (ctx .PageWidth ,ctx .PageHeight );
+ctx .Page ++;_gbfd :=ctx ;_gbfd .Y =ctx .Margins .Top +_aebf ._gcag .Top +_begce ;_gbfd .X =ctx .Margins .Left +_aebf ._gcag .Left +_begce ;_gbfd .Height =ctx .PageHeight -ctx .Margins .Top -ctx .Margins .Bottom -_aebf ._gcag .Top -_aebf ._gcag .Bottom ;
+_gbfd .Width =ctx .PageWidth -ctx .Margins .Left -ctx .Margins .Right -_aebf ._gcag .Left -_aebf ._gcag .Right ;ctx =_gbfd ;};}else {ctx .X =_aebf ._cfbab ;ctx .Y =_aebf ._cffbf ;};_babg :=_bg .Rectangle {X :ctx .X ,Y :ctx .PageHeight -ctx .Y -_aebf ._abfd ,Width :_aebf ._bfddd ,Height :_aebf ._abfd ,BorderRadiusTopLeft :_aebf ._egdce ,BorderRadiusTopRight :_aebf ._edac ,BorderRadiusBottomLeft :_aebf ._cdfge ,BorderRadiusBottomRight :_aebf ._cfef ,Opacity :1.0};
+if _aebf ._cdgf !=nil {_babg .FillEnabled =true ;_afed :=_cfd (_aebf ._cdgf );_ebgdd :=_aacgba (_gafab ,_afed ,_aebf ._cdgf ,func ()Rectangle {return Rectangle {_cfbab :_babg .X ,_cffbf :_babg .Y ,_bfddd :_babg .Width ,_abfd :_babg .Height };});if _ebgdd !=nil {return nil ,ctx ,_ebgdd ;
+};_babg .FillColor =_afed ;};if _aebf ._eggbc !=nil &&_aebf ._egde > 0{_babg .BorderEnabled =true ;_babg .BorderColor =_cfd (_aebf ._eggbc );_babg .BorderWidth =_aebf ._egde ;};_gaea ,_eeee :=_gafab .setOpacity (_aebf ._ffdfg ,_aebf ._cgbf );if _eeee !=nil {return nil ,ctx ,_eeee ;
+};_eecag ,_ ,_eeee :=_babg .Draw (_gaea );if _eeee !=nil {return nil ,ctx ,_eeee ;};if _eeee =_gafab .addContentsByString (string (_eecag ));_eeee !=nil {return nil ,ctx ,_eeee ;};if _gbgef {ctx .X =_gcded .X ;ctx .Width =_gcded .Width ;_gageb :=_aebf ._abfd +_begce ;
+ctx .Y +=_gageb +_aebf ._gcag .Bottom ;ctx .Height -=_gageb ;}else {ctx =_gcded ;};_gabc =append (_gabc ,_gafab );return _gabc ,ctx ,nil ;};func _egcf (_gbeeg TextStyle )*List {return &List {_dabcb :TextChunk {Text :"\u2022\u0020",Style :_gbeeg },_cfffc :0,_ggeg :true ,_aaab :PositionRelative ,_bdbe :_gbeeg };
+};func (_fbbae *Paragraph )getMaxLineWidth ()float64 {if _fbbae ._fcda ==nil ||len (_fbbae ._fcda )==0{_fbbae .wrapText ();};var _aabf float64 ;for _ ,_degad :=range _fbbae ._fcda {_cccef :=_fbbae .getTextLineWidth (_degad );if _cccef > _aabf {_aabf =_cccef ;
+};};return _aabf ;};
+
+// FillOpacity returns the fill opacity of the rectangle (0-1).
+func (_adfaf *Rectangle )FillOpacity ()float64 {return _adfaf ._ffdfg };
+
+// SetRowHeight sets the height for a specified row.
+func (_ccef *Table )SetRowHeight (row int ,h float64 )error {if row < 1||row > len (_ccef ._agda ){return _d .New ("\u0072\u0061\u006e\u0067\u0065\u0020\u0063\u0068\u0065\u0063\u006b\u0020e\u0072\u0072\u006f\u0072");};_ccef ._agda [row -1]=h ;return nil ;
 };
 
-// FrontpageFunctionArgs holds the input arguments to a front page drawing function.
-// It is designed as a struct, so additional parameters can be added in the future with backwards
-// compatibility.
-type FrontpageFunctionArgs struct{PageNum int ;TotalPages int ;};type shading struct{_adddc Color ;_dgdf bool ;_gfaae []bool ;_dfae []*ColorPoint ;};func _bgaed (_cdge *templateProcessor ,_dbeagg *templateNode )(interface{},error ){return _cdge .parseList (_dbeagg );
-};
+// ToRGB implements interface Color.
+// Note: It's not directly used since shading color works differently than regular color.
+func (_fdda *RadialShading )ToRGB ()(float64 ,float64 ,float64 ){return 0,0,0};func (_ddfe *StyledParagraph )wrapWordChunks (){if !_ddfe ._dffeg {return ;};var (_gfbag []*TextChunk ;_dcbe *_fee .PdfFont ;);for _ ,_cceca :=range _ddfe ._adeb {_ddaa :=[]rune (_cceca .Text );
+if _dcbe ==nil {_dcbe =_cceca .Style .Font ;};_bgcc :=_cceca ._beebgd ;_adcb :=_cceca .VerticalAlignment ;if len (_gfbag )> 0{if len (_ddaa )==1&&_eb .IsPunct (_ddaa [0])&&_cceca .Style .Font ==_dcbe {_cbcdg :=[]rune (_gfbag [len (_gfbag )-1].Text );_gfbag [len (_gfbag )-1].Text =string (append (_cbcdg ,_ddaa [0]));
+continue ;}else {_ ,_dgdef :=_fe .Atoi (_cceca .Text );if _dgdef ==nil {_bage :=[]rune (_gfbag [len (_gfbag )-1].Text );_bbac :=len (_bage );if _bbac >=2{_ ,_adbbf :=_fe .Atoi (string (_bage [_bbac -2]));if _adbbf ==nil &&_eb .IsPunct (_bage [_bbac -1]){_gfbag [len (_gfbag )-1].Text =string (append (_bage ,_ddaa ...));
+continue ;};};};};};_ffcaa ,_ffec :=_gbac (_cceca .Text );if _ffec !=nil {_da .Log .Debug ("\u0045\u0052\u0052O\u0052\u003a\u0020\u0055\u006e\u0061\u0062\u006c\u0065\u0020\u0074\u006f\u0020\u0062\u0072\u0065\u0061\u006b\u0020\u0073\u0074\u0072\u0069\u006e\u0067\u0020\u0074\u006f\u0020w\u006f\u0072\u0064\u0073\u003a\u0020\u0025\u0076",_ffec );
+_ffcaa =[]string {_cceca .Text };};for _ ,_gefc :=range _ffcaa {_egga :=NewTextChunk (_gefc ,_cceca .Style );_egga ._beebgd =_gfbde (_bgcc );_egga .VerticalAlignment =_adcb ;_gfbag =append (_gfbag ,_egga );};_dcbe =_cceca .Style .Font ;};if len (_gfbag )> 0{_ddfe ._adeb =_gfbag ;
+};};
 
-// NewInvoice returns an instance of an empty invoice.
-func (_abde *Creator )NewInvoice ()*Invoice {_cbeg :=_abde .NewTextStyle ();_cbeg .Font =_abde ._deca ;return _ccbb (_abde .NewTextStyle (),_cbeg );};
+// WriteToFile writes the Creator output to file specified by path.
+func (_eedb *Creator )WriteToFile (outputPath string )error {_babc ,_bfbb :=_fd .Create (outputPath );if _bfbb !=nil {return _bfbb ;};defer _babc .Close ();return _eedb .Write (_babc );};func (_bfde *StyledParagraph )wrapChunks (_efbf bool )error {if !_bfde ._egge ||int (_bfde ._cdba )<=0{_bfde ._cfcf =[][]*TextChunk {_bfde ._adeb };
+return nil ;};if _bfde ._dffeg {_bfde .wrapWordChunks ();};_bfde ._cfcf =[][]*TextChunk {};var _cbge []*TextChunk ;var _afafc float64 ;_agea :=_eb .IsSpace ;if !_efbf {_agea =func (rune )bool {return false };};_aecf :=_gfcee (_bfde ._cdba *1000.0,0.000001);
+for _ ,_gdggc :=range _bfde ._adeb {_edaeg :=_gdggc .Style ;_dgagg :=_gdggc ._beebgd ;_ebgfd :=_gdggc .VerticalAlignment ;var (_feadg []rune ;_ecaeg []float64 ;);_eeedb :=_cfcbf (_gdggc .Text );for _ ,_bcdf :=range _gdggc .Text {if _bcdf =='\u000A'{if !_efbf {_feadg =append (_feadg ,_bcdf );
+};_cbge =append (_cbge ,&TextChunk {Text :_cf .TrimRightFunc (string (_feadg ),_agea ),Style :_edaeg ,_beebgd :_gfbde (_dgagg ),VerticalAlignment :_ebgfd });_bfde ._cfcf =append (_bfde ._cfcf ,_cbge );_cbge =nil ;_afafc =0;_feadg =nil ;_ecaeg =nil ;continue ;
+};_cgcg :=_bcdf ==' ';_aaff ,_befee :=_edaeg .Font .GetRuneMetrics (_bcdf );if !_befee {_da .Log .Debug ("\u0052\u0075\u006e\u0065\u0020\u0063\u0068\u0061\u0072\u0020\u006d\u0065\u0074\u0072\u0069c\u0073 \u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064\u0021\u0020\u0025\u0076\u000a",_bcdf );
+return _d .New ("\u0067\u006c\u0079\u0070\u0068\u0020\u0063\u0068\u0061\u0072\u0020m\u0065\u0074\u0072\u0069\u0063\u0073\u0020\u006d\u0069\u0073s\u0069\u006e\u0067");};_fbfb :=_edaeg .FontSize *_aaff .Wx *_edaeg .horizontalScale ();_ceac :=_fbfb ;if !_cgcg {_ceac =_fbfb +_edaeg .CharSpacing *1000.0;
+};if _afafc +_fbfb > _aecf {_ffdd :=-1;if !_cgcg {for _eeeg :=len (_feadg )-1;_eeeg >=0;_eeeg --{if _feadg [_eeeg ]==' '{_ffdd =_eeeg ;break ;};};};if _bfde ._dffeg {if len (_cbge )> 0{_bfde ._cfcf =append (_bfde ._cfcf ,_cbge );_cbge =[]*TextChunk {};
+};_feadg =append (_feadg ,_bcdf );_ecaeg =append (_ecaeg ,_ceac );if _ffdd >=0{_feadg =_feadg [_ffdd +1:];_ecaeg =_ecaeg [_ffdd +1:];};_afafc =0;for _ ,_aafbf :=range _ecaeg {_afafc +=_aafbf ;};if _afafc > _aecf {_begbb :=string (_feadg [:len (_feadg )-1]);
+_begbb =_bcgdb (_begbb ,_eeedb );if !_efbf &&_cgcg {_begbb +="\u0020";};_cbge =append (_cbge ,&TextChunk {Text :_cf .TrimRightFunc (_begbb ,_agea ),Style :_edaeg ,_beebgd :_gfbde (_dgagg ),VerticalAlignment :_ebgfd });_bfde ._cfcf =append (_bfde ._cfcf ,_cbge );
+_cbge =[]*TextChunk {};_feadg =[]rune {_bcdf };_ecaeg =[]float64 {_ceac };_afafc =_ceac ;};continue ;};_feede :=string (_feadg );if _ffdd >=0{_feede =string (_feadg [0:_ffdd +1]);_feadg =_feadg [_ffdd +1:];_feadg =append (_feadg ,_bcdf );_ecaeg =_ecaeg [_ffdd +1:];
+_ecaeg =append (_ecaeg ,_ceac );_afafc =0;for _ ,_bddd :=range _ecaeg {_afafc +=_bddd ;};}else {if _cgcg {_afafc =0;_feadg =[]rune {};_ecaeg =[]float64 {};}else {_afafc =_ceac ;_feadg =[]rune {_bcdf };_ecaeg =[]float64 {_ceac };};};_feede =_bcgdb (_feede ,_eeedb );
+if !_efbf &&_cgcg {_feede +="\u0020";};_cbge =append (_cbge ,&TextChunk {Text :_cf .TrimRightFunc (_feede ,_agea ),Style :_edaeg ,_beebgd :_gfbde (_dgagg ),VerticalAlignment :_ebgfd });_bfde ._cfcf =append (_bfde ._cfcf ,_cbge );_cbge =[]*TextChunk {};
+}else {_afafc +=_ceac ;_feadg =append (_feadg ,_bcdf );_ecaeg =append (_ecaeg ,_ceac );};};if len (_feadg )> 0{_cbeeb :=_bcgdb (string (_feadg ),_eeedb );_cbge =append (_cbge ,&TextChunk {Text :_cbeeb ,Style :_edaeg ,_beebgd :_gfbde (_dgagg ),VerticalAlignment :_ebgfd });
+};};if len (_cbge )> 0{_bfde ._cfcf =append (_bfde ._cfcf ,_cbge );};return nil ;};
 
-// MultiCell makes a new cell with the specified row span and col span
-// and inserts it into the table at the current position.
-func (_fafde *Table )MultiCell (rowspan ,colspan int )*TableCell {_fafde ._gfcae ++;_gedag :=(_fafde .moveToNextAvailableCell ()-1)%(_fafde ._eeecb )+1;_bbcea :=(_fafde ._gfcae -1)/_fafde ._eeecb +1;for _bbcea > _fafde ._bacg {_fafde ._bacg ++;_fafde ._gdgf =append (_fafde ._gdgf ,_fafde ._ddee );
-};_fbcd :=&TableCell {};_fbcd ._gaddf =_bbcea ;_fbcd ._bgege =_gedag ;_fbcd ._bcgf =5;_fbcd ._cgafa =CellBorderStyleNone ;_fbcd ._bdbd =_g .LineStyleSolid ;_fbcd ._efed =CellHorizontalAlignmentLeft ;_fbcd ._gaff =CellVerticalAlignmentTop ;_fbcd ._cefdc =0;
-_fbcd ._ggbc =0;_fbcd ._dadga =0;_fbcd ._ebbbd =0;_bdebg :=ColorBlack ;_fbcd ._effe =_bdebg ;_fbcd ._feeb =_bdebg ;_fbcd ._afgf =_bdebg ;_fbcd ._dffad =_bdebg ;if rowspan < 1{_cf .Log .Debug ("\u0054\u0061\u0062\u006c\u0065\u003a\u0020\u0063\u0065\u006c\u006c\u0020\u0072\u006f\u0077\u0073\u0070a\u006e\u0020\u006c\u0065\u0073\u0073\u0020\u0074\u0068\u0061t\u0020\u0031\u0020\u0028\u0025\u0064\u0029\u002e\u0020\u0053\u0065\u0074\u0074\u0069\u006e\u0067\u0020\u0063e\u006c\u006c\u0020\u0072\u006f\u0077s\u0070\u0061n\u0020\u0074o\u00201\u002e",rowspan );
-rowspan =1;};_efdae :=_fafde ._bacg -(_fbcd ._gaddf -1);if rowspan > _efdae {_cf .Log .Debug ("\u0054\u0061b\u006c\u0065\u003a\u0020\u0063\u0065\u006c\u006c\u0020\u0072\u006f\u0077\u0073\u0070\u0061\u006e\u0020\u0028\u0025d\u0029\u0020\u0065\u0078\u0063\u0065e\u0064\u0073\u0020\u0072\u0065\u006d\u0061\u0069\u006e\u0069\u006e\u0067\u0020\u0072o\u0077\u0073 \u0028\u0025\u0064\u0029.\u0020\u0041\u0064\u0064\u0069n\u0067\u0020\u0072\u006f\u0077\u0073\u002e",rowspan ,_efdae );
-_fafde ._bacg +=rowspan -1;for _fbdg :=0;_fbdg <=rowspan -_efdae ;_fbdg ++{_fafde ._gdgf =append (_fafde ._gdgf ,_fafde ._ddee );};};for _cfecb :=0;_cfecb < colspan &&_gedag +_cfecb -1< len (_fafde ._ebad );_cfecb ++{_fafde ._ebad [_gedag +_cfecb -1]=rowspan -1;
-};_fbcd ._adfef =rowspan ;if colspan < 1{_cf .Log .Debug ("\u0054\u0061\u0062\u006c\u0065\u003a\u0020\u0063\u0065\u006c\u006c\u0020\u0063\u006f\u006c\u0073\u0070a\u006e\u0020\u006c\u0065\u0073\u0073\u0020\u0074\u0068\u0061n\u0020\u0031\u0020\u0028\u0025\u0064\u0029\u002e\u0020\u0053\u0065\u0074\u0074\u0069\u006e\u0067\u0020\u0063e\u006c\u006c\u0020\u0063\u006f\u006cs\u0070\u0061n\u0020\u0074o\u00201\u002e",colspan );
-colspan =1;};_fadb :=_fafde ._eeecb -(_fbcd ._bgege -1);if colspan > _fadb {_cf .Log .Debug ("\u0054\u0061\u0062\u006c\u0065:\u0020\u0063\u0065\u006c\u006c\u0020\u0063o\u006c\u0073\u0070\u0061\u006e\u0020\u0028\u0025\u0064\u0029\u0020\u0065\u0078\u0063\u0065\u0065\u0064\u0073\u0020\u0072\u0065\u006d\u0061\u0069\u006e\u0069\u006e\u0067\u0020\u0072\u006f\u0077\u0020\u0063\u006f\u006c\u0073\u0020\u0028\u0025d\u0029\u002e\u0020\u0041\u0064\u006a\u0075\u0073\u0074\u0069\u006e\u0067 \u0063\u006f\u006c\u0073\u0070\u0061n\u002e",colspan ,_fadb );
-colspan =_fadb ;};_fbcd ._adcd =colspan ;_fafde ._gfcae +=colspan -1;_fafde ._fdde =append (_fafde ._fdde ,_fbcd );_fbcd ._bbcg =_fafde ;return _fbcd ;};
+// TextRenderingMode determines whether showing text shall cause glyph
+// outlines to be stroked, filled, used as a clipping boundary, or some
+// combination of the three.
+// See section 9.3 "Text State Parameters and Operators" and
+// Table 106 (pp. 254-255 PDF32000_2008).
+type TextRenderingMode int ;var (PageSizeA3 =PageSize {297*PPMM ,420*PPMM };PageSizeA4 =PageSize {210*PPMM ,297*PPMM };PageSizeA5 =PageSize {148*PPMM ,210*PPMM };PageSizeLetter =PageSize {8.5*PPI ,11*PPI };PageSizeLegal =PageSize {8.5*PPI ,14*PPI };);
 
-// FillColor returns the fill color of the ellipse.
-func (_gga *Ellipse )FillColor ()Color {return _gga ._agfc };
+// InvoiceCell represents any cell belonging to a table from the invoice
+// template. The main tables are the invoice information table, the line
+// items table and totals table. Contains the text value of the cell and
+// the style properties of the cell.
+type InvoiceCell struct{InvoiceCellProps ;Value string ;};
 
-// SetMaxLines sets the maximum number of lines before the paragraph
-// text is truncated.
-func (_defg *Paragraph )SetMaxLines (maxLines int ){_defg ._dgfc =maxLines ;_defg .wrapText ()};func (_eega *Invoice )setCellBorder (_dgcc *TableCell ,_fcfc *InvoiceCell ){for _ ,_fbde :=range _fcfc .BorderSides {_dgcc .SetBorder (_fbde ,CellBorderStyleSingle ,_fcfc .BorderWidth );
-};_dgcc .SetBorderColor (_fcfc .BorderColor );};
+// SetStyleRight sets border style for right side.
+func (_gba *border )SetStyleRight (style CellBorderStyle ){_gba ._eccg =style };
 
-// SetPos sets the Block's positioning to absolute mode with the specified coordinates.
-func (_gg *Block )SetPos (x ,y float64 ){_gg ._ad =PositionAbsolute ;_gg ._adc =x ;_gg ._ec =y };
+// ConvertToBinary converts current image data into binary (Bi-level image) format.
+// If provided image is RGB or GrayScale the function converts it into binary image
+// using histogram auto threshold method.
+func (_eeae *Image )ConvertToBinary ()error {return _eeae ._dgaec .ConvertToBinary ()};
 
-// Line defines a line between point 1 (X1, Y1) and point 2 (X2, Y2).
-// The line width, color, style (solid or dashed) and opacity can be
-// configured. Implements the Drawable interface.
-type Line struct{_aecg float64 ;_cdbf float64 ;_badg float64 ;_acba float64 ;_ebce Color ;_fggb _g .LineStyle ;_cabc float64 ;_deaff []int64 ;_gdcae int64 ;_decc float64 ;_fadc Positioning ;_gagda FitMode ;_eadb Margins ;};func _bccf (_efdf *_gf .PdfFont ,_bccg float64 )*fontMetrics {_cgdec :=&fontMetrics {};
-if _efdf ==nil {_cf .Log .Debug ("\u0057\u0041\u0052\u004e\u003a\u0020\u0066\u006f\u006e\u0074\u0020\u0069s\u0020\u006e\u0069\u006c");return _cgdec ;};_bgfcc ,_feccc :=_efdf .GetFontDescriptor ();if _feccc !=nil {_cf .Log .Debug ("E\u0052\u0052\u004f\u0052\u003a\u0020\u0055\u006e\u0061\u0062\u006c\u0065\u0020\u0074\u006f\u0020\u0067\u0065t\u0020\u0066\u006f\u006e\u0074\u0020\u0064\u0065\u0073\u0063ri\u0070\u0074\u006fr\u003a \u0025\u0076",_feccc );
-return _cgdec ;};if _cgdec ._eegac ,_feccc =_bgfcc .GetCapHeight ();_feccc !=nil {_cf .Log .Trace ("\u0057\u0041\u0052\u004e\u003a\u0020\u0055\u006e\u0061\u0062\u006c\u0065\u0020t\u006f\u0020\u0067\u0065\u0074\u0020f\u006f\u006e\u0074\u0020\u0063\u0061\u0070\u0020\u0068\u0065\u0069\u0067\u0068t\u003a\u0020\u0025\u0076",_feccc );
-};if int (_cgdec ._eegac )<=0{_cf .Log .Trace ("\u0057\u0041\u0052\u004e\u003a\u0020\u0043\u0061p\u0020\u0048\u0065ig\u0068\u0074\u0020\u006e\u006f\u0074 \u0061\u0076\u0061\u0069\u006c\u0061\u0062\u006c\u0065\u0020\u002d\u0020\u0073\u0065\u0074t\u0069\u006e\u0067\u0020\u0074\u006f\u0020\u00310\u0030\u0030");
-_cgdec ._eegac =1000;};_cgdec ._eegac *=_bccg /1000.0;if _cgdec ._aeae ,_feccc =_bgfcc .GetXHeight ();_feccc !=nil {_cf .Log .Trace ("\u0057\u0041R\u004e\u003a\u0020\u0055n\u0061\u0062l\u0065\u0020\u0074\u006f\u0020\u0067\u0065\u0074 \u0066\u006f\u006e\u0074\u0020\u0078\u002d\u0068\u0065\u0069\u0067\u0068t\u003a\u0020\u0025\u0076",_feccc );
-};_cgdec ._aeae *=_bccg /1000.0;if _cgdec ._acggec ,_feccc =_bgfcc .GetAscent ();_feccc !=nil {_cf .Log .Trace ("W\u0041\u0052\u004e\u003a\u0020\u0055n\u0061\u0062\u006c\u0065\u0020\u0074o\u0020\u0067\u0065\u0074\u0020\u0066\u006fn\u0074\u0020\u0061\u0073\u0063\u0065\u006e\u0074\u003a\u0020%\u0076",_feccc );
-};_cgdec ._acggec *=_bccg /1000.0;if _cgdec ._gbfbe ,_feccc =_bgfcc .GetDescent ();_feccc !=nil {_cf .Log .Trace ("\u0057\u0041RN\u003a\u0020\u0055n\u0061\u0062\u006c\u0065 to\u0020ge\u0074\u0020\u0066\u006f\u006e\u0074\u0020de\u0073\u0063\u0065\u006e\u0074\u003a\u0020%\u0076",_feccc );
-};_cgdec ._gbfbe *=_bccg /1000.0;return _cgdec ;};
+// SetAngle sets Image rotation angle in degrees.
+func (_dgcea *Image )SetAngle (angle float64 ){_dgcea ._dbbd =angle };
 
-// DueDate returns the invoice due date description and value cells.
-// The returned values can be used to customize the styles of the cells.
-func (_bdbb *Invoice )DueDate ()(*InvoiceCell ,*InvoiceCell ){return _bdbb ._acgf [0],_bdbb ._acgf [1]};
+// Color returns the color of the line.
+func (_cdae *Line )Color ()Color {return _cdae ._bec };
 
-// BorderOpacity returns the border opacity of the ellipse (0-1).
-func (_fac *Ellipse )BorderOpacity ()float64 {return _fac ._deaa };
+// SetPos sets absolute positioning with specified coordinates.
+func (_egaga *Paragraph )SetPos (x ,y float64 ){_egaga ._fgecf =PositionAbsolute ;_egaga ._gbfc =x ;_egaga ._bfcd =y ;};
 
-// FitMode returns the fit mode of the rectangle.
-func (_cfadc *Rectangle )FitMode ()FitMode {return _cfadc ._debg };func (_aaa *Block )duplicate ()*Block {_af :=&Block {};*_af =*_aaa ;_ge :=_cd .ContentStreamOperations {};_ge =append (_ge ,*_aaa ._egf ...);_af ._egf =&_ge ;return _af ;};
+// Context returns the current drawing context.
+func (_fceg *Creator )Context ()DrawContext {return _fceg ._ddd };func (_cdfgb *templateProcessor )parseBoolAttr (_ddegd ,_eadfb string )bool {_da .Log .Debug ("P\u0061\u0072\u0073\u0069\u006e\u0067 \u0062\u006f\u006f\u006c\u0020\u0061t\u0074\u0072\u0069\u0062\u0075\u0074\u0065:\u0020\u0028\u0060\u0025\u0073\u0060\u002c\u0020\u0025\u0073)\u002e",_ddegd ,_eadfb );
+_dfbf ,_ :=_fe .ParseBool (_eadfb );return _eadfb ==""||_dfbf ;};
 
-// Height returns the Block's height.
-func (_ae *Block )Height ()float64 {return _ae ._ce };
+// SetLineNumberStyle sets the style for the numbers part of all new lines
+// of the table of contents.
+func (_dgbfc *TOC )SetLineNumberStyle (style TextStyle ){_dgbfc ._bbda =style };func (_eebaf *List )ctxHeight (_fccd float64 )float64 {_fccd -=_eebaf ._cfffc ;var _defdd float64 ;for _ ,_fgac :=range _eebaf ._fegg {_defdd +=_fgac .ctxHeight (_fccd );};
+return _defdd ;};type listItem struct{_eaca VectorDrawable ;_aeaf TextChunk ;};func (_eafe *templateProcessor )parseTextChunk (_eebabb *templateNode ,_fdfdg *TextChunk )(interface{},error ){if _eebabb ._bdgb ==nil {_da .Log .Error ("\u0054\u0065\u0078\u0074\u0020\u0063\u0068\u0075\u006e\u006b\u0020\u0070\u0061\u0072\u0065n\u0074 \u0063\u0061\u006e\u006e\u006f\u0074\u0020\u0062\u0065\u0020\u006e\u0069\u006c\u002e");
+return nil ,_cedeg ;};var (_cbbb =_eafe .creator .NewTextStyle ();_eafb bool ;);for _ ,_geab :=range _eebabb ._bdbga .Attr {if _geab .Name .Local =="\u006c\u0069\u006e\u006b"{_cegad ,_daag :=_eebabb ._bdgb ._bdced .(*StyledParagraph );if !_daag {_da .Log .Error ("\u004c\u0069\u006e\u006b\u0020\u0061t\u0074\u0072\u0069b\u0075\u0074\u0065 \u006f\u006e\u006c\u0079\u0020\u0061\u0070\u0070\u006c\u0069c\u0061\u0062\u006c\u0065\u0020to\u0020\u0070\u0061\u0072\u0061\u0067\u0072\u0061\u0070\u0068\u0027\u0073\u0020\u0074\u0065\u0078\u0074\u0020\u0063\u0068\u0075\u006e\u006b");
+_eafb =true ;}else {_cbbb =_cegad ._fecf ;};break ;};};if _fdfdg ==nil {_fdfdg =NewTextChunk ("",_cbbb );};for _ ,_gfege :=range _eebabb ._bdbga .Attr {_cbbf :=_gfege .Value ;switch _ebaf :=_gfege .Name .Local ;_ebaf {case "\u0063\u006f\u006co\u0072":_fdfdg .Style .Color =_eafe .parseColorAttr (_ebaf ,_cbbf );
+case "\u006f\u0075\u0074\u006c\u0069\u006e\u0065\u002d\u0063\u006f\u006c\u006f\u0072":_fdfdg .Style .OutlineColor =_eafe .parseColorAttr (_ebaf ,_cbbf );case "\u0066\u006f\u006e\u0074":_fdfdg .Style .Font =_eafe .parseFontAttr (_ebaf ,_cbbf );case "\u0066o\u006e\u0074\u002d\u0073\u0069\u007ae":_fdfdg .Style .FontSize =_eafe .parseFloatAttr (_ebaf ,_cbbf );
+case "\u006f\u0075\u0074l\u0069\u006e\u0065\u002d\u0073\u0069\u007a\u0065":_fdfdg .Style .OutlineSize =_eafe .parseFloatAttr (_ebaf ,_cbbf );case "\u0063\u0068\u0061\u0072\u0061\u0063\u0074\u0065\u0072\u002d\u0073\u0070a\u0063\u0069\u006e\u0067":_fdfdg .Style .CharSpacing =_eafe .parseFloatAttr (_ebaf ,_cbbf );
+case "\u0068o\u0072i\u007a\u006f\u006e\u0074\u0061l\u002d\u0073c\u0061\u006c\u0069\u006e\u0067":_fdfdg .Style .HorizontalScaling =_eafe .parseFloatAttr (_ebaf ,_cbbf );case "\u0072\u0065\u006e\u0064\u0065\u0072\u0069\u006e\u0067-\u006d\u006f\u0064\u0065":_fdfdg .Style .RenderingMode =_eafe .parseTextRenderingModeAttr (_ebaf ,_cbbf );
+case "\u0075n\u0064\u0065\u0072\u006c\u0069\u006ee":_fdfdg .Style .Underline =_eafe .parseBoolAttr (_ebaf ,_cbbf );case "\u0075n\u0064e\u0072\u006c\u0069\u006e\u0065\u002d\u0063\u006f\u006c\u006f\u0072":_fdfdg .Style .UnderlineStyle .Color =_eafe .parseColorAttr (_ebaf ,_cbbf );
+case "\u0075\u006ed\u0065\u0072\u006ci\u006e\u0065\u002d\u006f\u0066\u0066\u0073\u0065\u0074":_fdfdg .Style .UnderlineStyle .Offset =_eafe .parseFloatAttr (_ebaf ,_cbbf );case "\u0075\u006e\u0064\u0065rl\u0069\u006e\u0065\u002d\u0074\u0068\u0069\u0063\u006b\u006e\u0065\u0073\u0073":_fdfdg .Style .UnderlineStyle .Thickness =_eafe .parseFloatAttr (_ebaf ,_cbbf );
+case "\u006c\u0069\u006e\u006b":if !_eafb {_fdfdg ._beebgd =_eafe .parseLinkAttr (_ebaf ,_cbbf );};case "\u0074e\u0078\u0074\u002d\u0072\u0069\u0073e":_fdfdg .Style .TextRise =_eafe .parseFloatAttr (_ebaf ,_cbbf );default:_da .Log .Debug ("\u0055\u006e\u0073\u0075\u0070\u0070o\u0072\u0074\u0065\u0064\u0020\u0074\u0065\u0078\u0074\u0020\u0063\u0068\u0075\u006e\u006b\u0020\u0061\u0074\u0074\u0072i\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073\u0060\u002e\u0020\u0053\u006bi\u0070p\u0069\u006e\u0067\u002e",_ebaf );
+};};return _fdfdg ,nil ;};
 
 // SetLineTitleStyle sets the style for the title part of all new lines
 // of the table of contents.
-func (_gdeg *TOC )SetLineTitleStyle (style TextStyle ){_gdeg ._cgddd =style };
+func (_ecbcgb *TOC )SetLineTitleStyle (style TextStyle ){_ecbcgb ._gaebe =style };const (FitModeNone FitMode =iota ;FitModeFillWidth ;);
 
-// ScaleToWidth scale Image to a specified width w, maintaining the aspect ratio.
-func (_bgga *Image )ScaleToWidth (w float64 ){_dega :=_bgga ._dcde /_bgga ._gebf ;_bgga ._gebf =w ;_bgga ._dcde =w *_dega ;};
+// Inline returns whether the inline mode of the division is active.
+func (_abfcd *Division )Inline ()bool {return _abfcd ._agag };func (_dfbce *StyledParagraph )split (_caee DrawContext )(_eecb ,_gaeab *StyledParagraph ,_ebaec error ){if _ebaec =_dfbce .wrapChunks (false );_ebaec !=nil {return nil ,nil ,_ebaec ;};if len (_dfbce ._cfcf )==1&&_dfbce ._gbbd > _caee .Height {return _dfbce ,nil ,nil ;
+};_efccd :=func (_beccd []*TextChunk ,_abcfc []*TextChunk )[]*TextChunk {if len (_abcfc )==0{return _beccd ;};_edabb :=len (_beccd );if _edabb ==0{return append (_beccd ,_abcfc ...);};if _beccd [_edabb -1].Style ==_abcfc [0].Style {_beccd [_edabb -1].Text +=_abcfc [0].Text ;
+}else {_beccd =append (_beccd ,_abcfc [0]);};return append (_beccd ,_abcfc [1:]...);};_aafca :=func (_dbfc *StyledParagraph ,_abbf []*TextChunk )*StyledParagraph {if len (_abbf )==0{return nil ;};_bfbef :=*_dbfc ;_bfbef ._adeb =_abbf ;return &_bfbef ;};
+var (_ffebe float64 ;_cced []*TextChunk ;_dfcce []*TextChunk ;);for _ ,_gebf :=range _dfbce ._cfcf {var _abcaf float64 ;_gcdd :=make ([]*TextChunk ,0,len (_gebf ));for _ ,_faggf :=range _gebf {if _bged :=_faggf .Style .FontSize ;_bged > _abcaf {_abcaf =_bged ;
+};_gcdd =append (_gcdd ,_faggf .clone ());};_abcaf *=_dfbce ._gbbd ;if _dfbce ._eege .IsRelative (){if _ffebe +_abcaf > _caee .Height {_dfcce =_efccd (_dfcce ,_gcdd );}else {_cced =_efccd (_cced ,_gcdd );};};_ffebe +=_abcaf ;};_dfbce ._cfcf =nil ;if len (_dfcce )==0{return _dfbce ,nil ,nil ;
+};return _aafca (_dfbce ,_cced ),_aafca (_dfbce ,_dfcce ),nil ;};
+
+// New creates a new instance of the PDF Creator.
+func New ()*Creator {const _geaa ="c\u0072\u0065\u0061\u0074\u006f\u0072\u002e\u004e\u0065\u0077";_cdeaf :=&Creator {};_cdeaf ._adbg =[]*_fee .PdfPage {};_cdeaf ._adcea =map[*_fee .PdfPage ]*Block {};_cdeaf ._ecbb =map[*_fee .PdfPage ]*pageTransformations {};
+_cdeaf .SetPageSize (PageSizeLetter );_bacf :=0.1*_cdeaf ._aef ;_cdeaf ._bbdf .Left =_bacf ;_cdeaf ._bbdf .Right =_bacf ;_cdeaf ._bbdf .Top =_bacf ;_cdeaf ._bbdf .Bottom =_bacf ;var _debb error ;_cdeaf ._eedd ,_debb =_fee .NewStandard14Font (_fee .HelveticaName );
+if _debb !=nil {_cdeaf ._eedd =_fee .DefaultFont ();};_cdeaf ._gbad ,_debb =_fee .NewStandard14Font (_fee .HelveticaBoldName );if _debb !=nil {_cdeaf ._eedd =_fee .DefaultFont ();};_cdeaf ._fgde =_cdeaf .NewTOC ("\u0054\u0061\u0062\u006c\u0065\u0020\u006f\u0066\u0020\u0043\u006f\u006et\u0065\u006e\u0074\u0073");
+_cdeaf .AddOutlines =true ;_cdeaf ._aeff =_fee .NewOutline ();_ga .TrackUse (_geaa );return _cdeaf ;};
+
+// SetSideBorderWidth sets the cell's side border width.
+func (_dfbdf *TableCell )SetSideBorderWidth (side CellBorderSide ,width float64 ){switch side {case CellBorderSideAll :_dfbdf ._cbcbcg =width ;_dfbdf ._fabe =width ;_dfbdf ._bcdfe =width ;_dfbdf ._bdga =width ;case CellBorderSideTop :_dfbdf ._cbcbcg =width ;
+case CellBorderSideBottom :_dfbdf ._fabe =width ;case CellBorderSideLeft :_dfbdf ._bcdfe =width ;case CellBorderSideRight :_dfbdf ._bdga =width ;};};func _cfbfe (_gccb string )(*GraphicSVG ,error ){_gbf ,_abea :=_aeb .ParseFromFile (_gccb );if _abea !=nil {return nil ,_abea ;
+};return _caac (_gbf );};func _fbgda (_efabcf *templateProcessor ,_ffab *templateNode )(interface{},error ){return _efabcf .parseImage (_ffab );};
+
+// Scale scales the rectangle dimensions by the specified factors.
+func (_aafd *Rectangle )Scale (xFactor ,yFactor float64 ){_aafd ._bfddd =xFactor *_aafd ._bfddd ;_aafd ._abfd =yFactor *_aafd ._abfd ;};
+
+// SetPos sets the Block's positioning to absolute mode with the specified coordinates.
+func (_ea *Block )SetPos (x ,y float64 ){_ea ._eg =PositionAbsolute ;_ea ._ba =x ;_ea ._cd =y };
+
+// GeneratePageBlocks draws the chart onto a block.
+func (_dfgb *Chart )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_bfbe :=ctx ;_deb :=_dfgb ._gge .IsRelative ();var _ffge []*Block ;if _deb {_bdda :=1.0;_ecbf :=_dfgb ._cgc .Top ;if float64 (_dfgb ._edbg .Height ())> ctx .Height -_dfgb ._cgc .Top {_ffge =[]*Block {NewBlock (ctx .PageWidth ,ctx .PageHeight -ctx .Y )};
+var _aag error ;if _ ,ctx ,_aag =_gaffdg ().GeneratePageBlocks (ctx );_aag !=nil {return nil ,ctx ,_aag ;};_ecbf =0;};ctx .X +=_dfgb ._cgc .Left +_bdda ;ctx .Y +=_ecbf ;ctx .Width -=_dfgb ._cgc .Left +_dfgb ._cgc .Right +2*_bdda ;ctx .Height -=_ecbf ;_dfgb ._edbg .SetWidth (int (ctx .Width ));
+}else {ctx .X =_dfgb ._gfcd ;ctx .Y =_dfgb ._abfg ;};_abe :=_ebc .NewContentCreator ();_abe .Translate (0,ctx .PageHeight );_abe .Scale (1,-1);_abe .Translate (ctx .X ,ctx .Y );_eef :=NewBlock (ctx .PageWidth ,ctx .PageHeight );_dfgb ._edbg .Render (_aad .NewRenderer (_abe ,_eef ._gf ),nil );
+if _afdg :=_eef .addContentsByString (_abe .String ());_afdg !=nil {return nil ,ctx ,_afdg ;};if _deb {_ebgf :=_dfgb .Height ()+_dfgb ._cgc .Bottom ;ctx .Y +=_ebgf ;ctx .Height -=_ebgf ;}else {ctx =_bfbe ;};_ffge =append (_ffge ,_eef );return _ffge ,ctx ,nil ;
+};func (_fbcag *RadialShading )shadingModel ()*_fee .PdfShadingType3 {_aeede ,_adeg ,_edbc :=_fbcag ._ecef ._bbcfd .ToRGB ();var _cecb _bg .Point ;switch _fbcag ._egaae {case AnchorBottomLeft :_cecb =_bg .Point {X :_fbcag ._aaecd .Llx ,Y :_fbcag ._aaecd .Lly };
+case AnchorBottomRight :_cecb =_bg .Point {X :_fbcag ._aaecd .Urx ,Y :_fbcag ._aaecd .Ury -_fbcag ._aaecd .Height ()};case AnchorTopLeft :_cecb =_bg .Point {X :_fbcag ._aaecd .Llx ,Y :_fbcag ._aaecd .Lly +_fbcag ._aaecd .Height ()};case AnchorTopRight :_cecb =_bg .Point {X :_fbcag ._aaecd .Urx ,Y :_fbcag ._aaecd .Ury };
+case AnchorLeft :_cecb =_bg .Point {X :_fbcag ._aaecd .Llx ,Y :_fbcag ._aaecd .Lly +_fbcag ._aaecd .Height ()/2};case AnchorTop :_cecb =_bg .Point {X :_fbcag ._aaecd .Llx +_fbcag ._aaecd .Width ()/2,Y :_fbcag ._aaecd .Ury };case AnchorRight :_cecb =_bg .Point {X :_fbcag ._aaecd .Urx ,Y :_fbcag ._aaecd .Lly +_fbcag ._aaecd .Height ()/2};
+case AnchorBottom :_cecb =_bg .Point {X :_fbcag ._aaecd .Urx +_fbcag ._aaecd .Width ()/2,Y :_fbcag ._aaecd .Lly };default:_cecb =_bg .NewPoint (_fbcag ._aaecd .Llx +_fbcag ._aaecd .Width ()/2,_fbcag ._aaecd .Lly +_fbcag ._aaecd .Height ()/2);};_eabg :=_fbcag ._cgfcf ;
+_gafcf :=_fbcag ._bbdd ;_dfga :=_cecb .X +_fbcag ._cbbeee ;_eccgf :=_cecb .Y +_fbcag ._gbfb ;if _eabg ==-1.0{_eabg =0.0;};if _gafcf ==-1.0{var _caaaa []float64 ;_gaacf :=_fa .Pow (_dfga -_fbcag ._aaecd .Llx ,2)+_fa .Pow (_eccgf -_fbcag ._aaecd .Lly ,2);
+_caaaa =append (_caaaa ,_fa .Abs (_gaacf ));_gbdg :=_fa .Pow (_dfga -_fbcag ._aaecd .Llx ,2)+_fa .Pow (_fbcag ._aaecd .Lly +_fbcag ._aaecd .Height ()-_eccgf ,2);_caaaa =append (_caaaa ,_fa .Abs (_gbdg ));_bdef :=_fa .Pow (_fbcag ._aaecd .Urx -_dfga ,2)+_fa .Pow (_eccgf -_fbcag ._aaecd .Ury -_fbcag ._aaecd .Height (),2);
+_caaaa =append (_caaaa ,_fa .Abs (_bdef ));_dcgb :=_fa .Pow (_fbcag ._aaecd .Urx -_dfga ,2)+_fa .Pow (_fbcag ._aaecd .Ury -_eccgf ,2);_caaaa =append (_caaaa ,_fa .Abs (_dcgb ));_b .Slice (_caaaa ,func (_ebcdb ,_gcffg int )bool {return _ebcdb > _gcffg });
+_gafcf =_fa .Sqrt (_caaaa [0]);};_bcbg :=&_fee .PdfRectangle {Llx :_dfga -_gafcf ,Lly :_eccgf -_gafcf ,Urx :_dfga +_gafcf ,Ury :_eccgf +_gafcf };_acdb :=_fee .NewPdfShadingType3 ();_acdb .PdfShading .ShadingType =_dd .MakeInteger (3);_acdb .PdfShading .ColorSpace =_fee .NewPdfColorspaceDeviceRGB ();
+_acdb .PdfShading .Background =_dd .MakeArrayFromFloats ([]float64 {_aeede ,_adeg ,_edbc });_acdb .PdfShading .BBox =_bcbg ;_acdb .PdfShading .AntiAlias =_dd .MakeBool (_fbcag ._ecef ._fbfeg );_acdb .Coords =_dd .MakeArrayFromFloats ([]float64 {_dfga ,_eccgf ,_eabg ,_dfga ,_eccgf ,_gafcf });
+_acdb .Domain =_dd .MakeArrayFromFloats ([]float64 {0.0,1.0});_acdb .Extend =_dd .MakeArray (_dd .MakeBool (_fbcag ._ecef ._gcefb [0]),_dd .MakeBool (_fbcag ._ecef ._gcefb [1]));_acdb .Function =_fbcag ._ecef .generatePdfFunctions ();return _acdb ;};func _fadcf (_bgae *Block ,_agaec *StyledParagraph ,_bddfd [][]*TextChunk ,_dcede DrawContext )(DrawContext ,[][]*TextChunk ,error ){_aceba :=1;
+_geff :=_dd .PdfObjectName (_fb .Sprintf ("\u0046\u006f\u006e\u0074\u0025\u0064",_aceba ));for _bgae ._gf .HasFontByName (_geff ){_aceba ++;_geff =_dd .PdfObjectName (_fb .Sprintf ("\u0046\u006f\u006e\u0074\u0025\u0064",_aceba ));};_fadf :=_bgae ._gf .SetFontByName (_geff ,_agaec ._cefc .Font .ToPdfObject ());
+if _fadf !=nil {return _dcede ,nil ,_fadf ;};_aceba ++;_eedg :=_geff ;_cbgbf :=_agaec ._cefc .FontSize ;_begg :=_agaec ._eege .IsRelative ();var _dcgf [][]_dd .PdfObjectName ;var _cffcf [][]*TextChunk ;var _efgfc float64 ;for _fccgc ,_ffgdd :=range _bddfd {var _aebd []_dd .PdfObjectName ;
+var _gbeb float64 ;if len (_ffgdd )> 0{_gbeb =_ffgdd [0].Style .FontSize ;};for _ ,_cgdd :=range _ffgdd {_eefc :=_cgdd .Style ;if _cgdd .Text !=""&&_eefc .FontSize > _gbeb {_gbeb =_eefc .FontSize ;};_geff =_dd .PdfObjectName (_fb .Sprintf ("\u0046\u006f\u006e\u0074\u0025\u0064",_aceba ));
+_ecbc :=_bgae ._gf .SetFontByName (_geff ,_eefc .Font .ToPdfObject ());if _ecbc !=nil {return _dcede ,nil ,_ecbc ;};_aebd =append (_aebd ,_geff );_aceba ++;};_gbeb *=_agaec ._gbbd ;if _begg &&_efgfc +_gbeb > _dcede .Height {_cffcf =_bddfd [_fccgc :];_bddfd =_bddfd [:_fccgc ];
+break ;};_efgfc +=_gbeb ;_dcgf =append (_dcgf ,_aebd );};_eegc ,_gfgae ,_addcb :=_agaec .getLineMetrics (0);_ccgf ,_fdac :=_eegc *_agaec ._gbbd ,_gfgae *_agaec ._gbbd ;if len (_bddfd )==0{return _dcede ,_cffcf ,nil ;};_egafc :=_ebc .NewContentCreator ();
+_egafc .Add_q ();_cage :=_fdac ;if _agaec ._cfebc ==TextVerticalAlignmentCenter {_cage =_gfgae +(_eegc +_addcb -_gfgae )/2+(_fdac -_gfgae )/2;};_bfed :=_dcede .PageHeight -_dcede .Y -_cage ;_egafc .Translate (_dcede .X ,_bfed );_bgeeb :=_bfed ;if _agaec ._bbfc !=0{_egafc .RotateDeg (_agaec ._bbfc );
+};if _agaec ._ebbd ==TextOverflowHidden {_egafc .Add_re (0,-_efgfc +_ccgf +1,_agaec ._cdba ,_efgfc ).Add_W ().Add_n ();};_egafc .Add_BT ();_gaeb :=0.0;var _agbag []*_bg .BasicLine ;for _fada ,_gfcdb :=range _bddfd {_abda :=_dcede .X ;var _affe float64 ;
+if len (_gfcdb )> 0{_affe =_gfcdb [0].Style .FontSize ;};_eegc ,_ ,_addcb =_agaec .getLineMetrics (_fada );_fdac =(_eegc +_addcb );for _ ,_cdgcg :=range _gfcdb {_edeff :=&_cdgcg .Style ;if _cdgcg .Text !=""&&_edeff .FontSize > _affe {_affe =_edeff .FontSize ;
+};if _fdac > _affe {_affe =_fdac ;};};if _fada !=0{_egafc .Add_TD (0,-_affe *_agaec ._gbbd +_gaeb );_bgeeb -=_affe *_agaec ._gbbd +_gaeb ;_gaeb =0.0;};_ecfag :=_fada ==len (_bddfd )-1;var (_dcfg float64 ;_bfdfc float64 ;_gbdaac *fontMetrics ;_adecee float64 ;
+_cfefg uint ;);var _cagg []float64 ;for _ ,_fcfca :=range _gfcdb {_gccbe :=&_fcfca .Style ;if _gccbe .FontSize > _bfdfc {_bfdfc =_gccbe .FontSize ;_gbdaac =_eccgb (_fcfca .Style .Font ,_gccbe .FontSize );};if _fdac > _bfdfc {_bfdfc =_fdac ;};_aagbb ,_ffff :=_gccbe .Font .GetRuneMetrics (' ');
+if !_ffff {return _dcede ,nil ,_d .New ("\u0074\u0068e \u0066\u006f\u006et\u0020\u0064\u006f\u0065s n\u006ft \u0068\u0061\u0076\u0065\u0020\u0061\u0020sp\u0061\u0063\u0065\u0020\u0067\u006c\u0079p\u0068");};var _ebde uint ;var _affd float64 ;_bdcff :=len (_fcfca .Text );
+for _dfegf ,_gaeed :=range _fcfca .Text {if _gaeed ==' '{_ebde ++;continue ;};if _gaeed =='\u000A'{continue ;};_bafc ,_cfcg :=_gccbe .Font .GetRuneMetrics (_gaeed );if !_cfcg {_da .Log .Debug ("\u0055\u006e\u0073\u0075p\u0070\u006f\u0072\u0074\u0065\u0064\u0020\u0072\u0075\u006ee\u0020%\u0076\u0020\u0069\u006e\u0020\u0066\u006fn\u0074\u000a",_gaeed );
+return _dcede ,nil ,_d .New ("\u0075\u006e\u0073\u0075pp\u006f\u0072\u0074\u0065\u0064\u0020\u0074\u0065\u0078\u0074\u0020\u0067\u006c\u0079p\u0068");};_affd +=_gccbe .FontSize *_bafc .Wx *_gccbe .horizontalScale ();if _dfegf !=_bdcff -1{_affd +=_gccbe .CharSpacing *1000.0;
+};};_cagg =append (_cagg ,_affd );_dcfg +=_affd ;_adecee +=float64 (_ebde )*_aagbb .Wx *_gccbe .FontSize *_gccbe .horizontalScale ();_cfefg +=_ebde ;};_bfdfc *=_agaec ._gbbd ;var _egbgff []_dd .PdfObject ;_ecgbb :=_agaec ._cdba *1000.0;if _agaec ._fdge ==TextAlignmentJustify {if _cfefg > 0&&!_ecfag {_adecee =(_ecgbb -_dcfg )/float64 (_cfefg )/_cbgbf ;
+};}else if _agaec ._fdge ==TextAlignmentCenter {_eabd :=(_ecgbb -_dcfg -_adecee )/2;_cfee :=_eabd /_cbgbf ;_egbgff =append (_egbgff ,_dd .MakeFloat (-_cfee ));_abda +=_eabd /1000.0;}else if _agaec ._fdge ==TextAlignmentRight {_gfdf :=(_ecgbb -_dcfg -_adecee );
+_ccceg :=_gfdf /_cbgbf ;_egbgff =append (_egbgff ,_dd .MakeFloat (-_ccceg ));_abda +=_gfdf /1000.0;};if len (_egbgff )> 0{_egafc .Add_Tf (_eedg ,_cbgbf ).Add_TL (_cbgbf *_agaec ._gbbd ).Add_TJ (_egbgff ...);};_acde :=0.0;for _bdfef ,_geecg :=range _gfcdb {_fbcbd :=&_geecg .Style ;
+_aabge :=_eedg ;_cfgccf :=_cbgbf ;_cbgeb :=_fbcbd .OutlineColor !=nil ;_bfcfa :=_fbcbd .HorizontalScaling !=DefaultHorizontalScaling ;_gfcdc :=_fbcbd .OutlineSize !=1;if _gfcdc {_egafc .Add_w (_fbcbd .OutlineSize );};_gcfff :=_fbcbd .RenderingMode !=TextRenderingModeFill ;
+if _gcfff {_egafc .Add_Tr (int64 (_fbcbd .RenderingMode ));};_afbb :=_fbcbd .CharSpacing !=0;if _afbb {_egafc .Add_Tc (_fbcbd .CharSpacing );};_fagc :=_fbcbd .TextRise !=0;if _fagc {_egafc .Add_Ts (_fbcbd .TextRise );};if _geecg .VerticalAlignment !=TextVerticalAlignmentBaseline {_ebfc :=_eccgb (_geecg .Style .Font ,_fbcbd .FontSize );
+switch _geecg .VerticalAlignment {case TextVerticalAlignmentCenter :_acde =_gbdaac ._ffedb /2-_ebfc ._ffedb /2;case TextVerticalAlignmentBottom :_acde =_gbdaac ._ebggb -_ebfc ._ebggb ;case TextVerticalAlignmentTop :_acde =_gfgae -_fbcbd .FontSize ;};if _acde !=0.0{_egafc .Translate (0,_acde );
+};};if _agaec ._fdge !=TextAlignmentJustify ||_ecfag {_ddba ,_baggb :=_fbcbd .Font .GetRuneMetrics (' ');if !_baggb {return _dcede ,nil ,_d .New ("\u0074\u0068e \u0066\u006f\u006et\u0020\u0064\u006f\u0065s n\u006ft \u0068\u0061\u0076\u0065\u0020\u0061\u0020sp\u0061\u0063\u0065\u0020\u0067\u006c\u0079p\u0068");
+};_aabge =_dcgf [_fada ][_bdfef ];_cfgccf =_fbcbd .FontSize ;_adecee =_ddba .Wx *_fbcbd .horizontalScale ();};_cbcee :=_fbcbd .Font .Encoder ();var _decdb []byte ;for _ ,_edaee :=range _geecg .Text {if _edaee =='\u000A'{continue ;};if _edaee ==' '{if len (_decdb )> 0{if _cbgeb {_egafc .SetStrokingColor (_cfd (_fbcbd .OutlineColor ));
+};if _bfcfa {_egafc .Add_Tz (_fbcbd .HorizontalScaling );};_egafc .SetNonStrokingColor (_cfd (_fbcbd .Color )).Add_Tf (_dcgf [_fada ][_bdfef ],_fbcbd .FontSize ).Add_TJ ([]_dd .PdfObject {_dd .MakeStringFromBytes (_decdb )}...);_decdb =nil ;};if _bfcfa {_egafc .Add_Tz (DefaultHorizontalScaling );
+};_egafc .Add_Tf (_aabge ,_cfgccf ).Add_TJ ([]_dd .PdfObject {_dd .MakeFloat (-_adecee )}...);_cagg [_bdfef ]+=_adecee *_cfgccf ;}else {if _ ,_fadaf :=_cbcee .RuneToCharcode (_edaee );!_fadaf {_fadf =UnsupportedRuneError {Message :_fb .Sprintf ("\u0075\u006e\u0073\u0075\u0070\u0070\u006fr\u0074\u0065\u0064 \u0072\u0075\u006e\u0065 \u0069\u006e\u0020\u0074\u0065\u0078\u0074\u0020\u0065\u006e\u0063\u006f\u0064\u0069\u006e\u0067\u003a\u0020\u0025\u0023\u0078\u0020\u0028\u0025\u0063\u0029",_edaee ,_edaee ),Rune :_edaee };
+_dcede ._ggce =append (_dcede ._ggce ,_fadf );_da .Log .Debug (_fadf .Error ());if _dcede ._cbc <=0{continue ;};_edaee =_dcede ._cbc ;};_decdb =append (_decdb ,_cbcee .Encode (string (_edaee ))...);};};if len (_decdb )> 0{if _cbgeb {_egafc .SetStrokingColor (_cfd (_fbcbd .OutlineColor ));
+};if _bfcfa {_egafc .Add_Tz (_fbcbd .HorizontalScaling );};_egafc .SetNonStrokingColor (_cfd (_fbcbd .Color )).Add_Tf (_dcgf [_fada ][_bdfef ],_fbcbd .FontSize ).Add_TJ ([]_dd .PdfObject {_dd .MakeStringFromBytes (_decdb )}...);};_cgddg :=_cagg [_bdfef ]/1000.0;
+if _fbcbd .Underline {_fbad :=_fbcbd .UnderlineStyle .Color ;if _fbad ==nil {_fbad =_geecg .Style .Color ;};_aeba ,_fabge ,_cbcbc :=_fbad .ToRGB ();_gebc :=_abda -_dcede .X ;_egbc :=_bgeeb -_bfed +_fbcbd .TextRise -_fbcbd .UnderlineStyle .Offset ;_agbag =append (_agbag ,&_bg .BasicLine {X1 :_gebc ,Y1 :_egbc ,X2 :_gebc +_cgddg ,Y2 :_egbc ,LineWidth :_geecg .Style .UnderlineStyle .Thickness ,LineColor :_fee .NewPdfColorDeviceRGB (_aeba ,_fabge ,_cbcbc )});
+};if _geecg ._beebgd !=nil {var _bdgd *_dd .PdfObjectArray ;if !_geecg ._bacff {switch _dcdd :=_geecg ._beebgd .GetContext ().(type ){case *_fee .PdfAnnotationLink :_bdgd =_dd .MakeArray ();_dcdd .Rect =_bdgd ;_cbca ,_acefd :=_dcdd .Dest .(*_dd .PdfObjectArray );
+if _acefd &&_cbca .Len ()==5{_gebfg ,_dbddd :=_cbca .Get (1).(*_dd .PdfObjectName );if _dbddd &&_gebfg .String ()=="\u0058\u0059\u005a"{_afcgg ,_ddge :=_dd .GetNumberAsFloat (_cbca .Get (3));if _ddge ==nil {_cbca .Set (3,_dd .MakeFloat (_dcede .PageHeight -_afcgg ));
+};};};};_geecg ._bacff =true ;};if _bdgd !=nil {_abga :=_bg .NewPoint (_abda -_dcede .X ,_bgeeb +_fbcbd .TextRise -_bfed ).Rotate (_agaec ._bbfc );_abga .X +=_dcede .X ;_abga .Y +=_bfed ;_ebdfg ,_aefag ,_ddaf ,_dgdd :=_abcbd (_cgddg ,_bfdfc ,_agaec ._bbfc );
+_abga .X +=_ebdfg ;_abga .Y +=_aefag ;_bdgd .Clear ();_bdgd .Append (_dd .MakeFloat (_abga .X ));_bdgd .Append (_dd .MakeFloat (_abga .Y ));_bdgd .Append (_dd .MakeFloat (_abga .X +_ddaf ));_bdgd .Append (_dd .MakeFloat (_abga .Y +_dgdd ));};_bgae .AddAnnotation (_geecg ._beebgd );
+};_abda +=_cgddg ;if _gfcdc {_egafc .Add_w (1.0);};if _cbgeb {_egafc .Add_RG (0.0,0.0,0.0);};if _gcfff {_egafc .Add_Tr (int64 (TextRenderingModeFill ));};if _afbb {_egafc .Add_Tc (0);};if _fagc {_egafc .Add_Ts (0);};if _bfcfa {_egafc .Add_Tz (DefaultHorizontalScaling );
+};if _acde !=0.0{_egafc .Translate (0,-_acde );_acde =0.0;};};};_egafc .Add_ET ();for _ ,_fffd :=range _agbag {_egafc .SetStrokingColor (_fffd .LineColor ).Add_w (_fffd .LineWidth ).Add_m (_fffd .X1 ,_fffd .Y1 ).Add_l (_fffd .X2 ,_fffd .Y2 ).Add_s ();};
+_egafc .Add_Q ();_acdf :=_egafc .Operations ();_acdf .WrapIfNeeded ();_bgae .addContents (_acdf );if _begg {_gffc :=_efgfc ;_dcede .Y +=_gffc ;_dcede .Height -=_gffc ;if _dcede .Inline {_dcede .X +=_agaec .Width ()+_agaec ._eebag .Right ;};};return _dcede ,_cffcf ,nil ;
+};
+
+// SetHorizontalAlignment sets the horizontal alignment of the image.
+func (_baff *Image )SetHorizontalAlignment (alignment HorizontalAlignment ){_baff ._eeef =alignment };
+
+// SetMargins sets the margins TOC line.
+func (_faacbe *TOCLine )SetMargins (left ,right ,top ,bottom float64 ){_faacbe ._gfgb =left ;_gecga :=&_faacbe ._dabee ._eebag ;_gecga .Left =_faacbe ._gfgb +float64 (_faacbe ._bbec -1)*_faacbe ._eedde ;_gecga .Right =right ;_gecga .Top =top ;_gecga .Bottom =bottom ;
+};func _ccea (_gfggc *Block ,_faaga *Paragraph ,_agff DrawContext )(DrawContext ,error ){_ebag :=1;_afab :=_dd .PdfObjectName ("\u0046\u006f\u006e\u0074"+_fe .Itoa (_ebag ));for _gfggc ._gf .HasFontByName (_afab ){_ebag ++;_afab =_dd .PdfObjectName ("\u0046\u006f\u006e\u0074"+_fe .Itoa (_ebag ));
+};_eaff :=_gfggc ._gf .SetFontByName (_afab ,_faaga ._gbdaa .ToPdfObject ());if _eaff !=nil {return _agff ,_eaff ;};_faaga .wrapText ();_efdde :=_ebc .NewContentCreator ();_efdde .Add_q ();_faaf :=_agff .PageHeight -_agff .Y -_faaga ._bgef *_faaga ._adgg ;
+_efdde .Translate (_agff .X ,_faaf );if _faaga ._abgcb !=0{_efdde .RotateDeg (_faaga ._abgcb );};_dgag :=_cfd (_faaga ._cfae );_eaff =_aacgba (_gfggc ,_dgag ,_faaga ._cfae ,func ()Rectangle {return Rectangle {_cfbab :_agff .X ,_cffbf :_faaf ,_bfddd :_faaga .getMaxLineWidth ()/1000.0,_abfd :_faaga .Height ()};
+});if _eaff !=nil {return _agff ,_eaff ;};_efdde .Add_BT ().SetNonStrokingColor (_dgag ).Add_Tf (_afab ,_faaga ._bgef ).Add_TL (_faaga ._bgef *_faaga ._adgg );for _bdfe ,_edfa :=range _faaga ._fcda {if _bdfe !=0{_efdde .Add_Tstar ();};_dceb :=[]rune (_edfa );
+_fbgdf :=0.0;_aebb :=0;for _eggd ,_fgcda :=range _dceb {if _fgcda ==' '{_aebb ++;continue ;};if _fgcda =='\u000A'{continue ;};_fbgb ,_adggc :=_faaga ._gbdaa .GetRuneMetrics (_fgcda );if !_adggc {_da .Log .Debug ("\u0055\u006e\u0073\u0075\u0070\u0070\u006f\u0072\u0074\u0065\u0064\u0020\u0072\u0075\u006e\u0065\u0020\u0069=\u0025\u0064\u0020\u0072\u0075\u006e\u0065=\u0030\u0078\u0025\u0030\u0034\u0078\u003d\u0025\u0063\u0020\u0069n\u0020\u0066\u006f\u006e\u0074\u0020\u0025\u0073\u0020\u0025\u0073",_eggd ,_fgcda ,_fgcda ,_faaga ._gbdaa .BaseFont (),_faaga ._gbdaa .Subtype ());
+return _agff ,_d .New ("\u0075\u006e\u0073\u0075pp\u006f\u0072\u0074\u0065\u0064\u0020\u0074\u0065\u0078\u0074\u0020\u0067\u006c\u0079p\u0068");};_fbgdf +=_faaga ._bgef *_fbgb .Wx ;};var _agab []_dd .PdfObject ;_gga ,_fbab :=_faaga ._gbdaa .GetRuneMetrics (' ');
+if !_fbab {return _agff ,_d .New ("\u0074\u0068e \u0066\u006f\u006et\u0020\u0064\u006f\u0065s n\u006ft \u0068\u0061\u0076\u0065\u0020\u0061\u0020sp\u0061\u0063\u0065\u0020\u0067\u006c\u0079p\u0068");};_ead :=_gga .Wx ;switch _faaga ._afcfe {case TextAlignmentJustify :if _aebb > 0&&_bdfe < len (_faaga ._fcda )-1{_ead =(_faaga ._bgdg *1000.0-_fbgdf )/float64 (_aebb )/_faaga ._bgef ;
+};case TextAlignmentCenter :_ddbd :=_fbgdf +float64 (_aebb )*_ead *_faaga ._bgef ;_bfag :=(_faaga ._bgdg *1000.0-_ddbd )/2/_faaga ._bgef ;_agab =append (_agab ,_dd .MakeFloat (-_bfag ));case TextAlignmentRight :_cceg :=_fbgdf +float64 (_aebb )*_ead *_faaga ._bgef ;
+_fege :=(_faaga ._bgdg *1000.0-_cceg )/_faaga ._bgef ;_agab =append (_agab ,_dd .MakeFloat (-_fege ));};_ccaf :=_faaga ._gbdaa .Encoder ();var _abffd []byte ;for _ ,_cbga :=range _dceb {if _cbga =='\u000A'{continue ;};if _cbga ==' '{if len (_abffd )> 0{_agab =append (_agab ,_dd .MakeStringFromBytes (_abffd ));
+_abffd =nil ;};_agab =append (_agab ,_dd .MakeFloat (-_ead ));}else {if _ ,_facf :=_ccaf .RuneToCharcode (_cbga );!_facf {_eaff =UnsupportedRuneError {Message :_fb .Sprintf ("\u0075\u006e\u0073\u0075\u0070\u0070\u006fr\u0074\u0065\u0064 \u0072\u0075\u006e\u0065 \u0069\u006e\u0020\u0074\u0065\u0078\u0074\u0020\u0065\u006e\u0063\u006f\u0064\u0069\u006e\u0067\u003a\u0020\u0025\u0023\u0078\u0020\u0028\u0025\u0063\u0029",_cbga ,_cbga ),Rune :_cbga };
+_agff ._ggce =append (_agff ._ggce ,_eaff );_da .Log .Debug (_eaff .Error ());if _agff ._cbc <=0{continue ;};_cbga =_agff ._cbc ;};_abffd =append (_abffd ,_ccaf .Encode (string (_cbga ))...);};};if len (_abffd )> 0{_agab =append (_agab ,_dd .MakeStringFromBytes (_abffd ));
+};_efdde .Add_TJ (_agab ...);};_efdde .Add_ET ();_efdde .Add_Q ();_feec :=_efdde .Operations ();_feec .WrapIfNeeded ();_gfggc .addContents (_feec );if _faaga ._fgecf .IsRelative (){_adga :=_faaga .Height ();_agff .Y +=_adga ;_agff .Height -=_adga ;if _agff .Inline {_agff .X +=_faaga .Width ()+_faaga ._efbg .Right ;
+};};return _agff ,nil ;};func (_dbe *Block )translate (_ad ,_ac float64 ){_df :=_ebc .NewContentCreator ().Translate (_ad ,-_ac ).Operations ();*_dbe ._db =append (*_df ,*_dbe ._db ...);_dbe ._db .WrapIfNeeded ();};const (TextOverflowVisible TextOverflow =iota ;
+TextOverflowHidden ;);
+
+// SetExtends specifies whether to extend the shading beyond the starting and ending points.
+//
+// Text extends is set to `[]bool{false, false}` by default.
+func (_bgfe *shading )SetExtends (start bool ,end bool ){_bgfe ._gcefb =[]bool {start ,end }};
+
+// InvoiceAddress contains contact information that can be displayed
+// in an invoice. It is used for the seller and buyer information in the
+// invoice template.
+type InvoiceAddress struct{Heading string ;Name string ;Street string ;Street2 string ;Zip string ;City string ;State string ;Country string ;Phone string ;Email string ;
+
+// Separator defines the separator between different address components,
+// such as the city, state and zip code. It defaults to ", " when the
+// field is an empty string.
+Separator string ;
+
+// If enabled, the Phone field label (`Phone: `) is not displayed.
+HidePhoneLabel bool ;
+
+// If enabled, the Email field label (`Email: `) is not displayed.
+HideEmailLabel bool ;};func (_gcgg *templateProcessor )parseColor (_ddbda string )Color {if _ddbda ==""{return nil ;};_dage ,_bgfdf :=_gcgg ._deag .ColorMap [_ddbda ];if _bgfdf {return _dage ;};if _ddbda [0]=='#'{return ColorRGBFromHex (_ddbda );};return nil ;
+};
+
+// NewImageFromData creates an Image from image data.
+func (_edg *Creator )NewImageFromData (data []byte )(*Image ,error ){return _abgd (data )};
+
+// Number returns the invoice number description and value cells.
+// The returned values can be used to customize the styles of the cells.
+func (_efcc *Invoice )Number ()(*InvoiceCell ,*InvoiceCell ){return _efcc ._agebg [0],_efcc ._agebg [1]};
+
+// Length calculates and returns the length of the line.
+func (_ecfg *Line )Length ()float64 {return _fa .Sqrt (_fa .Pow (_ecfg ._ecec -_ecfg ._bcgf ,2.0)+_fa .Pow (_ecfg ._daac -_ecfg ._fgba ,2.0));};func (_cfffd *TableCell )width (_cagc []float64 ,_caafg float64 )float64 {_fgbdde :=float64 (0.0);for _dbeg :=0;
+_dbeg < _cfffd ._cdefg ;_dbeg ++{_fgbdde +=_cagc [_cfffd ._faga +_dbeg -1];};return _fgbdde *_caafg ;};
+
+// SetHorizontalAlignment sets the cell's horizontal alignment of content.
+// Can be one of:
+// - CellHorizontalAlignmentLeft
+// - CellHorizontalAlignmentCenter
+// - CellHorizontalAlignmentRight
+func (_cbgdf *TableCell )SetHorizontalAlignment (halign CellHorizontalAlignment ){_cbgdf ._cdfcd =halign ;};func (_cccd *Creator )initContext (){_cccd ._ddd .X =_cccd ._bbdf .Left ;_cccd ._ddd .Y =_cccd ._bbdf .Top ;_cccd ._ddd .Width =_cccd ._aef -_cccd ._bbdf .Right -_cccd ._bbdf .Left ;
+_cccd ._ddd .Height =_cccd ._cec -_cccd ._bbdf .Bottom -_cccd ._bbdf .Top ;_cccd ._ddd .PageHeight =_cccd ._cec ;_cccd ._ddd .PageWidth =_cccd ._aef ;_cccd ._ddd .Margins =_cccd ._bbdf ;_cccd ._ddd ._cbc =_cccd .UnsupportedCharacterReplacement ;};
+
+// SetFillOpacity sets the fill opacity.
+func (_efgc *CurvePolygon )SetFillOpacity (opacity float64 ){_efgc ._febb =opacity };
+
+// Logo returns the logo of the invoice.
+func (_ggcd *Invoice )Logo ()*Image {return _ggcd ._gaffd };
+
+// Width returns Image's document width.
+func (_ffeb *Image )Width ()float64 {return _ffeb ._edda };
+
+// GetMargins returns the margins of the ellipse: left, right, top, bottom.
+func (_cbce *Ellipse )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _cbce ._fbed .Left ,_cbce ._fbed .Right ,_cbce ._fbed .Top ,_cbce ._fbed .Bottom ;};func (_aeebb *StyledParagraph )getTextLineWidth (_gabf []*TextChunk )float64 {var _cdfd float64 ;
+_gagbc :=len (_gabf );for _adffa ,_acef :=range _gabf {_feeaf :=&_acef .Style ;_fggge :=len (_acef .Text );for _befb ,_afcaf :=range _acef .Text {if _afcaf =='\u000A'{continue ;};_cgeg ,_fbag :=_feeaf .Font .GetRuneMetrics (_afcaf );if !_fbag {_da .Log .Debug ("\u0052\u0075\u006e\u0065\u0020\u0063\u0068\u0061\u0072\u0020\u006d\u0065\u0074\u0072\u0069c\u0073 \u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064\u0021\u0020\u0025\u0076\u000a",_afcaf );
+return -1;};_cdfd +=_feeaf .FontSize *_cgeg .Wx *_feeaf .horizontalScale ();if _afcaf !=' '&&(_adffa !=_gagbc -1||_befb !=_fggge -1){_cdfd +=_feeaf .CharSpacing *1000.0;};};};return _cdfd ;};
+
+// ScaleToHeight scales the Block to a specified height, maintaining the same aspect ratio.
+func (_bce *Block )ScaleToHeight (h float64 ){_gae :=h /_bce ._egb ;_bce .Scale (_gae ,_gae )};
+
+// SetBorderRadius sets the radius of the background corners.
+func (_cb *Background )SetBorderRadius (topLeft ,topRight ,bottomLeft ,bottomRight float64 ){_cb .BorderRadiusTopLeft =topLeft ;_cb .BorderRadiusTopRight =topRight ;_cb .BorderRadiusBottomLeft =bottomLeft ;_cb .BorderRadiusBottomRight =bottomRight ;};
+
+// RotatedSize returns the width and height of the rotated block.
+func (_feed *Block )RotatedSize ()(float64 ,float64 ){_ ,_ ,_dgc ,_gfc :=_abcbd (_feed ._bab ,_feed ._egb ,_feed ._gc );return _dgc ,_gfc ;};
+
+// SetLogo sets the logo of the invoice.
+func (_afcea *Invoice )SetLogo (logo *Image ){_afcea ._gaffd =logo };func (_ecgbbg *templateProcessor )parseLineStyleAttr (_ccbgf ,_fgae string )_bg .LineStyle {_da .Log .Debug ("\u0050\u0061\u0072\u0073\u0069n\u0067\u0020\u006c\u0069\u006e\u0065\u0020\u0073\u0074\u0079\u006c\u0065\u0020a\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0028\u0060\u0025\u0073\u0060\u002c\u0020\u0025\u0073\u0029\u002e",_ccbgf ,_fgae );
+_bdbc :=map[string ]_bg .LineStyle {"\u0073\u006f\u006ci\u0064":_bg .LineStyleSolid ,"\u0064\u0061\u0073\u0068\u0065\u0064":_bg .LineStyleDashed }[_fgae ];return _bdbc ;};func (_edcdb *templateProcessor )parseEllipse (_abddc *templateNode )(interface{},error ){_afagc :=_edcdb .creator .NewEllipse (0,0,0,0);
+for _ ,_egdef :=range _abddc ._bdbga .Attr {_eebb :=_egdef .Value ;switch _agcf :=_egdef .Name .Local ;_agcf {case "\u0063\u0078":_afagc ._gbd =_edcdb .parseFloatAttr (_agcf ,_eebb );case "\u0063\u0079":_afagc ._efd =_edcdb .parseFloatAttr (_agcf ,_eebb );
+case "\u0077\u0069\u0064t\u0068":_afagc .SetWidth (_edcdb .parseFloatAttr (_agcf ,_eebb ));case "\u0068\u0065\u0069\u0067\u0068\u0074":_afagc .SetHeight (_edcdb .parseFloatAttr (_agcf ,_eebb ));case "\u0066\u0069\u006c\u006c\u002d\u0063\u006f\u006c\u006f\u0072":_afagc .SetFillColor (_edcdb .parseColorAttr (_agcf ,_eebb ));
+case "\u0066\u0069\u006cl\u002d\u006f\u0070\u0061\u0063\u0069\u0074\u0079":_afagc .SetFillOpacity (_edcdb .parseFloatAttr (_agcf ,_eebb ));case "\u0062\u006f\u0072d\u0065\u0072\u002d\u0063\u006f\u006c\u006f\u0072":_afagc .SetBorderColor (_edcdb .parseColorAttr (_agcf ,_eebb ));
+case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u006f\u0070a\u0063\u0069\u0074\u0079":_afagc .SetBorderOpacity (_edcdb .parseFloatAttr (_agcf ,_eebb ));case "\u0062\u006f\u0072d\u0065\u0072\u002d\u0077\u0069\u0064\u0074\u0068":_afagc .SetBorderWidth (_edcdb .parseFloatAttr (_agcf ,_eebb ));
+case "\u0070\u006f\u0073\u0069\u0074\u0069\u006f\u006e":_afagc .SetPositioning (_edcdb .parsePositioningAttr (_agcf ,_eebb ));case "\u0066\u0069\u0074\u002d\u006d\u006f\u0064\u0065":_afagc .SetFitMode (_edcdb .parseFitModeAttr (_agcf ,_eebb ));case "\u006d\u0061\u0072\u0067\u0069\u006e":_gfge :=_edcdb .parseMarginAttr (_agcf ,_eebb );
+_afagc .SetMargins (_gfge .Left ,_gfge .Right ,_gfge .Top ,_gfge .Bottom );default:_da .Log .Debug ("\u0055\u006es\u0075\u0070\u0070\u006f\u0072\u0074\u0065\u0064\u0020\u0065\u006c\u006c\u0069\u0070\u0073\u0065\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073\u0060\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069\u006e\u0067\u002e",_agcf );
+};};return _afagc ,nil ;};
+
+// GeneratePageBlocks draws the filled curve on page blocks.
+func (_eddf *FilledCurve )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_defc :=NewBlock (ctx .PageWidth ,ctx .PageHeight );_ccbfb ,_ ,_cbbg :=_eddf .draw (_defc ,"");if _cbbg !=nil {return nil ,ctx ,_cbbg ;};_cbbg =_defc .addContentsByString (string (_ccbfb ));
+if _cbbg !=nil {return nil ,ctx ,_cbbg ;};return []*Block {_defc },ctx ,nil ;};func (_gfaf *Invoice )setCellBorder (_gfef *TableCell ,_cdfbc *InvoiceCell ){for _ ,_bdfd :=range _cdfbc .BorderSides {_gfef .SetBorder (_bdfd ,CellBorderStyleSingle ,_cdfbc .BorderWidth );
+};_gfef .SetBorderColor (_cdfbc .BorderColor );};
+
+// SetLineStyle sets the style for all the line components: number, title,
+// separator, page. The style is applied only for new lines added to the
+// TOC component.
+func (_beefd *TOC )SetLineStyle (style TextStyle ){_beefd .SetLineNumberStyle (style );_beefd .SetLineTitleStyle (style );_beefd .SetLineSeparatorStyle (style );_beefd .SetLinePageStyle (style );};func _gcdc (_gebb *Creator ,_deae _fg .Reader ,_fffg interface{},_edacc *TemplateOptions ,_dbgd componentRenderer )error {if _gebb ==nil {_da .Log .Error ("\u0043\u0072\u0065a\u0074\u006f\u0072\u0020i\u006e\u0073\u0074\u0061\u006e\u0063\u0065 \u0063\u0061\u006e\u006e\u006f\u0074\u0020\u0062\u0065\u0020\u006e\u0069\u006c\u002e");
+return _eacgc ;};_aefeb :=_c .NewBuffer (nil );if _ ,_cdacc :=_fg .Copy (_aefeb ,_deae );_cdacc !=nil {return _cdacc ;};_cfad :=_ff .FuncMap {"\u0064\u0069\u0063\u0074":_bgfac };if _edacc !=nil &&_edacc .HelperFuncMap !=nil {for _ccfa ,_dffeb :=range _edacc .HelperFuncMap {if _ ,_ebaaf :=_cfad [_ccfa ];
+_ebaaf {_da .Log .Debug ("\u0043\u0061\u006e\u006e\u006f\u0074 \u006f\u0076\u0065r\u0072\u0069\u0064e\u0020\u0062\u0075\u0069\u006c\u0074\u002d\u0069\u006e\u0020`\u0025\u0073\u0060\u0020\u0068el\u0070\u0065\u0072\u0020\u0066\u0075\u006e\u0063\u0074\u0069\u006f\u006e\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069\u006e\u0067\u002e",_ccfa );
+continue ;};_cfad [_ccfa ]=_dffeb ;};};_becca ,_bgde :=_ff .New ("").Funcs (_cfad ).Parse (_aefeb .String ());if _bgde !=nil {return _bgde ;};if _edacc !=nil &&_edacc .SubtemplateMap !=nil {for _acca ,_ebeab :=range _edacc .SubtemplateMap {if _acca ==""{_da .Log .Debug ("\u0053\u0075\u0062\u0074\u0065\u006d\u0070\u006c\u0061\u0074\u0065\u0020\u006e\u0061\u006d\u0065\u0020\u0063\u0061\u006en\u006f\u0074\u0020\u0062\u0065\u0020\u0065\u006d\u0070\u0074\u0079\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069\u006e\u0067.\u0020\u004f\u0075\u0074\u0070\u0075\u0074\u0020\u006d\u0061\u0079\u0020\u0062\u0065 \u0069\u006e\u0063o\u0072\u0072\u0065\u0063\u0074\u002e");
+continue ;};if _ebeab ==nil {_da .Log .Debug ("S\u0075\u0062t\u0065\u006d\u0070\u006c\u0061\u0074\u0065\u0020\u0063\u006f\u006e\u0074\u0065\u006e\u0074\u0020\u0063\u0061\u006e\u006eo\u0074\u0020\u0062\u0065\u0020\u006e\u0069\u006c\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069n\u0067\u002e\u0020\u004f\u0075\u0074\u0070\u0075\u0074\u0020\u006d\u0061\u0079 \u0062\u0065\u0020\u0069\u006e\u0063\u006f\u0072\u0072\u0065\u0063t\u002e");
+continue ;};_gecbg :=_c .NewBuffer (nil );if _ ,_deeec :=_fg .Copy (_gecbg ,_ebeab );_deeec !=nil {return _deeec ;};if _ ,_cdee :=_becca .New (_acca ).Parse (_gecbg .String ());_cdee !=nil {return _cdee ;};};};_aefeb .Reset ();if _aeega :=_becca .Execute (_aefeb ,_fffg );
+_aeega !=nil {return _aeega ;};return _ggad (_gebb ,_aefeb .Bytes (),_edacc ,_dbgd ).run ();};func (_cbfec *templateProcessor )parseChapter (_efdg *templateNode )(interface{},error ){_geef :=_cbfec .creator .NewChapter ;if _efdg ._bdgb !=nil {if _cgfd ,_ddeg :=_efdg ._bdgb ._bdced .(*Chapter );
+_ddeg {_geef =_cgfd .NewSubchapter ;};};_bddg :=_geef ("");for _ ,_feff :=range _efdg ._bdbga .Attr {_bebd :=_feff .Value ;switch _agagc :=_feff .Name .Local ;_agagc {case "\u0073\u0068\u006f\u0077\u002d\u006e\u0075\u006d\u0062e\u0072\u0069\u006e\u0067":_bddg .SetShowNumbering (_cbfec .parseBoolAttr (_agagc ,_bebd ));
+case "\u0069\u006e\u0063\u006c\u0075\u0064\u0065\u002d\u0069n\u002d\u0074\u006f\u0063":_bddg .SetIncludeInTOC (_cbfec .parseBoolAttr (_agagc ,_bebd ));case "\u006d\u0061\u0072\u0067\u0069\u006e":_ceagd :=_cbfec .parseMarginAttr (_agagc ,_bebd );_bddg .SetMargins (_ceagd .Left ,_ceagd .Right ,_ceagd .Top ,_ceagd .Bottom );
+default:_da .Log .Debug ("\u0055\u006es\u0075\u0070\u0070\u006f\u0072\u0074\u0065\u0064\u0020\u0063\u0068\u0061\u0070\u0074\u0065\u0072\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073\u0060\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069\u006e\u0067\u002e",_agagc );
+};};return _bddg ,nil ;};
 
 // SetAddressStyle sets the style properties used to render the content of
 // the invoice address sections.
-func (_aeagb *Invoice )SetAddressStyle (style TextStyle ){_aeagb ._cfgg =style };func _afgcg (_ccaeb *_gf .PdfFont )TextStyle {return TextStyle {Color :ColorRGBFrom8bit (0,0,238),Font :_ccaeb ,FontSize :10,OutlineSize :1,HorizontalScaling :DefaultHorizontalScaling ,UnderlineStyle :TextDecorationLineStyle {Offset :1,Thickness :1}};
+func (_beab *Invoice )SetAddressStyle (style TextStyle ){_beab ._bdbg =style };
+
+// AddTotalLine adds a new line in the invoice totals table.
+func (_afcc *Invoice )AddTotalLine (desc ,value string )(*InvoiceCell ,*InvoiceCell ){_bfcf :=&InvoiceCell {_afcc ._afdac ,desc };_gdae :=&InvoiceCell {_afcc ._afdac ,value };_afcc ._gcffc =append (_afcc ._gcffc ,[2]*InvoiceCell {_bfcf ,_gdae });return _bfcf ,_gdae ;
+};func _gbac (_dffgb string )([]string ,error ){var (_gadb []string ;_acec []rune ;);for _ ,_ffbae :=range _dffgb {if _ffbae =='\u000A'{if len (_acec )> 0{_gadb =append (_gadb ,string (_acec ));};_gadb =append (_gadb ,string (_ffbae ));_acec =nil ;continue ;
+};_acec =append (_acec ,_ffbae );};if len (_acec )> 0{_gadb =append (_gadb ,string (_acec ));};var _fbff []string ;for _ ,_cfaab :=range _gadb {_eddag :=[]rune (_cfaab );_cbebg :=_g .NewScanner (_eddag );var _fgfc []rune ;for _dgaf :=0;_dgaf < len (_eddag );
+_dgaf ++{_ ,_fdcb ,_afagb :=_cbebg .Next ();if _afagb !=nil {return nil ,_afagb ;};if _fdcb ==_g .BreakProhibited ||_eb .IsSpace (_eddag [_dgaf ]){_fgfc =append (_fgfc ,_eddag [_dgaf ]);if _eb .IsSpace (_eddag [_dgaf ]){_fbff =append (_fbff ,string (_fgfc ));
+_fgfc =[]rune {};};continue ;}else {if len (_fgfc )> 0{_fbff =append (_fbff ,string (_fgfc ));};_fgfc =[]rune {_eddag [_dgaf ]};};};if len (_fgfc )> 0{_fbff =append (_fbff ,string (_fgfc ));};};return _fbff ,nil ;};
+
+// SetPos sets the position of the chart to the specified coordinates.
+// This method sets the chart to use absolute positioning.
+func (_afe *Chart )SetPos (x ,y float64 ){_afe ._gge =PositionAbsolute ;_afe ._gfcd =x ;_afe ._abfg =y };func (_fbef *Image )rotatedSize ()(float64 ,float64 ){_ffca :=_fbef ._edda ;_eaeg :=_fbef ._eega ;_adac :=_fbef ._dbbd ;if _adac ==0{return _ffca ,_eaeg ;
+};_cbbc :=_bg .Path {Points :[]_bg .Point {_bg .NewPoint (0,0).Rotate (_adac ),_bg .NewPoint (_ffca ,0).Rotate (_adac ),_bg .NewPoint (0,_eaeg ).Rotate (_adac ),_bg .NewPoint (_ffca ,_eaeg ).Rotate (_adac )}}.GetBoundingBox ();return _cbbc .Width ,_cbbc .Height ;
 };
 
-// BorderWidth returns the border width of the rectangle.
-func (_fgfb *Rectangle )BorderWidth ()float64 {return _fgfb ._eacf };func _bcddc (_afceb *templateProcessor ,_addge *templateNode )(interface{},error ){return _afceb .parsePageBreak (_addge );};
+// SetLineHeight sets the line height (1.0 default).
+func (_deead *StyledParagraph )SetLineHeight (lineheight float64 ){_deead ._gbbd =lineheight };var _accae =map[string ]*templateTag {"\u0070a\u0072\u0061\u0067\u0072\u0061\u0070h":&templateTag {_gagf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{},"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{},"\u006ci\u0073\u0074\u002d\u0069\u0074\u0065m":struct{}{}},_agdb :_ddbc },"\u0074\u0065\u0078\u0074\u002d\u0063\u0068\u0075\u006e\u006b":&templateTag {_gagf :map[string ]struct{}{"\u0070a\u0072\u0061\u0067\u0072\u0061\u0070h":struct{}{}},_agdb :_cbgdfe },"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":&templateTag {_gagf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{},"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{},"\u006ci\u0073\u0074\u002d\u0069\u0074\u0065m":struct{}{}},_agdb :_dgefe },"\u0074\u0061\u0062l\u0065":&templateTag {_gagf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{},"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{},"\u006ci\u0073\u0074\u002d\u0069\u0074\u0065m":struct{}{}},_agdb :_gffde },"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":&templateTag {_gagf :map[string ]struct{}{"\u0074\u0061\u0062l\u0065":struct{}{}},_agdb :_dgga },"\u006c\u0069\u006e\u0065":&templateTag {_gagf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{},"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{}},_agdb :_eeea },"\u0072e\u0063\u0074\u0061\u006e\u0067\u006ce":&templateTag {_gagf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{},"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{}},_agdb :_fcfce },"\u0065l\u006c\u0069\u0070\u0073\u0065":&templateTag {_gagf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{},"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{}},_agdb :_aagf },"\u0069\u006d\u0061g\u0065":&templateTag {_gagf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{},"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{},"\u006ci\u0073\u0074\u002d\u0069\u0074\u0065m":struct{}{}},_agdb :_fbgda },"\u0063h\u0061\u0070\u0074\u0065\u0072":&templateTag {_gagf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{}},_agdb :_ffcc },"\u0063h\u0061p\u0074\u0065\u0072\u002d\u0068\u0065\u0061\u0064\u0069\u006e\u0067":&templateTag {_gagf :map[string ]struct{}{"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{}},_agdb :_fgbddeg },"\u0063\u0068\u0061r\u0074":&templateTag {_gagf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{},"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{}},_agdb :_geegg },"\u0070\u0061\u0067\u0065\u002d\u0062\u0072\u0065\u0061\u006b":&templateTag {_gagf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{}},_agdb :_bdcgb },"\u0062\u0061\u0063\u006b\u0067\u0072\u006f\u0075\u006e\u0064":&templateTag {_gagf :map[string ]struct{}{"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{}},_agdb :_cefa },"\u006c\u0069\u0073\u0074":&templateTag {_gagf :map[string ]struct{}{"\u0063r\u0065\u0061\u0074\u006f\u0072":struct{}{},"\u0062\u006c\u006fc\u006b":struct{}{},"\u0064\u0069\u0076\u0069\u0073\u0069\u006f\u006e":struct{}{},"\u0074\u0061\u0062\u006c\u0065\u002d\u0063\u0065\u006c\u006c":struct{}{},"\u0063h\u0061\u0070\u0074\u0065\u0072":struct{}{},"\u006ci\u0073\u0074\u002d\u0069\u0074\u0065m":struct{}{}},_agdb :_gcabd },"\u006ci\u0073\u0074\u002d\u0069\u0074\u0065m":&templateTag {_gagf :map[string ]struct{}{"\u006c\u0069\u0073\u0074":struct{}{}},_agdb :_eaead },"l\u0069\u0073\u0074\u002d\u006d\u0061\u0072\u006b\u0065\u0072":&templateTag {_gagf :map[string ]struct{}{"\u006c\u0069\u0073\u0074":struct{}{},"\u006ci\u0073\u0074\u002d\u0069\u0074\u0065m":struct{}{}},_agdb :_edafc }};
 
-// GeneratePageBlocks draws the composite curve polygon on a new block
-// representing the page. Implements the Drawable interface.
-func (_cbegb *CurvePolygon )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_aecb :=NewBlock (ctx .PageWidth ,ctx .PageHeight );_aaeg ,_ddac :=_aecb .setOpacity (_cbegb ._ffcg ,_cbegb ._bced );if _ddac !=nil {return nil ,ctx ,_ddac ;
-};_abb :=_cbegb ._dadd ;_abb .FillEnabled =_abb .FillColor !=nil ;_abb .BorderEnabled =_abb .BorderColor !=nil &&_abb .BorderWidth > 0;var (_fdedg =ctx .PageHeight ;_cgg =_abb .Rings ;_gefc =make ([][]_g .CubicBezierCurve ,0,len (_abb .Rings )););_gbaf :=_gf .PdfRectangle {};
-if len (_cgg )> 0&&len (_cgg [0])> 0{_egbc :=_cgg [0][0];_egbc .P0 .Y =_fdedg -_egbc .P0 .Y ;_egbc .P1 .Y =_fdedg -_egbc .P1 .Y ;_egbc .P2 .Y =_fdedg -_egbc .P2 .Y ;_egbc .P3 .Y =_fdedg -_egbc .P3 .Y ;_gbaf =_egbc .GetBounds ();};for _ ,_fegg :=range _cgg {_egfd :=make ([]_g .CubicBezierCurve ,0,len (_fegg ));
-for _ ,_efb :=range _fegg {_afgb :=_efb ;_afgb .P0 .Y =_fdedg -_afgb .P0 .Y ;_afgb .P1 .Y =_fdedg -_afgb .P1 .Y ;_afgb .P2 .Y =_fdedg -_afgb .P2 .Y ;_afgb .P3 .Y =_fdedg -_afgb .P3 .Y ;_egfd =append (_egfd ,_afgb );_gced :=_afgb .GetBounds ();_gbaf .Llx =_ee .Min (_gbaf .Llx ,_gced .Llx );
-_gbaf .Lly =_ee .Min (_gbaf .Lly ,_gced .Lly );_gbaf .Urx =_ee .Max (_gbaf .Urx ,_gced .Urx );_gbaf .Ury =_ee .Max (_gbaf .Ury ,_gced .Ury );};_gefc =append (_gefc ,_egfd );};_abb .Rings =_gefc ;defer func (){_abb .Rings =_cgg }();if _abb .FillEnabled {_fbed :=_ggfba (_aecb ,_cbegb ._dadd .FillColor ,_cbegb ._caac ,func ()Rectangle {return Rectangle {_fgfd :_gbaf .Llx ,_aedgf :_gbaf .Lly ,_adeb :_gbaf .Width (),_dffef :_gbaf .Height ()};
-});if _fbed !=nil {return nil ,ctx ,_fbed ;};};_fcea ,_ ,_ddac :=_abb .Draw (_aaeg );if _ddac !=nil {return nil ,ctx ,_ddac ;};if _ddac =_aecb .addContentsByString (string (_fcea ));_ddac !=nil {return nil ,ctx ,_ddac ;};return []*Block {_aecb },ctx ,nil ;
-};
 
-// Width is not used. The list component is designed to fill into the available
-// width depending on the context. Returns 0.
-func (_eadba *List )Width ()float64 {return 0};
+// SetBorderColor sets the border color of the ellipse.
+func (_bfbg *Ellipse )SetBorderColor (col Color ){_bfbg ._fdfd =col };
+
+// RotateDeg rotates the current active page by angle degrees.  An error is returned on failure,
+// which can be if there is no currently active page, or the angleDeg is not a multiple of 90 degrees.
+func (_fbga *Creator )RotateDeg (angleDeg int64 )error {_edfc :=_fbga .getActivePage ();if _edfc ==nil {_da .Log .Debug ("F\u0061\u0069\u006c\u0020\u0074\u006f\u0020\u0072\u006f\u0074\u0061\u0074\u0065\u003a\u0020\u006e\u006f\u0020p\u0061\u0067\u0065\u0020\u0063\u0075\u0072\u0072\u0065\u006etl\u0079\u0020\u0061c\u0074i\u0076\u0065");
+return _d .New ("\u006e\u006f\u0020\u0070\u0061\u0067\u0065\u0020\u0061c\u0074\u0069\u0076\u0065");};if angleDeg %90!=0{_da .Log .Debug ("E\u0052\u0052\u004f\u0052\u003a\u0020\u0050\u0061\u0067e\u0020\u0072\u006f\u0074\u0061\u0074\u0069on\u0020\u0061\u006e\u0067l\u0065\u0020\u006e\u006f\u0074\u0020\u0061\u0020\u006dul\u0074\u0069p\u006c\u0065\u0020\u006f\u0066\u0020\u0039\u0030");
+return _d .New ("\u0072\u0061\u006e\u0067\u0065\u0020\u0063\u0068\u0065\u0063\u006b\u0020e\u0072\u0072\u006f\u0072");};var _cac int64 ;if _edfc .Rotate !=nil {_cac =*(_edfc .Rotate );};_cac +=angleDeg ;_edfc .Rotate =&_cac ;return nil ;};
+
+// SetText replaces all the text of the paragraph with the specified one.
+func (_dacgf *StyledParagraph )SetText (text string )*TextChunk {_dacgf .Reset ();return _dacgf .Append (text );};const (CellBorderSideLeft CellBorderSide =iota ;CellBorderSideRight ;CellBorderSideTop ;CellBorderSideBottom ;CellBorderSideAll ;);func (_fgcg *Chapter )headingText ()string {_bae :=_fgcg ._cdb ;
+if _gfg :=_fgcg .headingNumber ();_gfg !=""{_bae =_fb .Sprintf ("\u0025\u0073\u0020%\u0073",_gfg ,_bae );};return _bae ;};
+
+// SetAngle sets the rotation angle in degrees.
+func (_cde *Block )SetAngle (angleDeg float64 ){_cde ._gc =angleDeg };
+
+// Angle returns the block rotation angle in degrees.
+func (_gff *Block )Angle ()float64 {return _gff ._gc };
+
+// NewStyledParagraph creates a new styled paragraph.
+// Default attributes:
+// Font: Helvetica,
+// Font size: 10
+// Encoding: WinAnsiEncoding
+// Wrap: enabled
+// Text color: black
+func (_dabcd *Creator )NewStyledParagraph ()*StyledParagraph {return _dccc (_dabcd .NewTextStyle ())};type containerDrawable interface{Drawable ;
+
+// ContainerComponent checks if the component is allowed to be added into provided 'container' and returns
+// preprocessed copy of itself. If the component is not changed it is allowed to return itself in a callback way.
+// If the component is not compatible with provided container this method should return an error.
+ContainerComponent (_fad Drawable )(Drawable ,error );};
+
+// SetMargins sets the margins for the Image (in relative mode): left, right, top, bottom.
+func (_bcbd *Image )SetMargins (left ,right ,top ,bottom float64 ){_bcbd ._dgb .Left =left ;_bcbd ._dgb .Right =right ;_bcbd ._dgb .Top =top ;_bcbd ._dgb .Bottom =bottom ;};
+
+// ToPdfShadingPattern generates a new model.PdfShadingPatternType3 object.
+func (_gada *RadialShading )ToPdfShadingPattern ()*_fee .PdfShadingPatternType3 {_geeg ,_faec ,_ecece :=_gada ._ecef ._bbcfd .ToRGB ();_cedg :=_gada .shadingModel ();_cedg .PdfShading .Background =_dd .MakeArrayFromFloats ([]float64 {_geeg ,_faec ,_ecece });
+_fadc :=_fee .NewPdfShadingPatternType3 ();_fadc .Shading =_cedg ;return _fadc ;};
+
+// PolyBezierCurve represents a composite curve that is the result of joining
+// multiple cubic Bezier curves.
+// Implements the Drawable interface and can be drawn on PDF using the Creator.
+type PolyBezierCurve struct{_cceb *_bg .PolyBezierCurve ;_aabg float64 ;_ebef float64 ;_dcfb Color ;};func (_degd *StyledParagraph )wrapText ()error {return _degd .wrapChunks (true )};
+
+// Add appends a new item to the list.
+// The supported components are: *Paragraph, *StyledParagraph, *Division, *Image, *Table, and *List.
+// Returns the marker used for the newly added item. The returned marker
+// object can be used to change the text and style of the marker for the
+// current item.
+func (_abca *List )Add (item VectorDrawable )(*TextChunk ,error ){_efccg :=&listItem {_eaca :item ,_aeaf :_abca ._dabcb };switch _facc :=item .(type ){case *Paragraph :case *StyledParagraph :case *List :if _facc ._ggeg {_facc ._cfffc =15;};case *Division :case *Image :case *Table :default:return nil ,_d .New ("\u0074\u0068i\u0073\u0020\u0074\u0079\u0070\u0065\u0020\u006f\u0066\u0020\u0064\u0072\u0061\u0077\u0061\u0062\u006c\u0065\u0020\u0069\u0073\u0020\u006e\u006f\u0074\u0020\u0073\u0075\u0070\u0070\u006f\u0072\u0074\u0065\u0064\u0020\u0069\u006e\u0020\u006c\u0069\u0073\u0074");
+};_abca ._fegg =append (_abca ._fegg ,_efccg );return &_efccg ._aeaf ,nil ;};func _fffdc (_bgfb *Table ,_deda DrawContext )([]*Block ,DrawContext ,error ){var _fage []*Block ;_bfgaa :=NewBlock (_deda .PageWidth ,_deda .PageHeight );_bgfb .updateRowHeights (_deda .Width -_bgfb ._dceg .Left -_bgfb ._dceg .Right );
+_geba :=_bgfb ._dceg .Top ;if _bgfb ._caga .IsRelative ()&&!_bgfb ._edcc {_gfgc :=_bgfb .Height ();if _gfgc > _deda .Height -_bgfb ._dceg .Top &&_gfgc <=_deda .PageHeight -_deda .Margins .Top -_deda .Margins .Bottom {_fage =[]*Block {NewBlock (_deda .PageWidth ,_deda .PageHeight -_deda .Y )};
+var _dgaeb error ;if _ ,_deda ,_dgaeb =_gaffdg ().GeneratePageBlocks (_deda );_dgaeb !=nil {return nil ,_deda ,_dgaeb ;};_geba =0;};};_bgba :=_deda ;if _bgfb ._caga .IsAbsolute (){_deda .X =_bgfb ._bccdf ;_deda .Y =_bgfb ._fedc ;}else {_deda .X +=_bgfb ._dceg .Left ;
+_deda .Y +=_geba ;_deda .Width -=_bgfb ._dceg .Left +_bgfb ._dceg .Right ;_deda .Height -=_geba ;};_acge :=_deda .Width ;_dabfa :=_deda .X ;_egadf :=_deda .Y ;_dgddb :=_deda .Height ;_abdf :=0;_bbcdb ,_fdcafg :=-1,-1;if _bgfb ._dgaa {for _gddgg ,_gadda :=range _bgfb ._afbaa {if _gadda ._eeadc < _bgfb ._cfcgb {continue ;
+};if _gadda ._eeadc > _bgfb ._bgda {break ;};if _bbcdb < 0{_bbcdb =_gddgg ;};_fdcafg =_gddgg ;};};if _adefc :=_bgfb .wrapContent (_deda );_adefc !=nil {return nil ,_deda ,_adefc ;};_bgfb .updateRowHeights (_deda .Width -_bgfb ._dceg .Left -_bgfb ._dceg .Right );
+var (_agbf bool ;_dfgba int ;_edea int ;_eebg bool ;_fadd int ;_cbgd error ;);for _gbgdb :=0;_gbgdb < len (_bgfb ._afbaa );_gbgdb ++{_gbafg :=_bgfb ._afbaa [_gbgdb ];_fedg :=_gbafg .width (_bgfb ._fadgg ,_acge );_fbgdfa :=float64 (0.0);for _gbfg :=0;_gbfg < _gbafg ._faga -1;
+_gbfg ++{_fbgdfa +=_bgfb ._fadgg [_gbfg ]*_acge ;};_feedc :=float64 (0.0);for _cgcfg :=_abdf ;_cgcfg < _gbafg ._eeadc -1;_cgcfg ++{_feedc +=_bgfb ._agda [_cgcfg ];};_deda .Height =_dgddb -_feedc ;_afbce :=float64 (0.0);for _cafdd :=0;_cafdd < _gbafg ._dbbfc ;
+_cafdd ++{_afbce +=_bgfb ._agda [_gbafg ._eeadc +_cafdd -1];};_ffebc :=_eebg &&_gbafg ._eeadc !=_fadd ;_fadd =_gbafg ._eeadc ;if _ffebc ||_afbce > _deda .Height {if _bgfb ._cfbac &&!_eebg {_eebg ,_cbgd =_bgfb .wrapRow (_gbgdb ,_deda ,_acge );if _cbgd !=nil {return nil ,_deda ,_cbgd ;
+};if _eebg {_gbgdb --;continue ;};_ffebc =true ;};_fage =append (_fage ,_bfgaa );_bfgaa =NewBlock (_deda .PageWidth ,_deda .PageHeight );_dabfa =_deda .Margins .Left +_bgfb ._dceg .Left ;_egadf =_deda .Margins .Top ;_deda .Height =_deda .PageHeight -_deda .Margins .Top -_deda .Margins .Bottom ;
+_deda .Page ++;_dgddb =_deda .Height ;_abdf =_gbafg ._eeadc -1;_feedc =0;_eebg =false ;if _bgfb ._dgaa &&_bbcdb >=0{_dfgba =_gbgdb ;_gbgdb =_bbcdb -1;_edea =_abdf ;_abdf =_bgfb ._cfcgb -1;_agbf =true ;if _gbafg ._dbbfc > (_bgfb ._edde -_fadd )||(_gbafg ._dbbfc > 1&&_gbgdb < 0){_da .Log .Debug ("\u0054a\u0062\u006ce\u0020\u0068\u0065a\u0064\u0065\u0072\u0020\u0072\u006f\u0077s\u0070\u0061\u006e\u0020\u0065\u0078c\u0065\u0065\u0064\u0073\u0020\u0061\u0076\u0061\u0069\u006c\u0061b\u006c\u0065\u0020\u0073\u0070\u0061\u0063\u0065\u002e");
+_agbf =false ;_bbcdb ,_fdcafg =-1,-1;};continue ;};if _ffebc {_gbgdb --;continue ;};};_deda .Width =_fedg ;_deda .X =_dabfa +_fbgdfa ;_deda .Y =_egadf +_feedc ;_daacc :=_gfac (_deda .X ,_deda .Y ,_fedg ,_afbce );if _gbafg ._cafg !=nil {_daacc .SetFillColor (_gbafg ._cafg );
+};_daacc .LineStyle =_gbafg ._gaeaa ;_daacc ._ece =_gbafg ._fgfda ;_daacc ._eccg =_gbafg ._egea ;_daacc ._cffc =_gbafg ._acdfc ;_daacc ._beb =_gbafg ._gefeba ;if _gbafg ._gefeb !=nil {_daacc .SetColorLeft (_gbafg ._gefeb );};if _gbafg ._fcgg !=nil {_daacc .SetColorBottom (_gbafg ._fcgg );
+};if _gbafg ._fgdgg !=nil {_daacc .SetColorRight (_gbafg ._fgdgg );};if _gbafg ._gcac !=nil {_daacc .SetColorTop (_gbafg ._gcac );};_daacc .SetWidthBottom (_gbafg ._fabe );_daacc .SetWidthLeft (_gbafg ._bcdfe );_daacc .SetWidthRight (_gbafg ._bdga );_daacc .SetWidthTop (_gbafg ._cbcbcg );
+_fabf :=_bfgaa .Draw (_daacc );if _fabf !=nil {_da .Log .Debug ("\u0045R\u0052\u004f\u0052\u003a\u0020\u0025v",_fabf );};if _gbafg ._cfdd !=nil {_bdfge :=_gbafg ._cfdd .Width ();_fcfe :=_gbafg ._cfdd .Height ();_fefd :=0.0;switch _caagd :=_gbafg ._cfdd .(type ){case *Paragraph :if _caagd ._ccee {_bdfge =_caagd .getMaxLineWidth ()/1000.0;
+};_bdfge +=_caagd ._efbg .Left +_caagd ._efbg .Right ;_fcfe +=_caagd ._efbg .Top +_caagd ._efbg .Bottom ;case *StyledParagraph :if _caagd ._egge {_bdfge =_caagd .getMaxLineWidth ()/1000.0;};_abgb ,_bdcfd ,_bgeee :=_caagd .getLineMetrics (0);_deebc ,_aecb :=_abgb *_caagd ._gbbd ,_bdcfd *_caagd ._gbbd ;
+if _caagd ._cfebc ==TextVerticalAlignmentCenter {_fefd =_aecb -(_bdcfd +(_abgb +_bgeee -_bdcfd )/2+(_aecb -_bdcfd )/2);};if len (_caagd ._cfcf )==1{_fcfe =_deebc ;}else {_fcfe =_fcfe -_aecb +_deebc ;};_fefd +=_deebc -_aecb ;switch _gbafg ._egfeb {case CellVerticalAlignmentTop :_fefd +=_deebc *0.5;
+case CellVerticalAlignmentBottom :_fefd -=_deebc *0.5;};_bdfge +=_caagd ._eebag .Left +_caagd ._eebag .Right ;_fcfe +=_caagd ._eebag .Top +_caagd ._eebag .Bottom ;case *Table :_bdfge =_fedg ;case *List :_bdfge =_fedg ;case *Division :_bdfge =_fedg ;case *Chart :_bdfge =_fedg ;
+case *Line :_fcfe +=_caagd ._cfdcg .Top +_caagd ._cfdcg .Bottom ;_fefd -=_caagd .Height ()/2;};switch _gbafg ._cdfcd {case CellHorizontalAlignmentLeft :_deda .X +=_gbafg ._bdff ;_deda .Width -=_gbafg ._bdff ;case CellHorizontalAlignmentCenter :if _eagf :=_fedg -_bdfge ;
+_eagf > 0{_deda .X +=_eagf /2;_deda .Width -=_eagf /2;};case CellHorizontalAlignmentRight :if _fedg > _bdfge {_deda .X =_deda .X +_fedg -_bdfge -_gbafg ._bdff ;_deda .Width -=_gbafg ._bdff ;};};_bdaf :=_deda .Y ;_eebab :=_deda .Height ;_deda .Y +=_fefd ;
+switch _gbafg ._egfeb {case CellVerticalAlignmentTop :case CellVerticalAlignmentMiddle :if _ffcb :=_afbce -_fcfe ;_ffcb > 0{_deda .Y +=_ffcb /2;_deda .Height -=_ffcb /2;};case CellVerticalAlignmentBottom :if _afbce > _fcfe {_deda .Y =_deda .Y +_afbce -_fcfe ;
+_deda .Height =_afbce ;};};_egeeb :=_bfgaa .DrawWithContext (_gbafg ._cfdd ,_deda );if _egeeb !=nil {_da .Log .Debug ("\u0045R\u0052\u004f\u0052\u003a\u0020\u0025v",_egeeb );};_deda .Y =_bdaf ;_deda .Height =_eebab ;};_deda .Y +=_afbce ;_deda .Height -=_afbce ;
+if _agbf &&_gbgdb +1> _fdcafg {_egadf +=_feedc +_afbce ;_dgddb -=_afbce +_feedc ;_abdf =_edea ;_gbgdb =_dfgba -1;_agbf =false ;};};_fage =append (_fage ,_bfgaa );if _bgfb ._caga .IsAbsolute (){return _fage ,_bgba ,nil ;};_deda .X =_bgba .X ;_deda .Width =_bgba .Width ;
+_deda .Y +=_bgfb ._dceg .Bottom ;_deda .Height -=_bgfb ._dceg .Bottom ;return _fage ,_deda ,nil ;};
+
+// ColorRGBFromArithmetic creates a Color from arithmetic color values (0-1).
+// Example:
+//   green := ColorRGBFromArithmetic(0.0, 1.0, 0.0)
+func ColorRGBFromArithmetic (r ,g ,b float64 )Color {return rgbColor {_ade :_fa .Max (_fa .Min (r ,1.0),0.0),_fcc :_fa .Max (_fa .Min (g ,1.0),0.0),_fbe :_fa .Max (_fa .Min (b ,1.0),0.0)};};func _gfac (_def ,_fgc ,_dbd ,_bcb float64 )*border {_cce :=&border {};
+_cce ._bgg =_def ;_cce ._ebg =_fgc ;_cce ._dgda =_dbd ;_cce ._aed =_bcb ;_cce ._bfgc =ColorBlack ;_cce ._beed =ColorBlack ;_cce ._ege =ColorBlack ;_cce ._ecba =ColorBlack ;_cce ._gab =0;_cce ._eec =0;_cce ._bbd =0;_cce ._cee =0;_cce .LineStyle =_bg .LineStyleSolid ;
+return _cce ;};
+
+// Width is not used as the division component is designed to fill all the
+// available space, depending on the context. Returns 0.
+func (_bbcg *Division )Width ()float64 {return 0};
+
+// BorderOpacity returns the border opacity of the rectangle (0-1).
+func (_ecgebf *Rectangle )BorderOpacity ()float64 {return _ecgebf ._cgbf };
+
+// TextChunk represents a chunk of text along with a particular style.
+type TextChunk struct{
+
+// The text that is being rendered in the PDF.
+Text string ;
+
+// The style of the text being rendered.
+Style TextStyle ;_beebgd *_fee .PdfAnnotation ;_bacff bool ;
+
+// The vertical alignment of the text chunk.
+VerticalAlignment TextVerticalAlignment ;};func _fafb (_bebf Color ,_adgd float64 )*ColorPoint {return &ColorPoint {_abfba :_bebf ,_gfeg :_adgd }};
+
+// Division is a container component which can wrap across multiple pages.
+// Currently supported drawable components:
+// - *Paragraph
+// - *StyledParagraph
+// - *Image
+// - *Chart
+//
+// The component stacking behavior is vertical, where the drawables are drawn
+// on top of each other.
+type Division struct{_aegg []VectorDrawable ;_dgcag Positioning ;_ceeba Margins ;_deca Margins ;_agag bool ;_fgg bool ;_dgce *Background ;};
 
 // SkipCells skips over a specified number of cells in the table.
-func (_dbdb *Table )SkipCells (num int ){if num < 0{_cf .Log .Debug ("\u0054\u0061\u0062\u006c\u0065:\u0020\u0063\u0061\u006e\u006e\u006f\u0074\u0020\u0073\u006b\u0069\u0070\u0020b\u0061\u0063\u006b\u0020\u0074\u006f\u0020\u0070\u0072\u0065\u0076\u0069\u006f\u0075\u0073\u0020\u0063\u0065\u006c\u006c\u0073");
-return ;};_dbdb ._gfcae +=num ;};
+func (_ddgd *Table )SkipCells (num int ){if num < 0{_da .Log .Debug ("\u0054\u0061\u0062\u006c\u0065:\u0020\u0063\u0061\u006e\u006e\u006f\u0074\u0020\u0073\u006b\u0069\u0070\u0020b\u0061\u0063\u006b\u0020\u0074\u006f\u0020\u0070\u0072\u0065\u0076\u0069\u006f\u0075\u0073\u0020\u0063\u0065\u006c\u006c\u0073");
+return ;};_ddgd ._gacbf +=num ;};func (_cae *Block )drawToPage (_efe *_fee .PdfPage )error {_eea :=&_ebc .ContentStreamOperations {};if _efe .Resources ==nil {_efe .Resources =_fee .NewPdfPageResources ();};_dc :=_gcg (_eea ,_efe .Resources ,_cae ._db ,_cae ._gf );
+if _dc !=nil {return _dc ;};if _dc =_dee (_cae ._gf ,_efe .Resources );_dc !=nil {return _dc ;};if _dc =_efe .AppendContentBytes (_eea .Bytes (),true );_dc !=nil {return _dc ;};for _ ,_bcf :=range _cae ._aee {_efe .AddAnnotation (_bcf );};return nil ;};
 
-// SetPadding sets the padding of the component. The padding represents
-// inner margins which are applied around the contents of the division.
-// The background of the component is not affected by its padding.
-func (_ebda *Division )SetPadding (left ,right ,top ,bottom float64 ){_ebda ._acbg .Left =left ;_ebda ._acbg .Right =right ;_ebda ._acbg .Top =top ;_ebda ._acbg .Bottom =bottom ;};
 
-// InfoLines returns all the rows in the invoice information table as
-// description-value cell pairs.
-func (_fddf *Invoice )InfoLines ()[][2]*InvoiceCell {_cccc :=[][2]*InvoiceCell {_fddf ._cfgb ,_fddf ._bggdg ,_fddf ._acgf };return append (_cccc ,_fddf ._bca ...);};
+// SetNotes sets the notes section of the invoice.
+func (_eeba *Invoice )SetNotes (title ,content string ){_eeba ._egdda =[2]string {title ,content }};
 
-// Chart represents a chart drawable.
-// It is used to render unichart chart components using a creator instance.
-type Chart struct{_dde _ef .ChartRenderable ;_dddc Positioning ;_adcaa float64 ;_fdd float64 ;_fbfc Margins ;};
+// Width returns the width of the rectangle.
+// NOTE: the returned value does not include the border width of the rectangle.
+func (_gfeea *Rectangle )Width ()float64 {return _gfeea ._bfddd };
 
-// TOC represents a table of contents component.
-// It consists of a paragraph heading and a collection of
-// table of contents lines.
-// The representation of a table of contents line is as follows:
-//       [number] [title]      [separator] [page]
-// e.g.: Chapter1 Introduction ........... 1
-type TOC struct{_faef *StyledParagraph ;_baabb []*TOCLine ;_gbda TextStyle ;_cgddd TextStyle ;_fadbf TextStyle ;_daadg TextStyle ;_edddb string ;_bgece float64 ;_eegf Margins ;_gecb Positioning ;_eeeeb TextStyle ;_afaba bool ;};
+// PageFinalize sets a function to be called for each page before finalization
+// (i.e. the last stage of page processing before they get written out).
+// The callback function allows final touch-ups for each page, and it
+// provides information that might not be known at other stages of designing
+// the document (e.g. the total number of pages). Unlike the header/footer
+// functions, which are limited to the top/bottom margins of the page, the
+// finalize function can be used draw components anywhere on the current page.
+func (_aaga *Creator )PageFinalize (pageFinalizeFunc func (_eagbd PageFinalizeFunctionArgs )error ){_aaga ._ecd =pageFinalizeFunc ;};func _agegf (_adcd int )*Table {_eefce :=&Table {_fcfd :_adcd ,_gbbe :10.0,_fadgg :[]float64 {},_agda :[]float64 {},_afbaa :[]*TableCell {},_gbdga :make ([]int ,_adcd ),_edcc :true };
+_eefce .resetColumnWidths ();return _eefce ;};
 
-// SetBorderWidth sets the border width of the rectangle.
-func (_efbc *Rectangle )SetBorderWidth (bw float64 ){_efbc ._eacf =bw };
+// GetCoords returns the (x1, y1), (x2, y2) points defining the Line.
+func (_eaegg *Line )GetCoords ()(float64 ,float64 ,float64 ,float64 ){return _eaegg ._bcgf ,_eaegg ._fgba ,_eaegg ._ecec ,_eaegg ._daac ;};
 
-// TextDecorationLineStyle represents the style of lines used to decorate
-// a text chunk (e.g. underline).
-type TextDecorationLineStyle struct{
+// ScaleToWidth sets the graphic svg scaling factor with the given width.
+func (_gaff *GraphicSVG )ScaleToWidth (w float64 ){_eafc :=_gaff ._cfff .Height /_gaff ._cfff .Width ;_gaff ._cfff .Width =w ;_gaff ._cfff .Height =w *_eafc ;_gaff ._cfff .SetScaling (_eafc ,_eafc );};
 
-// Color represents the color of the line (default: the color of the text).
-Color Color ;
+// SetPos sets absolute positioning with specified coordinates.
+func (_dcfeg *StyledParagraph )SetPos (x ,y float64 ){_dcfeg ._eege =PositionAbsolute ;_dcfeg ._fggg =x ;_dcfeg ._gaba =y ;};
 
-// Offset represents the vertical offset of the line (default: 1).
-Offset float64 ;
+// SetPageLabels adds the specified page labels to the PDF file generated
+// by the creator. See section 12.4.2 "Page Labels" (p. 382 PDF32000_2008).
+// NOTE: for existing PDF files, the page label ranges object can be obtained
+// using the model.PDFReader's GetPageLabels method.
+func (_ecac *Creator )SetPageLabels (pageLabels _dd .PdfObject ){_ecac ._dce =pageLabels };
 
-// Thickness represents the thickness of the line (default: 1).
-Thickness float64 ;};
+// SetHeight sets the Image's document height to specified h.
+func (_gdfa *Image )SetHeight (h float64 ){_gdfa ._eega =h };
 
-// Width returns the width of the specified text chunk.
-func (_cefgc *TextChunk )Width ()float64 {var (_efbcb float64 ;_gfebb =_cefgc .Style ;);for _ ,_babc :=range _cefgc .Text {_acfge ,_aacbf :=_gfebb .Font .GetRuneMetrics (_babc );if !_aacbf {_cf .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0052\u0075\u006e\u0065\u0020\u0063\u0068\u0061\u0072\u0020\u006det\u0072i\u0063\u0073\u0020\u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064!\u0020\u0072\u0075\u006e\u0065\u003d\u0030\u0078\u0025\u0030\u0034\u0078\u003d\u0025\u0063\u0020\u0066o\u006e\u0074\u003d\u0025\u0073\u0020\u0025\u0023\u0071",_babc ,_babc ,_gfebb .Font .BaseFont (),_gfebb .Font .Subtype ());
-_cf .Log .Trace ("\u0046o\u006e\u0074\u003a\u0020\u0025\u0023v",_gfebb .Font );_cf .Log .Trace ("\u0045\u006e\u0063o\u0064\u0065\u0072\u003a\u0020\u0025\u0023\u0076",_gfebb .Font .Encoder ());};_agfbeb :=_gfebb .FontSize *_acfge .Wx ;_abfdd :=_agfbeb ;
-if _babc !=' '{_abfdd =_agfbeb +_gfebb .CharSpacing *1000.0;};_efbcb +=_abfdd ;};return _efbcb /1000.0;};
+// SetHeight sets the height of the ellipse.
+func (_gdab *Ellipse )SetHeight (height float64 ){_gdab ._afaf =height };
 
-// Scale scales Image by a constant factor, both width and height.
-func (_geaf *Image )Scale (xFactor ,yFactor float64 ){_geaf ._gebf =xFactor *_geaf ._gebf ;_geaf ._dcde =yFactor *_geaf ._dcde ;};
+// SetWidth set the Image's document width to specified w. This does not change the raw image data, i.e.
+// no actual scaling of data is performed. That is handled by the PDF viewer.
+func (_beec *Image )SetWidth (w float64 ){_beec ._edda =w };
+
+// SetHeight sets the height of the rectangle.
+func (_afec *Rectangle )SetHeight (height float64 ){_afec ._abfd =height };
+
+// SetAngle would set the angle at which the gradient is rendered.
+//
+// The default angle would be 0 where the gradient would be rendered from left to right side.
+func (_dacg *LinearShading )SetAngle (angle float64 ){_dacg ._fcfba =angle };
+
+// AddAnnotation adds an annotation to the current block.
+// The annotation will be added to the page the block will be rendered on.
+func (_bb *Block )AddAnnotation (annotation *_fee .PdfAnnotation ){for _ ,_bfc :=range _bb ._aee {if _bfc ==annotation {return ;};};_bb ._aee =append (_bb ._aee ,annotation );};func (_eegb *templateProcessor )parseLine (_ccgfd *templateNode )(interface{},error ){_gabde :=_eegb .creator .NewLine (0,0,0,0);
+for _ ,_cecbb :=range _ccgfd ._bdbga .Attr {_fgddf :=_cecbb .Value ;switch _deebb :=_cecbb .Name .Local ;_deebb {case "\u0078\u0031":_gabde ._bcgf =_eegb .parseFloatAttr (_deebb ,_fgddf );case "\u0079\u0031":_gabde ._fgba =_eegb .parseFloatAttr (_deebb ,_fgddf );
+case "\u0078\u0032":_gabde ._ecec =_eegb .parseFloatAttr (_deebb ,_fgddf );case "\u0079\u0032":_gabde ._daac =_eegb .parseFloatAttr (_deebb ,_fgddf );case "\u0074h\u0069\u0063\u006b\u006e\u0065\u0073s":_gabde .SetLineWidth (_eegb .parseFloatAttr (_deebb ,_fgddf ));
+case "\u0063\u006f\u006co\u0072":_gabde .SetColor (_eegb .parseColorAttr (_deebb ,_fgddf ));case "\u0073\u0074\u0079l\u0065":_gabde .SetStyle (_eegb .parseLineStyleAttr (_deebb ,_fgddf ));case "\u0064\u0061\u0073\u0068\u002d\u0061\u0072\u0072\u0061\u0079":_gabde .SetDashPattern (_eegb .parseInt64Array (_deebb ,_fgddf ),_gabde ._ccgd );
+case "\u0064\u0061\u0073\u0068\u002d\u0070\u0068\u0061\u0073\u0065":_gabde .SetDashPattern (_gabde ._fafa ,_eegb .parseInt64Attr (_deebb ,_fgddf ));case "\u006fp\u0061\u0063\u0069\u0074\u0079":_gabde .SetOpacity (_eegb .parseFloatAttr (_deebb ,_fgddf ));
+case "\u0070\u006f\u0073\u0069\u0074\u0069\u006f\u006e":_gabde .SetPositioning (_eegb .parsePositioningAttr (_deebb ,_fgddf ));case "\u0066\u0069\u0074\u002d\u006d\u006f\u0064\u0065":_gabde .SetFitMode (_eegb .parseFitModeAttr (_deebb ,_fgddf ));case "\u006d\u0061\u0072\u0067\u0069\u006e":_caeg :=_eegb .parseMarginAttr (_deebb ,_fgddf );
+_gabde .SetMargins (_caeg .Left ,_caeg .Right ,_caeg .Top ,_caeg .Bottom );default:_da .Log .Debug ("\u0055\u006e\u0073\u0075\u0070\u0070\u006fr\u0074\u0065\u0064 \u006c\u0069\u006e\u0065 \u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073\u0060\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069\u006e\u0067\u002e",_deebb );
+};};return _gabde ,nil ;};func (_baac *templateProcessor )parseHorizontalAlignmentAttr (_eegec ,_fegaf string )HorizontalAlignment {_da .Log .Debug ("\u0050\u0061\u0072\u0073\u0069n\u0067\u0020\u0068\u006f\u0072\u0069\u007a\u006f\u006e\u0074\u0061\u006c\u0020a\u006c\u0069\u0067\u006e\u006d\u0065\u006e\u0074\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0028\u0060\u0025\u0073\u0060\u002c\u0020\u0025\u0073\u0029.",_eegec ,_fegaf );
+_baggg :=map[string ]HorizontalAlignment {"\u006c\u0065\u0066\u0074":HorizontalAlignmentLeft ,"\u0063\u0065\u006e\u0074\u0065\u0072":HorizontalAlignmentCenter ,"\u0072\u0069\u0067h\u0074":HorizontalAlignmentRight }[_fegaf ];return _baggg ;};
+
+// TextOverflow determines the behavior of paragraph text which does
+// not fit in the available space.
+type TextOverflow int ;
+
+// Table allows organizing content in an rows X columns matrix, which can spawn across multiple pages.
+type Table struct{_edde int ;_fcfd int ;_gacbf int ;_fadgg []float64 ;_agda []float64 ;_gbbe float64 ;_afbaa []*TableCell ;_gbdga []int ;_caga Positioning ;_bccdf ,_fedc float64 ;_dceg Margins ;_dgaa bool ;_cfcgb int ;_bgda int ;_cfbac bool ;_edcc bool ;
+};
 
 // Add adds a VectorDrawable to the Division container.
 // Currently supported VectorDrawables:
@@ -2360,160 +1828,183 @@ func (_geaf *Image )Scale (xFactor ,yFactor float64 ){_geaf ._gebf =xFactor *_ge
 // - *Table
 // - *Division
 // - *List
-func (_dggc *Division )Add (d VectorDrawable )error {switch _bgae :=d .(type ){case *Paragraph ,*StyledParagraph ,*Image ,*Chart ,*Rectangle ,*Ellipse ,*Line ,*Table ,*Division ,*List :case containerDrawable :_fbac ,_ecgb :=_bgae .ContainerComponent (_dggc );
-if _ecgb !=nil {return _ecgb ;};_abdf ,_fagbb :=_fbac .(VectorDrawable );if !_fagbb {return _agd .Errorf ("\u0072\u0065\u0073\u0075\u006ct\u0020\u006f\u0066\u0020\u0043\u006f\u006et\u0061\u0069\u006e\u0065\u0072\u0043\u006f\u006d\u0070\u006f\u006e\u0065\u006e\u0074\u0020\u002d\u0020\u0025\u0054\u0020\u0064\u006f\u0065\u0073\u006e\u0027\u0074\u0020\u0069\u006d\u0070\u006c\u0065\u006d\u0065\u006e\u0074\u0020\u0056\u0065c\u0074\u006f\u0072\u0044\u0072\u0061\u0077\u0061\u0062\u006c\u0065\u0020i\u006e\u0074\u0065\u0072\u0066\u0061c\u0065",_fbac );
-};d =_abdf ;default:return _d .New ("\u0075\u006e\u0073\u0075p\u0070\u006f\u0072\u0074\u0065\u0064\u0020\u0074\u0079\u0070e\u0020i\u006e\u0020\u0044\u0069\u0076\u0069\u0073i\u006f\u006e");};_dggc ._ebd =append (_dggc ._ebd ,d );return nil ;};
+func (_gag *Division )Add (d VectorDrawable )error {switch _dffb :=d .(type ){case *Paragraph ,*StyledParagraph ,*Image ,*Chart ,*Rectangle ,*Ellipse ,*Line ,*Table ,*Division ,*List :case containerDrawable :_fcfc ,_edgb :=_dffb .ContainerComponent (_gag );
+if _edgb !=nil {return _edgb ;};_acgg ,_dgde :=_fcfc .(VectorDrawable );if !_dgde {return _fb .Errorf ("\u0072\u0065\u0073\u0075\u006ct\u0020\u006f\u0066\u0020\u0043\u006f\u006et\u0061\u0069\u006e\u0065\u0072\u0043\u006f\u006d\u0070\u006f\u006e\u0065\u006e\u0074\u0020\u002d\u0020\u0025\u0054\u0020\u0064\u006f\u0065\u0073\u006e\u0027\u0074\u0020\u0069\u006d\u0070\u006c\u0065\u006d\u0065\u006e\u0074\u0020\u0056\u0065c\u0074\u006f\u0072\u0044\u0072\u0061\u0077\u0061\u0062\u006c\u0065\u0020i\u006e\u0074\u0065\u0072\u0066\u0061c\u0065",_fcfc );
+};d =_acgg ;default:return _d .New ("\u0075\u006e\u0073\u0075p\u0070\u006f\u0072\u0074\u0065\u0064\u0020\u0074\u0079\u0070e\u0020i\u006e\u0020\u0044\u0069\u0076\u0069\u0073i\u006f\u006e");};_gag ._aegg =append (_gag ._aegg ,d );return nil ;};func (_gdfg *Paragraph )wrapText ()error {if !_gdfg ._ccee ||int (_gdfg ._bgdg )<=0{_gdfg ._fcda =[]string {_gdfg ._fagf };
+return nil ;};_dabg :=NewTextChunk (_gdfg ._fagf ,TextStyle {Font :_gdfg ._gbdaa ,FontSize :_gdfg ._bgef });_dgaee ,_daff :=_dabg .Wrap (_gdfg ._bgdg );if _daff !=nil {return _daff ;};if _gdfg ._afaa > 0&&len (_dgaee )> _gdfg ._afaa {_dgaee =_dgaee [:_gdfg ._afaa ];
+};_gdfg ._fcda =_dgaee ;return nil ;};
 
-// Marker returns the marker used for the list items.
-// The marker instance can be used the change the text and the style
-// of newly added list items.
-func (_degf *List )Marker ()*TextChunk {return &_degf ._bdeb };func _gddc ()*listItem {return &listItem {}};
+// DashPattern returns the dash pattern of the line.
+func (_ccfe *Line )DashPattern ()(_cgga []int64 ,_fbca int64 ){return _ccfe ._fafa ,_ccfe ._ccgd };func _fcfce (_geea *templateProcessor ,_beeac *templateNode )(interface{},error ){return _geea .parseRectangle (_beeac );};
 
-// GetHorizontalAlignment returns the horizontal alignment of the image.
-func (_fdge *Image )GetHorizontalAlignment ()HorizontalAlignment {return _fdge ._fddg };
+// DrawWithContext draws the Block using the specified drawing context.
+func (_caa *Block )DrawWithContext (d Drawable ,ctx DrawContext )error {_bede ,_ ,_beda :=d .GeneratePageBlocks (ctx );if _beda !=nil {return _beda ;};if len (_bede )!=1{return _d .New ("\u0074\u006f\u006f\u0020ma\u006e\u0079\u0020\u006f\u0075\u0074\u0070\u0075\u0074\u0020\u0062\u006c\u006f\u0063k\u0073");
+};for _ ,_dad :=range _bede {if _af :=_caa .mergeBlocks (_dad );_af !=nil {return _af ;};};return nil ;};
 
-// CurCol returns the currently active cell's column number.
-func (_cgaa *Table )CurCol ()int {_eafgc :=(_cgaa ._gfcae -1)%(_cgaa ._eeecb )+1;return _eafgc };
+// SetLineLevelOffset sets the amount of space an indentation level occupies
+// for all new lines of the table of contents.
+func (_gaag *TOC )SetLineLevelOffset (levelOffset float64 ){_gaag ._gfdfe =levelOffset };
 
-// TotalLines returns all the rows in the invoice totals table as
-// description-value cell pairs.
-func (_edad *Invoice )TotalLines ()[][2]*InvoiceCell {_bdfc :=[][2]*InvoiceCell {_edad ._ecgfa };_bdfc =append (_bdfc ,_edad ._gecf ...);return append (_bdfc ,_edad ._aefbg );};
+// Margins returns the margins of the component.
+func (_faab *Division )Margins ()(_geda ,_bbf ,_gdfc ,_debe float64 ){return _faab ._ceeba .Left ,_faab ._ceeba .Right ,_faab ._ceeba .Top ,_faab ._ceeba .Bottom ;};var (ColorBlack =ColorRGBFromArithmetic (0,0,0);ColorWhite =ColorRGBFromArithmetic (1,1,1);
+ColorRed =ColorRGBFromArithmetic (1,0,0);ColorGreen =ColorRGBFromArithmetic (0,1,0);ColorBlue =ColorRGBFromArithmetic (0,0,1);ColorYellow =ColorRGBFromArithmetic (1,1,0););
 
-// The Image type is used to draw an image onto PDF.
-type Image struct{_ddec *_gf .XObjectImage ;_afaf *_gf .Image ;_agebb float64 ;_gebf ,_dcde float64 ;_cafg ,_fddb float64 ;_ebff Positioning ;_fddg HorizontalAlignment ;_ecadg float64 ;_ggbg float64 ;_cbfe float64 ;_gbeae Margins ;_gfgf ,_feadg float64 ;
-_eebc _acb .StreamEncoder ;_ggcg FitMode ;};func (_edd rgbColor )ToRGB ()(float64 ,float64 ,float64 ){return _edd ._bef ,_edd ._gdcb ,_edd ._dbf };
+// Chart represents a chart drawable.
+// It is used to render unichart chart components using a creator instance.
+type Chart struct{_edbg _ef .ChartRenderable ;_gge Positioning ;_gfcd float64 ;_abfg float64 ;_cgc Margins ;};
 
-// GetMargins returns the margins of the ellipse: left, right, top, bottom.
-func (_fda *Ellipse )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _fda ._eac .Left ,_fda ._eac .Right ,_fda ._eac .Top ,_fda ._eac .Bottom ;};
+// Text sets the text content of the Paragraph.
+func (_cbcd *Paragraph )Text ()string {return _cbcd ._fagf };func (_gaef *LinearShading )shadingModel ()*_fee .PdfShadingType2 {_eeaab :=_bg .NewPoint (_gaef ._ecbd .Llx +_gaef ._ecbd .Width ()/2,_gaef ._ecbd .Lly +_gaef ._ecbd .Height ()/2);_cgcf :=_bg .NewPoint (_gaef ._ecbd .Llx ,_gaef ._ecbd .Lly +_gaef ._ecbd .Height ()/2).Add (-_eeaab .X ,-_eeaab .Y ).Rotate (_gaef ._fcfba ).Add (_eeaab .X ,_eeaab .Y );
+_cgcf =_bg .NewPoint (_fa .Max (_fa .Min (_cgcf .X ,_gaef ._ecbd .Urx ),_gaef ._ecbd .Llx ),_fa .Max (_fa .Min (_cgcf .Y ,_gaef ._ecbd .Ury ),_gaef ._ecbd .Lly ));_gagc :=_bg .NewPoint (_gaef ._ecbd .Urx ,_gaef ._ecbd .Lly +_gaef ._ecbd .Height ()/2).Add (-_eeaab .X ,-_eeaab .Y ).Rotate (_gaef ._fcfba ).Add (_eeaab .X ,_eeaab .Y );
+_gagc =_bg .NewPoint (_fa .Min (_fa .Max (_gagc .X ,_gaef ._ecbd .Llx ),_gaef ._ecbd .Urx ),_fa .Min (_fa .Max (_gagc .Y ,_gaef ._ecbd .Lly ),_gaef ._ecbd .Ury ));_bdcf :=_fee .NewPdfShadingType2 ();_bdcf .PdfShading .ShadingType =_dd .MakeInteger (2);
+_bdcf .PdfShading .ColorSpace =_fee .NewPdfColorspaceDeviceRGB ();_bdcf .PdfShading .AntiAlias =_dd .MakeBool (_gaef ._adece ._fbfeg );_bdcf .Coords =_dd .MakeArrayFromFloats ([]float64 {_cgcf .X ,_cgcf .Y ,_gagc .X ,_gagc .Y });_bdcf .Extend =_dd .MakeArray (_dd .MakeBool (_gaef ._adece ._gcefb [0]),_dd .MakeBool (_gaef ._adece ._gcefb [1]));
+_bdcf .Function =_gaef ._adece .generatePdfFunctions ();return _bdcf ;};
 
-// Logo returns the logo of the invoice.
-func (_adfb *Invoice )Logo ()*Image {return _adfb ._egae };
+// MultiColCell makes a new cell with the specified column span and inserts it
+// into the table at the current position.
+func (_abgad *Table )MultiColCell (colspan int )*TableCell {return _abgad .MultiCell (1,colspan )};
 
-// SetShowNumbering sets a flag to indicate whether or not to show chapter numbers as part of title.
-func (_cdcb *Chapter )SetShowNumbering (show bool ){_cdcb ._agbcd =show ;_cdcb ._agdbe .SetText (_cdcb .headingText ());};
-
-// Context returns the current drawing context.
-func (_beb *Creator )Context ()DrawContext {return _beb ._fagd };
-
-// NewList creates a new list.
-func (_fdeg *Creator )NewList ()*List {return _befc (_fdeg .NewTextStyle ())};
-
-// SetFitMode sets the fit mode of the rectangle.
-// NOTE: The fit mode is only applied if relative positioning is used.
-func (_gdaf *Rectangle )SetFitMode (fitMode FitMode ){_gdaf ._debg =fitMode };const (CellVerticalAlignmentTop CellVerticalAlignment =iota ;CellVerticalAlignmentMiddle ;CellVerticalAlignmentBottom ;);
-
-// SetColorTop sets border color for top.
-func (_dead *border )SetColorTop (col Color ){_dead ._fdf =col };func _decgd (_faca ,_eedga ,_bdecf float64 )(_aggdc ,_edcbc ,_ceceb ,_cdfdd float64 ){if _bdecf ==0{return 0,0,_faca ,_eedga ;};_eaca :=_g .Path {Points :[]_g .Point {_g .NewPoint (0,0).Rotate (_bdecf ),_g .NewPoint (_faca ,0).Rotate (_bdecf ),_g .NewPoint (0,_eedga ).Rotate (_bdecf ),_g .NewPoint (_faca ,_eedga ).Rotate (_bdecf )}}.GetBoundingBox ();
-return _eaca .X ,_eaca .Y ,_eaca .Width ,_eaca .Height ;};
-
-// GetMargins returns the left, right, top, bottom Margins.
-func (_agfe *Table )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _agfe ._bbfa .Left ,_agfe ._bbfa .Right ,_agfe ._bbfa .Top ,_agfe ._bbfa .Bottom ;};
-
-// GeneratePageBlocks generates a page break block.
-func (_fbef *PageBreak )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_gcgb :=[]*Block {NewBlock (ctx .PageWidth ,ctx .PageHeight -ctx .Y ),NewBlock (ctx .PageWidth ,ctx .PageHeight )};ctx .Page ++;_befe :=ctx ;_befe .Y =ctx .Margins .Top ;
-_befe .X =ctx .Margins .Left ;_befe .Height =ctx .PageHeight -ctx .Margins .Top -ctx .Margins .Bottom ;_befe .Width =ctx .PageWidth -ctx .Margins .Left -ctx .Margins .Right ;ctx =_befe ;return _gcgb ,ctx ,nil ;};func _bbabe (_debc string )(*GraphicSVG ,error ){_gfcg ,_bfde :=_bga .ParseFromFile (_debc );
-if _bfde !=nil {return nil ,_bfde ;};return _daca (_gfcg );};
-
-// Scale scales the rectangle dimensions by the specified factors.
-func (_bega *Rectangle )Scale (xFactor ,yFactor float64 ){_bega ._adeb =xFactor *_bega ._adeb ;_bega ._dffef =yFactor *_bega ._dffef ;};func _eabb (_agec *templateProcessor ,_adda *templateNode )(interface{},error ){return _agec .parseChart (_adda );};
-
-
-// SetNumber sets the number of the invoice.
-func (_dgfg *Invoice )SetNumber (number string )(*InvoiceCell ,*InvoiceCell ){_dgfg ._cfgb [1].Value =number ;return _dgfg ._cfgb [0],_dgfg ._cfgb [1];};
-
-// Height returns Image's document height.
-func (_cbag *Image )Height ()float64 {return _cbag ._dcde };
-
-// AppendCurve appends a Bezier curve to the filled curve.
-func (_egec *FilledCurve )AppendCurve (curve _g .CubicBezierCurve )*FilledCurve {_egec ._agfb =append (_egec ._agfb ,curve );return _egec ;};
-
-// SetFontSize sets the font size in document units (points).
-func (_gdeag *Paragraph )SetFontSize (fontSize float64 ){_gdeag ._dgfa =fontSize };func (_bceee *TemplateOptions )init (){if _bceee .SubtemplateMap ==nil {_bceee .SubtemplateMap =map[string ]_ag .Reader {};};if _bceee .FontMap ==nil {_bceee .FontMap =map[string ]*_gf .PdfFont {};
-};if _bceee .ImageMap ==nil {_bceee .ImageMap =map[string ]*_gf .Image {};};if _bceee .ColorMap ==nil {_bceee .ColorMap =map[string ]Color {};};if _bceee .ChartMap ==nil {_bceee .ChartMap =map[string ]_ef .ChartRenderable {};};};
-
-// BorderWidth returns the border width of the ellipse.
-func (_ggb *Ellipse )BorderWidth ()float64 {return _ggb ._aged };
-
-// Height returns the height of the Paragraph. The height is calculated based on the input text and how it is wrapped
-// within the container. Does not include Margins.
-func (_bcfe *StyledParagraph )Height ()float64 {_bcfe .wrapText ();var _ddad float64 ;for _ ,_cecd :=range _bcfe ._cgfdg {var _gegdf float64 ;for _ ,_bbeb :=range _cecd {_bgab :=_bcfe ._edccf *_bbeb .Style .FontSize ;if _bgab > _gegdf {_gegdf =_bgab ;};
-};_ddad +=_gegdf ;};return _ddad ;};
-
-// SetAntiAlias enables anti alias config.
+// SetPageSize sets the Creator's page size.  Pages that are added after this will be created with
+// this Page size.
+// Does not affect pages already created.
 //
-// Anti alias is disabled by default.
-func (_edcd *LinearShading )SetAntiAlias (enable bool ){_edcd ._adbg .SetAntiAlias (enable )};
+// Common page sizes are defined as constants.
+// Examples:
+// 1. c.SetPageSize(creator.PageSizeA4)
+// 2. c.SetPageSize(creator.PageSizeA3)
+// 3. c.SetPageSize(creator.PageSizeLegal)
+// 4. c.SetPageSize(creator.PageSizeLetter)
+//
+// For custom sizes: Use the PPMM (points per mm) and PPI (points per inch) when defining those based on
+// physical page sizes:
+//
+// Examples:
+// 1. 10x15 sq. mm: SetPageSize(PageSize{10*creator.PPMM, 15*creator.PPMM}) where PPMM is points per mm.
+// 2. 3x2 sq. inches: SetPageSize(PageSize{3*creator.PPI, 2*creator.PPI}) where PPI is points per inch.
+func (_cfdf *Creator )SetPageSize (size PageSize ){_cfdf ._gee =size ;_cfdf ._aef =size [0];_cfdf ._cec =size [1];_agb :=0.1*_cfdf ._aef ;_cfdf ._bbdf .Left =_agb ;_cfdf ._bbdf .Right =_agb ;_cfdf ._bbdf .Top =_agb ;_cfdf ._bbdf .Bottom =_agb ;};
 
-// SetWidthBottom sets border width for bottom.
-func (_fca *border )SetWidthBottom (bw float64 ){_fca ._aac =bw };
+// SetOpacity sets the opacity of the line (0-1).
+func (_eacg *Line )SetOpacity (opacity float64 ){_eacg ._dcfe =opacity };func (_efee *templateProcessor )parseRectangle (_abcbg *templateNode )(interface{},error ){_cbfe :=_efee .creator .NewRectangle (0,0,0,0);for _ ,_dgcc :=range _abcbg ._bdbga .Attr {_bccdg :=_dgcc .Value ;
+switch _cfgdca :=_dgcc .Name .Local ;_cfgdca {case "\u0078":_cbfe ._cfbab =_efee .parseFloatAttr (_cfgdca ,_bccdg );case "\u0079":_cbfe ._cffbf =_efee .parseFloatAttr (_cfgdca ,_bccdg );case "\u0077\u0069\u0064t\u0068":_cbfe .SetWidth (_efee .parseFloatAttr (_cfgdca ,_bccdg ));
+case "\u0068\u0065\u0069\u0067\u0068\u0074":_cbfe .SetHeight (_efee .parseFloatAttr (_cfgdca ,_bccdg ));case "\u0066\u0069\u006c\u006c\u002d\u0063\u006f\u006c\u006f\u0072":_cbfe .SetFillColor (_efee .parseColorAttr (_cfgdca ,_bccdg ));case "\u0066\u0069\u006cl\u002d\u006f\u0070\u0061\u0063\u0069\u0074\u0079":_cbfe .SetFillOpacity (_efee .parseFloatAttr (_cfgdca ,_bccdg ));
+case "\u0062\u006f\u0072d\u0065\u0072\u002d\u0063\u006f\u006c\u006f\u0072":_cbfe .SetBorderColor (_efee .parseColorAttr (_cfgdca ,_bccdg ));case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u006f\u0070a\u0063\u0069\u0074\u0079":_cbfe .SetBorderOpacity (_efee .parseFloatAttr (_cfgdca ,_bccdg ));
+case "\u0062\u006f\u0072d\u0065\u0072\u002d\u0077\u0069\u0064\u0074\u0068":_cbfe .SetBorderWidth (_efee .parseFloatAttr (_cfgdca ,_bccdg ));case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u0072\u0061\u0064\u0069\u0075\u0073":_bcef ,_bfgba ,_efbe ,_affg :=_efee .parseBorderRadiusAttr (_cfgdca ,_bccdg );
+_cbfe .SetBorderRadius (_bcef ,_bfgba ,_affg ,_efbe );case "\u0062\u006f\u0072\u0064er\u002d\u0074\u006f\u0070\u002d\u006c\u0065\u0066\u0074\u002d\u0072\u0061\u0064\u0069u\u0073":_cbfe ._egdce =_efee .parseFloatAttr (_cfgdca ,_bccdg );case "\u0062\u006f\u0072de\u0072\u002d\u0074\u006f\u0070\u002d\u0072\u0069\u0067\u0068\u0074\u002d\u0072\u0061\u0064\u0069\u0075\u0073":_cbfe ._edac =_efee .parseFloatAttr (_cfgdca ,_bccdg );
+case "\u0062o\u0072\u0064\u0065\u0072-\u0062\u006f\u0074\u0074\u006fm\u002dl\u0065f\u0074\u002d\u0072\u0061\u0064\u0069\u0075s":_cbfe ._cdfge =_efee .parseFloatAttr (_cfgdca ,_bccdg );case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u0062\u006f\u0074\u0074o\u006d\u002d\u0072\u0069\u0067\u0068\u0074\u002d\u0072\u0061d\u0069\u0075\u0073":_cbfe ._cfef =_efee .parseFloatAttr (_cfgdca ,_bccdg );
+case "\u0070\u006f\u0073\u0069\u0074\u0069\u006f\u006e":_cbfe .SetPositioning (_efee .parsePositioningAttr (_cfgdca ,_bccdg ));case "\u0066\u0069\u0074\u002d\u006d\u006f\u0064\u0065":_cbfe .SetFitMode (_efee .parseFitModeAttr (_cfgdca ,_bccdg ));case "\u006d\u0061\u0072\u0067\u0069\u006e":_ggfe :=_efee .parseMarginAttr (_cfgdca ,_bccdg );
+_cbfe .SetMargins (_ggfe .Left ,_ggfe .Right ,_ggfe .Top ,_ggfe .Bottom );default:_da .Log .Debug ("\u0055\u006e\u0073\u0075\u0070\u0070\u006f\u0072t\u0065\u0064\u0020re\u0063\u0074\u0061\u006e\u0067\u006ce\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073`\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069n\u0067\u002e",_cfgdca );
+};};return _cbfe ,nil ;};
 
-// AddSection adds a new content section at the end of the invoice.
-func (_agabc *Invoice )AddSection (title ,content string ){_agabc ._ecff =append (_agabc ._ecff ,[2]string {title ,content });};func _egac (_ded string )string {_bfd :=_fedd .FindAllString (_ded ,-1);if len (_bfd )==0{_ded =_ded +"\u0030";}else {_eea ,_gfbf :=_egd .Atoi (_bfd [len (_bfd )-1]);
-if _gfbf !=nil {_cf .Log .Debug ("\u0045r\u0072\u006f\u0072 \u0063\u006f\u006ev\u0065rt\u0069\u006e\u0067\u0020\u0064\u0069\u0067i\u0074\u0020\u0063\u006f\u006d\u0070\u006f\u006e\u0065\u006e\u0074\u0020\u0069\u006e\u0020\u0072\u0065\u0073\u006f\u0075\u0072\u0063\u0065\u0073\u0020\u006e\u0061\u006de,\u0020f\u0061\u006c\u006c\u0062\u0061\u0063k\u0020\u0074\u006f\u0020\u0062a\u0073\u0069\u0063\u0020\u006d\u0065\u0074\u0068\u006f\u0064\u003a \u0025\u0076",_gfbf );
-_ded =_ded +"\u0030";}else {_eea ++;_ddgb :=_eg .LastIndex (_ded ,_bfd [len (_bfd )-1]);if _ddgb ==-1{_ded =_agd .Sprintf ("\u0025\u0073\u0025\u0064",_ded [:len (_ded )-1],_eea );}else {_ded =_ded [:_ddgb ]+_egd .Itoa (_eea );};};};return _ded ;};
+// SetWidthRight sets border width for right.
+func (_agaf *border )SetWidthRight (bw float64 ){_agaf ._cee =bw };
 
-// AnchorPoint defines anchor point where the center position of the radial gradient would be calculated.
-type AnchorPoint int ;
+// Width returns the width of the ellipse.
+func (_cbbd *Ellipse )Width ()float64 {return _cbbd ._baeg };
 
-// InvoiceCell represents any cell belonging to a table from the invoice
-// template. The main tables are the invoice information table, the line
-// items table and totals table. Contains the text value of the cell and
-// the style properties of the cell.
-type InvoiceCell struct{InvoiceCellProps ;Value string ;};
+// Height returns the height of the list.
+func (_cfba *List )Height ()float64 {var _cabg float64 ;for _ ,_abba :=range _cfba ._fegg {_cabg +=_abba .ctxHeight (_cfba .Width ());};return _cabg ;};
 
-// BorderColor returns the border color of the rectangle.
-func (_gfbga *Rectangle )BorderColor ()Color {return _gfbga ._fbdc };
+// SetWidth sets the width of the ellipse.
+func (_dcce *Ellipse )SetWidth (width float64 ){_dcce ._baeg =width };
 
-// Indent returns the left offset of the list when nested into another list.
-func (_cafc *List )Indent ()float64 {return _cafc ._gbdd };
+// TOCLine represents a line in a table of contents.
+// The component can be used both in the context of a
+// table of contents component and as a standalone component.
+// The representation of a table of contents line is as follows:
+/*
+         [number] [title]      [separator] [page]
+   e.g.: Chapter1 Introduction ........... 1
+*/
+type TOCLine struct{_dabee *StyledParagraph ;
 
-// SetHeight sets the Image's document height to specified h.
-func (_eafgg *Image )SetHeight (h float64 ){_eafgg ._dcde =h };
+// Holds the text and style of the number part of the TOC line.
+Number TextChunk ;
 
-// GeneratePageBlocks generate the Page blocks. Multiple blocks are generated
-// if the contents wrap over multiple pages.
-func (_gfgfa *List )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){var _dffd float64 ;var _adef []*StyledParagraph ;for _ ,_afbcf :=range _gfgfa ._eccb {_gggcd :=_ebab (_gfgfa ._dgcbd );_gggcd .SetEnableWrap (false );_gggcd .SetTextAlignment (TextAlignmentRight );
-_gggcd .Append (_afbcf ._ccbc .Text ).Style =_afbcf ._ccbc .Style ;_gfge :=_gggcd .getTextWidth ()/1000.0/ctx .Width ;if _dffd < _gfge {_dffd =_gfge ;};_adef =append (_adef ,_gggcd );};_bdfcd :=_afcfg (2);_bdfcd .SetColumnWidths (_dffd ,1-_dffd );_bdfcd .SetMargins (_gfgfa ._ccfa .Left +_gfgfa ._gbdd ,_gfgfa ._ccfa .Right ,_gfgfa ._ccfa .Top ,_gfgfa ._ccfa .Bottom );
-_bdfcd .EnableRowWrap (true );for _afff ,_cfeaf :=range _gfgfa ._eccb {_fecce :=_bdfcd .NewCell ();_fecce .SetIndent (0);_fecce .SetContent (_adef [_afff ]);_fecce =_bdfcd .NewCell ();_fecce .SetIndent (0);_fecce .SetContent (_cfeaf ._cafb );};return _bdfcd .GeneratePageBlocks (ctx );
-};func (_dbgbb *TOCLine )getLineLink ()*_gf .PdfAnnotation {if _dbgbb ._gdfbf <=0{return nil ;};return _feab (_dbgbb ._gdfbf -1,_dbgbb ._ffcfg ,_dbgbb ._fcae ,0);};
+// Holds the text and style of the title part of the TOC line.
+Title TextChunk ;
 
-// Number returns the invoice number description and value cells.
-// The returned values can be used to customize the styles of the cells.
-func (_gaeb *Invoice )Number ()(*InvoiceCell ,*InvoiceCell ){return _gaeb ._cfgb [0],_gaeb ._cfgb [1]};
+// Holds the text and style of the separator part of the TOC line.
+Separator TextChunk ;
 
-// SetLineMargins sets the margins for all new lines of the table of contents.
-func (_dccg *TOC )SetLineMargins (left ,right ,top ,bottom float64 ){_aeacg :=&_dccg ._eegf ;_aeacg .Left =left ;_aeacg .Right =right ;_aeacg .Top =top ;_aeacg .Bottom =bottom ;};type border struct{_dae float64 ;_deea float64 ;_cdg float64 ;_gce float64 ;
-_cdda Color ;_agbc Color ;_bac float64 ;_egdf Color ;_aac float64 ;_aeg Color ;_egg float64 ;_fdf Color ;_afed float64 ;LineStyle _g .LineStyle ;_ggd CellBorderStyle ;_bceb CellBorderStyle ;_cedf CellBorderStyle ;_fbb CellBorderStyle ;};func _ccdg (_ccbaf *templateProcessor ,_dgdb *templateNode )(interface{},error ){return _ccbaf .parseChapter (_dgdb );
+// Holds the text and style of the page part of the TOC line.
+Page TextChunk ;_gfgb float64 ;_bbec uint ;_eedde float64 ;_bgfaa Positioning ;_becg float64 ;_gfcef float64 ;_edbf int64 ;};
+
+// Finalize renders all blocks to the creator pages. In addition, it takes care
+// of adding headers and footers, as well as generating the front page,
+// table of contents and outlines.
+// Finalize is automatically called before writing the document out. Calling the
+// method manually can be useful when adding external pages to the creator,
+// using the AddPage method, as it renders all creator blocks to the added
+// pages, without having to write the document out.
+// NOTE: TOC and outlines are generated only if the AddTOC and AddOutlines
+// fields of the creator are set to true (enabled by default). Furthermore, TOCs
+// and outlines without content are skipped. TOC and outline content is
+// added automatically when using the chapter component. TOCs and outlines can
+// also be set externally, using the SetTOC and SetOutlineTree methods.
+// Finalize should only be called once, after all draw calls have taken place,
+// as it will return immediately if the creator instance has been finalized.
+func (_aebe *Creator )Finalize ()error {if _aebe ._aeg {return nil ;};_aca :=len (_aebe ._adbg );_bggb :=0;if _aebe ._badc !=nil {_fgdb :=*_aebe ;_aebe ._adbg =nil ;_aebe ._ebec =nil ;_aebe .initContext ();_degeb :=FrontpageFunctionArgs {PageNum :1,TotalPages :_aca };
+_aebe ._badc (_degeb );_bggb +=len (_aebe ._adbg );_aebe ._adbg =_fgdb ._adbg ;_aebe ._ebec =_fgdb ._ebec ;};if _aebe .AddTOC {_aebe .initContext ();_aebe ._ddd .Page =_bggb +1;if _aebe .CustomTOC &&_aebe ._cdfg !=nil {_dfcc :=*_aebe ;_aebe ._adbg =nil ;
+_aebe ._ebec =nil ;if _gcda :=_aebe ._cdfg (_aebe ._fgde );_gcda !=nil {return _gcda ;};_bggb +=len (_aebe ._adbg );_aebe ._adbg =_dfcc ._adbg ;_aebe ._ebec =_dfcc ._ebec ;}else {if _aebe ._cdfg !=nil {if _ecbgc :=_aebe ._cdfg (_aebe ._fgde );_ecbgc !=nil {return _ecbgc ;
+};};_ffe ,_ ,_ffef :=_aebe ._fgde .GeneratePageBlocks (_aebe ._ddd );if _ffef !=nil {_da .Log .Debug ("\u0046\u0061i\u006c\u0065\u0064\u0020\u0074\u006f\u0020\u0067\u0065\u006e\u0065\u0072\u0061\u0074\u0065\u0020\u0062\u006c\u006f\u0063\u006b\u0073: \u0025\u0076",_ffef );
+return _ffef ;};_bggb +=len (_ffe );};_gadc :=_aebe ._fgde .Lines ();for _ ,_geec :=range _gadc {_fff ,_bfdd :=_fe .Atoi (_geec .Page .Text );if _bfdd !=nil {continue ;};_geec .Page .Text =_fe .Itoa (_fff +_bggb );_geec ._edbf +=int64 (_bggb );};};_adgbf :=false ;
+var _cfgb []*_fee .PdfPage ;if _aebe ._badc !=nil {_gfga :=*_aebe ;_aebe ._adbg =nil ;_aebe ._ebec =nil ;_dac :=FrontpageFunctionArgs {PageNum :1,TotalPages :_aca };_aebe ._badc (_dac );_aca +=len (_aebe ._adbg );_cfgb =_aebe ._adbg ;_aebe ._adbg =append (_aebe ._adbg ,_gfga ._adbg ...);
+_aebe ._ebec =_gfga ._ebec ;_adgbf =true ;};var _abc []*_fee .PdfPage ;if _aebe .AddTOC {_aebe .initContext ();if _aebe .CustomTOC &&_aebe ._cdfg !=nil {_bccd :=*_aebe ;_aebe ._adbg =nil ;_aebe ._ebec =nil ;if _ged :=_aebe ._cdfg (_aebe ._fgde );_ged !=nil {_da .Log .Debug ("\u0045r\u0072\u006f\u0072\u0020\u0067\u0065\u006e\u0065\u0072\u0061\u0074i\u006e\u0067\u0020\u0054\u004f\u0043\u003a\u0020\u0025\u0076",_ged );
+return _ged ;};_abc =_aebe ._adbg ;_aca +=len (_abc );_aebe ._adbg =_bccd ._adbg ;_aebe ._ebec =_bccd ._ebec ;}else {if _aebe ._cdfg !=nil {if _cbg :=_aebe ._cdfg (_aebe ._fgde );_cbg !=nil {_da .Log .Debug ("\u0045r\u0072\u006f\u0072\u0020\u0067\u0065\u006e\u0065\u0072\u0061\u0074i\u006e\u0067\u0020\u0054\u004f\u0043\u003a\u0020\u0025\u0076",_cbg );
+return _cbg ;};};_fgb ,_ ,_ :=_aebe ._fgde .GeneratePageBlocks (_aebe ._ddd );for _ ,_ebcd :=range _fgb {_ebcd .SetPos (0,0);_aca ++;_gacc :=_aebe .newPage ();_abc =append (_abc ,_gacc );_aebe .setActivePage (_gacc );_aebe .Draw (_ebcd );};};if _adgbf {_gfd :=_cfgb ;
+_bced :=_aebe ._adbg [len (_cfgb ):];_aebe ._adbg =append ([]*_fee .PdfPage {},_gfd ...);_aebe ._adbg =append (_aebe ._adbg ,_abc ...);_aebe ._adbg =append (_aebe ._adbg ,_bced ...);}else {_aebe ._adbg =append (_abc ,_aebe ._adbg ...);};};if _aebe ._aeff !=nil &&_aebe .AddOutlines {var _gdbc func (_bbeg *_fee .OutlineItem );
+_gdbc =func (_degef *_fee .OutlineItem ){_degef .Dest .Page +=int64 (_bggb );if _fgcgb :=int (_degef .Dest .Page );_fgcgb >=0&&_fgcgb < len (_aebe ._adbg ){_degef .Dest .PageObj =_aebe ._adbg [_fgcgb ].GetPageAsIndirectObject ();}else {_da .Log .Debug ("\u0057\u0041R\u004e\u003a\u0020\u0063\u006f\u0075\u006c\u0064\u0020\u006e\u006f\u0074\u0020\u0067\u0065\u0074\u0020\u0070\u0061\u0067\u0065\u0020\u0063\u006f\u006e\u0074\u0061\u0069\u006e\u0065\u0072\u0020\u0066\u006f\u0072\u0020\u0070\u0061\u0067\u0065\u0020\u0025\u0064",_fgcgb );
+};_degef .Dest .Y =_aebe ._cec -_degef .Dest .Y ;_dag :=_degef .Items ();for _ ,_abcc :=range _dag {_gdbc (_abcc );};};_acgc :=_aebe ._aeff .Items ();for _ ,_cdgc :=range _acgc {_gdbc (_cdgc );};if _aebe .AddTOC {var _aced int ;if _adgbf {_aced =len (_cfgb );
+};_dfce :=_fee .NewOutlineDest (int64 (_aced ),0,_aebe ._cec );if _aced >=0&&_aced < len (_aebe ._adbg ){_dfce .PageObj =_aebe ._adbg [_aced ].GetPageAsIndirectObject ();}else {_da .Log .Debug ("\u0057\u0041R\u004e\u003a\u0020\u0063\u006f\u0075\u006c\u0064\u0020\u006e\u006f\u0074\u0020\u0067\u0065\u0074\u0020\u0070\u0061\u0067\u0065\u0020\u0063\u006f\u006e\u0074\u0061\u0069\u006e\u0065\u0072\u0020\u0066\u006f\u0072\u0020\u0070\u0061\u0067\u0065\u0020\u0025\u0064",_aced );
+};_aebe ._aeff .Insert (0,_fee .NewOutlineItem ("\u0054\u0061\u0062\u006c\u0065\u0020\u006f\u0066\u0020\u0043\u006f\u006et\u0065\u006e\u0074\u0073",_dfce ));};};for _cge ,_bef :=range _aebe ._adbg {_aebe .setActivePage (_bef );if _aebe ._ecd !=nil {_edfd ,_ccgc ,_ebcb :=_bef .Size ();
+if _ebcb !=nil {return _ebcb ;};_egffa :=PageFinalizeFunctionArgs {PageNum :_cge +1,PageWidth :_edfd ,PageHeight :_ccgc ,TOCPages :len (_abc ),TotalPages :_aca };if _adfc :=_aebe ._ecd (_egffa );_adfc !=nil {_da .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a \u0070\u0061\u0067\u0065\u0020\u0066\u0069\u006e\u0061\u006c\u0069\u007a\u0065 \u0063\u0061\u006c\u006c\u0062\u0061\u0063k\u003a\u0020\u0025\u0076",_adfc );
+return _adfc ;};};if _aebe ._dbbg !=nil {_bfbd :=NewBlock (_aebe ._aef ,_aebe ._bbdf .Top );_gdec :=HeaderFunctionArgs {PageNum :_cge +1,TotalPages :_aca };_aebe ._dbbg (_bfbd ,_gdec );_bfbd .SetPos (0,0);if _cffg :=_aebe .Draw (_bfbd );_cffg !=nil {_da .Log .Debug ("\u0045R\u0052\u004f\u0052\u003a \u0064\u0072\u0061\u0077\u0069n\u0067 \u0068e\u0061\u0064\u0065\u0072\u003a\u0020\u0025v",_cffg );
+return _cffg ;};};if _aebe ._fdf !=nil {_dea :=NewBlock (_aebe ._aef ,_aebe ._bbdf .Bottom );_ecgf :=FooterFunctionArgs {PageNum :_cge +1,TotalPages :_aca };_aebe ._fdf (_dea ,_ecgf );_dea .SetPos (0,_aebe ._cec -_dea ._egb );if _gcdg :=_aebe .Draw (_dea );
+_gcdg !=nil {_da .Log .Debug ("\u0045R\u0052\u004f\u0052\u003a \u0064\u0072\u0061\u0077\u0069n\u0067 \u0066o\u006f\u0074\u0065\u0072\u003a\u0020\u0025v",_gcdg );return _gcdg ;};};_aefc ,_fccg :=_aebe ._ecbb [_bef ];if _gaca ,_gbaf :=_aebe ._adcea [_bef ];
+_gbaf {if _fccg {_aefc .transformBlock (_gaca );};if _ecda :=_gaca .drawToPage (_bef );_ecda !=nil {_da .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a \u0064\u0072\u0061\u0077\u0069\u006e\u0067\u0020\u0070\u0061\u0067\u0065\u0020%\u0064\u0020\u0062\u006c\u006f\u0063\u006bs\u003a\u0020\u0025\u0076",_cge +1,_ecda );
+return _ecda ;};};if _fccg {if _bgbe :=_aefc .transformPage (_bef );_bgbe !=nil {_da .Log .Debug ("E\u0052\u0052\u004f\u0052\u003a\u0020c\u006f\u0075\u006c\u0064\u0020\u006eo\u0074\u0020\u0074\u0072\u0061\u006e\u0073f\u006f\u0072\u006d\u0020\u0070\u0061\u0067\u0065\u003a\u0020%\u0076",_bgbe );
+return _bgbe ;};};};_aebe ._aeg =true ;return nil ;};func _gfgag (_egae string )*_fee .PdfAnnotation {_bgfc :=_fee .NewPdfAnnotationLink ();_dfgfc :=_fee .NewBorderStyle ();_dfgfc .SetBorderWidth (0);_bgfc .BS =_dfgfc .ToPdfObject ();_ggcg :=_fee .NewPdfActionURI ();
+_ggcg .URI =_dd .MakeString (_egae );_bgfc .SetAction (_ggcg .PdfAction );return _bgfc .PdfAnnotation ;};func (_bfec *Creator )setActivePage (_dccfc *_fee .PdfPage ){_bfec ._ebec =_dccfc };
+
+// GetMargins returns the margins of the rectangle: left, right, top, bottom.
+func (_edaf *Rectangle )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _edaf ._gcag .Left ,_edaf ._gcag .Right ,_edaf ._gcag .Top ,_edaf ._gcag .Bottom ;};
+
+// ScaleToWidth scales the ellipse to the specified width. The height of
+// the ellipse is scaled so that the aspect ratio is maintained.
+func (_ggcf *Ellipse )ScaleToWidth (w float64 ){_gcaa :=_ggcf ._afaf /_ggcf ._baeg ;_ggcf ._baeg =w ;_ggcf ._afaf =w *_gcaa ;};func _gaffdg ()*PageBreak {return &PageBreak {}};
+
+// GeneratePageBlocks draw graphic svg into block.
+func (_eedbb *GraphicSVG )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_cadb :=ctx ;_gdd :=_eedbb ._ebgcc .IsRelative ();var _fggd []*Block ;if _gdd {_aeda :=1.0;_fgcd :=_eedbb ._dadde .Top ;if _eedbb ._cfff .Height > ctx .Height -_eedbb ._dadde .Top {_fggd =[]*Block {NewBlock (ctx .PageWidth ,ctx .PageHeight -ctx .Y )};
+var _eeab error ;if _ ,ctx ,_eeab =_gaffdg ().GeneratePageBlocks (ctx );_eeab !=nil {return nil ,ctx ,_eeab ;};_fgcd =0;};ctx .X +=_eedbb ._dadde .Left +_aeda ;ctx .Y +=_fgcd ;ctx .Width -=_eedbb ._dadde .Left +_eedbb ._dadde .Right +2*_aeda ;ctx .Height -=_fgcd ;
+}else {ctx .X =_eedbb ._cad ;ctx .Y =_eedbb ._debcc ;};_fgbd :=_ebc .NewContentCreator ();_fgbd .Translate (0,ctx .PageHeight );_fgbd .Scale (1,-1);_fgbd .Translate (ctx .X ,ctx .Y );_ffgb :=_eedbb ._cfff .Width /_eedbb ._cfff .ViewBox .W ;_fbea :=_eedbb ._cfff .Height /_eedbb ._cfff .ViewBox .H ;
+_dbda :=_eedbb ._cad -(_eedbb ._cfff .ViewBox .X *_fa .Max (_ffgb ,_fbea ));_gccdd :=_eedbb ._debcc -(_eedbb ._cfff .ViewBox .Y *_fa .Max (_ffgb ,_fbea ));_eedbb ._cfff .ToContentCreator (_fgbd ,_ffgb ,_fbea ,_dbda ,_gccdd );_daa :=NewBlock (ctx .PageWidth ,ctx .PageHeight );
+if _ebaag :=_daa .addContentsByString (_fgbd .String ());_ebaag !=nil {return nil ,ctx ,_ebaag ;};if _gdd {_fdddg :=_eedbb .Height ()+_eedbb ._dadde .Bottom ;ctx .Y +=_fdddg ;ctx .Height -=_fdddg ;}else {ctx =_cadb ;};_fggd =append (_fggd ,_daa );return _fggd ,ctx ,nil ;
 };
 
-// SetMargins sets the margins of the ellipse.
-// NOTE: ellipse margins are only applied if relative positioning is used.
-func (_aacb *Ellipse )SetMargins (left ,right ,top ,bottom float64 ){_aacb ._eac .Left =left ;_aacb ._eac .Right =right ;_aacb ._eac .Top =top ;_aacb ._eac .Bottom =bottom ;};func _aefb (_gfae _e .Image )(*Image ,error ){_agag ,_agcaa :=_gf .ImageHandling .NewImageFromGoImage (_gfae );
-if _agcaa !=nil {return nil ,_agcaa ;};return _ddga (_agag );};
+// AddColorStop add color stop info for rendering gradient color.
+func (_dggd *LinearShading )AddColorStop (color Color ,point float64 ){_dggd ._adece .AddColorStop (color ,point );};func (_acgce *templateProcessor )parseChapterHeading (_gecg *templateNode )(interface{},error ){if _gecg ._bdgb ==nil {_da .Log .Error ("\u0043\u0068a\u0070\u0074\u0065\u0072 \u0068\u0065a\u0064\u0069\u006e\u0067\u0020\u0070\u0061\u0072e\u006e\u0074\u0020\u0063\u0061\u006e\u006e\u006f\u0074\u0020\u0062\u0065 \u006e\u0069\u006c\u002e");
+return nil ,_cedeg ;};_beebg ,_daaf :=_gecg ._bdgb ._bdced .(*Chapter );if !_daaf {_da .Log .Error ("\u0043h\u0061\u0070t\u0065\u0072\u0020h\u0065\u0061\u0064\u0069\u006e\u0067\u0020p\u0061\u0072\u0065\u006e\u0074\u0020(\u0025\u0054\u0029\u0020\u0069\u0073\u0020\u006e\u006f\u0074\u0020a\u0020\u0063\u0068\u0061\u0070\u0074\u0065\u0072\u002e",_gecg ._bdgb ._bdced );
+return nil ,_cedeg ;};_gdfbe :=_beebg .GetHeading ();if _ ,_gdaab :=_acgce .parseParagraph (_gecg ,_gdfbe );_gdaab !=nil {return nil ,_gdaab ;};return _gdfbe ,nil ;};func (_dccgc *pageTransformations )transformBlock (_bgea *Block ){if _dccgc ._gbgd !=nil {_bgea .transform (*_dccgc ._gbgd );
+};};
 
-// PolyBezierCurve represents a composite curve that is the result of joining
-// multiple cubic Bezier curves.
-// Implements the Drawable interface and can be drawn on PDF using the Creator.
-type PolyBezierCurve struct{_debe *_g .PolyBezierCurve ;_bcbcf float64 ;_cbec float64 ;_defeb Color ;};
+// AddPage adds the specified page to the creator.
+// NOTE: If the page has a Rotate flag, the creator will take care of
+// transforming the contents to maintain the correct orientation.
+func (_efga *Creator )AddPage (page *_fee .PdfPage )error {_adecg ,_bbab :=page .GetMediaBox ();if _bbab !=nil {_da .Log .Debug ("\u0046\u0061\u0069l\u0065\u0064\u0020\u0074o\u0020\u0067\u0065\u0074\u0020\u0070\u0061g\u0065\u0020\u006d\u0065\u0064\u0069\u0061\u0062\u006f\u0078\u003a\u0020\u0025\u0076",_bbab );
+return _bbab ;};_adecg .Normalize ();_bebg ,_ecf :=_adecg .Llx ,_adecg .Lly ;_cgf :=_adecg ;if _aedc :=page .CropBox ;_aedc !=nil &&*_aedc !=*_adecg {_aedc .Normalize ();_bebg ,_ecf =_aedc .Llx ,_aedc .Lly ;_cgf =_aedc ;};_dgae :=_bc .IdentityMatrix ();
+_cfa ,_bbab :=page .GetRotate ();if _bbab !=nil {_da .Log .Debug ("\u0045\u0052R\u004f\u0052\u003a\u0020\u0025\u0073\u0020\u002d\u0020\u0069\u0067\u006e\u006f\u0072\u0069\u006e\u0067\u0020\u0061\u006e\u0064\u0020\u0061\u0073\u0073\u0075\u006d\u0069\u006e\u0067\u0020\u006e\u006f\u0020\u0072\u006f\u0074\u0061\u0074\u0069\u006f\u006e\u000a",_bbab .Error ());
+};_ecde :=_cfa %360!=0&&_cfa %90==0;if _ecde {_fafg :=float64 ((360+_cfa %360)%360);if _fafg ==90{_dgae =_dgae .Translate (_cgf .Width (),0);}else if _fafg ==180{_dgae =_dgae .Translate (_cgf .Width (),_cgf .Height ());}else if _fafg ==270{_dgae =_dgae .Translate (0,_cgf .Height ());
+};_dgae =_dgae .Mult (_bc .RotationMatrix (_fafg *_fa .Pi /180));_dgae =_dgae .Round (0.000001);_acg :=_fgbc (_cgf ,_dgae );_cgf =_acg ;_cgf .Normalize ();};if _bebg !=0||_ecf !=0{_dgae =_bc .TranslationMatrix (_bebg ,_ecf ).Mult (_dgae );};if !_dgae .Identity (){_dgae =_dgae .Round (0.000001);
+_efga ._ecbb [page ]=&pageTransformations {_gbgd :&_dgae };};_efga ._aef =_cgf .Width ();_efga ._cec =_cgf .Height ();_efga .initContext ();_efga ._adbg =append (_efga ._adbg ,page );_efga ._ddd .Page ++;return nil ;};
 
-// FitMode defines resizing options of an object inside a container.
-type FitMode int ;func (_ccfb *templateProcessor )parseCellAlignmentAttr (_ccag ,_becc string )CellHorizontalAlignment {_cf .Log .Debug ("\u0050a\u0072\u0073i\u006e\u0067\u0020c\u0065\u006c\u006c\u0020\u0061\u006c\u0069g\u006e\u006d\u0065\u006e\u0074\u0020a\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0028`\u0025\u0073\u0060\u002c\u0020\u0025\u0073\u0029\u002e",_ccag ,_becc );
-_gdcbd :=map[string ]CellHorizontalAlignment {"\u006c\u0065\u0066\u0074":CellHorizontalAlignmentLeft ,"\u0063\u0065\u006e\u0074\u0065\u0072":CellHorizontalAlignmentCenter ,"\u0072\u0069\u0067h\u0074":CellHorizontalAlignmentRight }[_becc ];return _gdcbd ;
-};func (_dgcd *templateProcessor )parseInt64Array (_bafg ,_facfa string )[]int64 {_cf .Log .Debug ("\u0050\u0061\u0072s\u0069\u006e\u0067\u0020\u0069\u006e\u0074\u0036\u0034\u0020\u0061\u0072\u0072\u0061\u0079\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0028\u0060%\u0073\u0060\u002c\u0020\u0025\u0073\u0029\u002e",_bafg ,_facfa );
-_gegg :=_eg .Fields (_facfa );_bfefe :=make ([]int64 ,0,len (_gegg ));for _ ,_aecbe :=range _gegg {_cdgdgd ,_ :=_egd .ParseInt (_aecbe ,10,64);_bfefe =append (_bfefe ,_cdgdgd );};return _bfefe ;};
+// NewGraphicSVGFromFile creates a graphic SVG from a file.
+func NewGraphicSVGFromFile (path string )(*GraphicSVG ,error ){return _cfbfe (path )};
 
-// WriteToFile writes the Creator output to file specified by path.
-func (_fgbd *Creator )WriteToFile (outputPath string )error {_gdf ,_edcb :=_bg .Create (outputPath );if _edcb !=nil {return _edcb ;};defer _gdf .Close ();return _fgbd .Write (_gdf );};
+// Positioning represents the positioning type for drawing creator components (relative/absolute).
+type Positioning int ;func _fgbddeg (_cfbbe *templateProcessor ,_aba *templateNode )(interface{},error ){return _cfbbe .parseChapterHeading (_aba );};
 
-// GetMargins returns the Paragraph's margins: left, right, top, bottom.
-func (_ggbf *StyledParagraph )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _ggbf ._gdfc .Left ,_ggbf ._gdfc .Right ,_ggbf ._gdfc .Top ,_ggbf ._gdfc .Bottom ;};
-
-// SetFitMode sets the fit mode of the ellipse.
-// NOTE: The fit mode is only applied if relative positioning is used.
-func (_eedf *Ellipse )SetFitMode (fitMode FitMode ){_eedf ._dgbc =fitMode };func (_bbeaac *templateProcessor )parseTextAlignmentAttr (_edcfg ,_cfddf string )TextAlignment {_cf .Log .Debug ("\u0050a\u0072\u0073i\u006e\u0067\u0020t\u0065\u0078\u0074\u0020\u0061\u006c\u0069g\u006e\u006d\u0065\u006e\u0074\u0020a\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0028`\u0025\u0073\u0060\u002c\u0020\u0025\u0073\u0029\u002e",_edcfg ,_cfddf );
-_acafc :=map[string ]TextAlignment {"\u006c\u0065\u0066\u0074":TextAlignmentLeft ,"\u0072\u0069\u0067h\u0074":TextAlignmentRight ,"\u0063\u0065\u006e\u0074\u0065\u0072":TextAlignmentCenter ,"\u006au\u0073\u0074\u0069\u0066\u0079":TextAlignmentJustify }[_cfddf ];
-return _acafc ;};func _bdaac (_cfbe *Creator ,_fccb []byte ,_fddfb *TemplateOptions ,_eaeb componentRenderer )*templateProcessor {if _fddfb ==nil {_fddfb =&TemplateOptions {};};_fddfb .init ();if _eaeb ==nil {_eaeb =_cfbe ;};return &templateProcessor {creator :_cfbe ,_baaba :_fccb ,_cfae :_fddfb ,_gcfe :_eaeb };
-};
+// Width returns the width of the Paragraph.
+func (_dabb *Paragraph )Width ()float64 {if _dabb ._ccee &&int (_dabb ._bgdg )> 0{return _dabb ._bgdg ;};return _dabb .getTextWidth ()/1000.0;};
 
 // DrawTemplate renders the template provided through the specified reader,
 // using the specified `data` and `options`.
@@ -2522,150 +2013,241 @@ return _acafc ;};func _bdaac (_cfbe *Creator ,_fccb []byte ,_fddfb *TemplateOpti
 // The second phase of processing is actually parsing the template, translating
 // it into creator components and rendering them using the provided options.
 // Both the `data` and `options` parameters can be nil.
-func (_dcg *Block )DrawTemplate (c *Creator ,r _ag .Reader ,data interface{},options *TemplateOptions )error {return _efefe (c ,r ,data ,options ,_dcg );};
-
-// Draw processes the specified Drawable widget and generates blocks that can
-// be rendered to the output document. The generated blocks can span over one
-// or more pages. Additional pages are added if the contents go over the current
-// page. Each generated block is assigned to the creator page it will be
-// rendered to. In order to render the generated blocks to the creator pages,
-// call Finalize, Write or WriteToFile.
-func (_faagg *Creator )Draw (d Drawable )error {if _faagg .getActivePage ()==nil {_faagg .NewPage ();};_fbdb ,_cbce ,_ccc :=d .GeneratePageBlocks (_faagg ._fagd );if _ccc !=nil {return _ccc ;};if len (_cbce ._gbeb )> 0{_faagg .Errors =append (_faagg .Errors ,_cbce ._gbeb ...);
-};for _eee ,_geg :=range _fbdb {if _eee > 0{_faagg .NewPage ();};_beee :=_faagg .getActivePage ();if _bbdg ,_addg :=_faagg ._agf [_beee ];_addg {if _fcf :=_bbdg .mergeBlocks (_geg );_fcf !=nil {return _fcf ;};if _efef :=_aeca (_geg ._cff ,_bbdg ._cff );
-_efef !=nil {return _efef ;};}else {_faagg ._agf [_beee ]=_geg ;};};_faagg ._fagd .X =_cbce .X ;_faagg ._fagd .Y =_cbce .Y ;_faagg ._fagd .Height =_cbce .PageHeight -_cbce .Y -_cbce .Margins .Bottom ;return nil ;};func _eedb (_adcbe ,_gefg ,_deace ,_gbff float64 )*Ellipse {return &Ellipse {_gecd :_adcbe ,_abbb :_gefg ,_bcce :_deace ,_ccae :_gbff ,_ceeb :PositionAbsolute ,_acf :1.0,_geba :ColorBlack ,_aged :1.0,_deaa :1.0};
+func (_eed *Block )DrawTemplate (c *Creator ,r _fg .Reader ,data interface{},options *TemplateOptions )error {return _gcdc (c ,r ,data ,options ,_eed );};func _aacgba (_aggg *Block ,_deee _fee .PdfColor ,_dcbb Color ,_aadb func ()Rectangle )error {switch _ffaab :=_deee .(type ){case *_fee .PdfColorPatternType2 :_ageg ,_fdbag :=_dcbb .(*LinearShading );
+if !_fdbag {return _fb .Errorf ("\u0043\u006f\u006c\u006f\u0072\u0020\u0069\u0073\u0020\u006e\u006ft\u0020\u004c\u0069\u006e\u0065\u0061\u0072\u0053\u0068\u0061d\u0069\u006e\u0067");};_dgec :=_aadb ();_ageg .SetBoundingBox (_dgec ._cfbab ,_dgec ._cffbf ,_dgec ._bfddd ,_dgec ._abfd );
+_fbee ,_debee :=_ageg .AddPatternResource (_aggg );if _debee !=nil {return _fb .Errorf ("\u0066\u0061\u0069\u006c\u0065\u0064\u0020\u0061\u0064\u0064\u0069\u006e\u0067\u0020\u0070\u0061\u0074\u0074\u0065\u0072\u006e\u0020\u0074\u006f \u0072\u0065\u0073\u006f\u0075r\u0063\u0065s\u003a\u0020\u0025\u0076",_debee );
+};_ffaab .PatternName =_fbee ;case *_fee .PdfColorPatternType3 :_afag ,_fdffa :=_dcbb .(*RadialShading );if !_fdffa {return _fb .Errorf ("\u0043\u006f\u006c\u006f\u0072\u0020\u0069\u0073\u0020\u006e\u006ft\u0020\u0052\u0061\u0064\u0069\u0061\u006c\u0053\u0068\u0061d\u0069\u006e\u0067");
+};_dgbe :=_aadb ();_afag .SetBoundingBox (_dgbe ._cfbab ,_dgbe ._cffbf ,_dgbe ._bfddd ,_dgbe ._abfd );_gefb ,_dafbb :=_afag .AddPatternResource (_aggg );if _dafbb !=nil {return _fb .Errorf ("\u0066\u0061\u0069\u006c\u0065\u0064\u0020\u0061\u0064\u0064\u0069\u006e\u0067\u0020\u0070\u0061\u0074\u0074\u0065\u0072\u006e\u0020\u0074\u006f \u0072\u0065\u0073\u006f\u0075r\u0063\u0065s\u003a\u0020\u0025\u0076",_dafbb );
+};_ffaab .PatternName =_gefb ;};return nil ;};func (_gbgf *templateProcessor )renderNode (_aafcb *templateNode )error {_fdafe :=_aafcb ._bdced ;if _fdafe ==nil {return nil ;};_fcdfd :=_aafcb ._bdbga .Name .Local ;_feac ,_dgac :=_accae [_fcdfd ];if !_dgac {_da .Log .Debug ("\u0049\u006e\u0076\u0061l\u0069\u0064\u0020\u0074\u0061\u0067\u003a\u0020\u0060\u0025s\u0060.\u0020\u0053\u006b\u0069\u0070\u0070\u0069n\u0067\u002e",_fcdfd );
+return nil ;};var _deaf interface{};if _aafcb ._bdgb !=nil &&_aafcb ._bdgb ._bdced !=nil {_gedd :=_aafcb ._bdgb ._bdbga .Name .Local ;if _ ,_dgac =_feac ._gagf [_gedd ];!_dgac {_da .Log .Debug ("\u0060%\u0073\u0060 \u0069\u0073\u0020n\u006f\u0074\u0020\u0061\u0020\u0076\u0061l\u0069\u0064\u0020\u0070\u0061\u0072e\u006e\u0074\u0020\u0066\u006f\u0072\u0020\u0074\u0068\u0065\u0020`\u0025\u0073\u0060\u0020\u006e\u006f\u0064\u0065\u002e",_gedd ,_fcdfd );
+return _cedeg ;};_deaf =_aafcb ._bdgb ._bdced ;}else {_fdcf :="\u0063r\u0065\u0061\u0074\u006f\u0072";switch _gbgf ._cgcaa .(type ){case *Block :_fdcf ="\u0062\u006c\u006fc\u006b";};if _ ,_dgac =_feac ._gagf [_fdcf ];!_dgac {_da .Log .Debug ("\u0060%\u0073\u0060 \u0069\u0073\u0020n\u006f\u0074\u0020\u0061\u0020\u0076\u0061l\u0069\u0064\u0020\u0070\u0061\u0072e\u006e\u0074\u0020\u0066\u006f\u0072\u0020\u0074\u0068\u0065\u0020`\u0025\u0073\u0060\u0020\u006e\u006f\u0064\u0065\u002e",_fdcf ,_fcdfd );
+return _cedeg ;};_deaf =_gbgf ._cgcaa ;};switch _babgbc :=_deaf .(type ){case componentRenderer :_febbe ,_gecbd :=_fdafe .(Drawable );if !_gecbd {_da .Log .Error ("\u0043\u006f\u006d\u0070\u006f\u006ee\u006e\u0074\u0020\u0028\u0025\u0054\u0029\u0020\u0069\u0073\u0020\u006e\u006ft\u0020\u0061\u0020\u0064\u0072\u0061\u0077a\u0062\u006c\u0065\u002e",_fdafe );
+return _gffbc ;};return _babgbc .Draw (_febbe );case *Division :switch _bgfbc :=_fdafe .(type ){case *Background :_babgbc .SetBackground (_bgfbc );case VectorDrawable :return _babgbc .Add (_bgfbc );};case *TableCell :_cgaf ,_egfec :=_fdafe .(VectorDrawable );
+if !_egfec {_da .Log .Error ("C\u006f\u006d\u0070\u006f\u006e\u0065\u006e\u0074\u0020\u0028\u0025\u0054\u0029\u0020\u0069\u0073\u0020\u006eo\u0074\u0020\u0061\u0020\u0076\u0065\u0063\u0074\u006f\u0072 d\u0072\u0061\u0077a\u0062l\u0065\u002e",_fdafe );return _gffbc ;
+};return _babgbc .SetContent (_cgaf );case *StyledParagraph :_aecad ,_dcddd :=_fdafe .(*TextChunk );if !_dcddd {_da .Log .Error ("C\u006f\u006d\u0070\u006f\u006e\u0065n\u0074\u0020\u0028\u0025\u0054\u0029 \u0069\u0073\u0020\u006e\u006f\u0074\u0020a\u0020\u0074\u0065\u0078\u0074\u0020\u0063\u0068\u0075\u006ek\u002e",_fdafe );
+return _gffbc ;};_babgbc .appendChunk (_aecad );case *Chapter :switch _edca :=_fdafe .(type ){case *Chapter :return nil ;case *Paragraph :if _aafcb ._bdbga .Name .Local =="\u0063h\u0061p\u0074\u0065\u0072\u002d\u0068\u0065\u0061\u0064\u0069\u006e\u0067"{return nil ;
+};return _babgbc .Add (_edca );case Drawable :return _babgbc .Add (_edca );};case *List :switch _fdfg :=_fdafe .(type ){case *TextChunk :case *listItem :_babgbc ._fegg =append (_babgbc ._fegg ,_fdfg );default:_da .Log .Error ("\u0043o\u006d\u0070o\u006e\u0065\u006e\u0074 \u0028\u0025\u0054)\u0020\u0069\u0073\u0020\u006e\u006f\u0074\u0020\u0061 l\u0069\u0073\u0074 \u0069\u0074e\u006d\u002e\u0020\u0053\u006b\u0069p\u0070\u0069n\u0067\u002e",_fdafe );
+};case *listItem :switch _bdbgc :=_fdafe .(type ){case *TextChunk :case *StyledParagraph :_babgbc ._eaca =_bdbgc ;case *List :if _bdbgc ._ggeg {_bdbgc ._cfffc =15;};_babgbc ._eaca =_bdbgc ;case *Image :_babgbc ._eaca =_bdbgc ;case *Division :_babgbc ._eaca =_bdbgc ;
+case *Table :_babgbc ._eaca =_bdbgc ;default:_da .Log .Error ("\u0043\u006f\u006d\u0070\u006f\u006e\u0065\u006e\u0074\u0020\u0028\u0025\u0054)\u0020\u0069\u0073\u0020\u006e\u006ft\u0020\u0073\u0075\u0070\u0070\u006f\u0072\u0074\u0065\u0064\u0020\u0069\u006e \u006c\u0069\u0073\u0074",_fdafe );
+return _gffbc ;};};return nil ;};func (_adcc *Division )drawBackground (_eead []*Block ,_dbgc ,_gage DrawContext ,_caf bool )([]*Block ,error ){_bdaa :=len (_eead );if _bdaa ==0||_adcc ._dgce ==nil {return _eead ,nil ;};_ddfa :=make ([]*Block ,0,len (_eead ));
+for _fbf ,_ggeb :=range _eead {var (_aabc =_adcc ._dgce .BorderRadiusTopLeft ;_gcde =_adcc ._dgce .BorderRadiusTopRight ;_gaga =_adcc ._dgce .BorderRadiusBottomLeft ;_abce =_adcc ._dgce .BorderRadiusBottomRight ;);_ced :=_dbgc ;_ced .Page +=_fbf ;if _fbf ==0{if _caf {_ddfa =append (_ddfa ,_ggeb );
+continue ;};if _bdaa ==1{_ced .Height =_gage .Y -_dbgc .Y ;};}else {_ced .X =_ced .Margins .Left +_adcc ._ceeba .Left ;_ced .Y =_ced .Margins .Top ;_ced .Width =_ced .PageWidth -_ced .Margins .Left -_ced .Margins .Right -_adcc ._ceeba .Left -_adcc ._ceeba .Right ;
+if _fbf ==_bdaa -1{_ced .Height =_gage .Y -_ced .Margins .Top -_adcc ._ceeba .Top ;}else {_ced .Height =_ced .PageHeight -_ced .Margins .Top -_ced .Margins .Bottom ;};if !_caf {_aabc =0;_gcde =0;};};if _bdaa > 1&&_fbf !=_bdaa -1{_gaga =0;_abce =0;};_egfa :=_eefb (_ced .X ,_ced .Y ,_ced .Width ,_ced .Height );
+_egfa .SetFillColor (_adcc ._dgce .FillColor );_egfa .SetBorderColor (_adcc ._dgce .BorderColor );_egfa .SetBorderWidth (_adcc ._dgce .BorderSize );_egfa .SetBorderRadius (_aabc ,_gcde ,_gaga ,_abce );_cdefb ,_ ,_ggbaf :=_egfa .GeneratePageBlocks (_ced );
+if _ggbaf !=nil {return nil ,_ggbaf ;};if len (_cdefb )==0{continue ;};_daca :=_cdefb [0];if _ggbaf =_daca .mergeBlocks (_ggeb );_ggbaf !=nil {return nil ,_ggbaf ;};_ddfa =append (_ddfa ,_daca );};return _ddfa ,nil ;};func _eaead (_ddgdg *templateProcessor ,_ceagg *templateNode )(interface{},error ){return _ddgdg .parseListItem (_ceagg );
 };
 
-// ColorRGBFromArithmetic creates a Color from arithmetic color values (0-1).
-// Example:
-//   green := ColorRGBFromArithmetic(0.0, 1.0, 0.0)
-func ColorRGBFromArithmetic (r ,g ,b float64 )Color {return rgbColor {_bef :_ee .Max (_ee .Min (r ,1.0),0.0),_gdcb :_ee .Max (_ee .Min (g ,1.0),0.0),_dbf :_ee .Max (_ee .Min (b ,1.0),0.0)};};
+// Date returns the invoice date description and value cells.
+// The returned values can be used to customize the styles of the cells.
+func (_abgc *Invoice )Date ()(*InvoiceCell ,*InvoiceCell ){return _abgc ._gfbd [0],_abgc ._gfbd [1]};const (TextAlignmentLeft TextAlignment =iota ;TextAlignmentRight ;TextAlignmentCenter ;TextAlignmentJustify ;);func (_gdagd *Table )updateRowHeights (_aeebf float64 ){for _ ,_ebgda :=range _gdagd ._afbaa {_cgcb :=_ebgda .width (_gdagd ._fadgg ,_aeebf );
+_dgfa :=_gdagd ._agda [_ebgda ._eeadc +_ebgda ._dbbfc -2];if _aagbba :=_ebgda .height (_cgcb );_aagbba > _dgfa {_cdca :=_aagbba /float64 (_ebgda ._dbbfc );for _fdacf :=1;_fdacf <=_ebgda ._dbbfc ;_fdacf ++{if _cdca > _gdagd ._agda [_ebgda ._eeadc +_fdacf -2]{_gdagd ._agda [_ebgda ._eeadc +_fdacf -2]=_cdca ;
+};};};};};
 
-// ScaleToWidth scales the ellipse to the specified width. The height of
-// the ellipse is scaled so that the aspect ratio is maintained.
-func (_bfbb *Ellipse )ScaleToWidth (w float64 ){_dcef :=_bfbb ._ccae /_bfbb ._bcce ;_bfbb ._bcce =w ;_bfbb ._ccae =w *_dcef ;};func (_cfba *listItem )ctxHeight (_gdfgd float64 )float64 {var _eafe float64 ;switch _gafba :=_cfba ._cafb .(type ){case *Paragraph :if _gafba ._bedd {_gafba .SetWidth (_gdfgd -_gafba ._eddc .Horizontal ());
-};_eafe =_gafba .Height ()+_gafba ._eddc .Vertical ();_eafe +=0.5*_gafba ._dgfa *_gafba ._dbdc ;case *StyledParagraph :if _gafba ._fbbcc {_gafba .SetWidth (_gdfgd -_gafba ._gdfc .Horizontal ());};_eafe =_gafba .Height ()+_gafba ._gdfc .Vertical ();_eafe +=0.5*_gafba .getTextHeight ();
-case *List :_efabg :=_gdfgd -_cfba ._ccbc .Width ()-_gafba ._ccfa .Horizontal ()-_gafba ._gbdd ;_eafe =_gafba .ctxHeight (_efabg )+_gafba ._ccfa .Vertical ();case *Image :_eafe =_gafba .Height ()+_gafba ._gbeae .Vertical ();case *Division :_faggc :=_gdfgd -_cfba ._ccbc .Width ()-_gafba ._dcbe .Horizontal ();
-_eafe =_gafba .ctxHeight (_faggc )+_gafba ._dcbe .Vertical ();case *Table :_fbace :=_gdfgd -_cfba ._ccbc .Width ()-_gafba ._bbfa .Horizontal ();_gafba .updateRowHeights (_fbace );_eafe =_gafba .Height ()+_gafba ._bbfa .Vertical ();default:_eafe =_cfba ._cafb .Height ();
-};return _eafe ;};const (AnchorBottomLeft AnchorPoint =iota ;AnchorBottomRight ;AnchorTopLeft ;AnchorTopRight ;AnchorCenter ;AnchorLeft ;AnchorRight ;AnchorTop ;AnchorBottom ;);
+// SetPos sets the absolute position. Changes object positioning to absolute.
+func (_gaac *Image )SetPos (x ,y float64 ){_gaac ._agagd =PositionAbsolute ;_gaac ._gbcdd =x ;_gaac ._egbgf =y ;};func (_adebd *templateProcessor )parseListMarker (_degfa *templateNode )(interface{},error ){if _degfa ._bdgb ==nil {_da .Log .Error ("\u004c\u0069\u0073\u0074\u0020\u006da\u0072\u006b\u0065\u0072\u0020\u0070\u0061\u0072\u0065\u006e\u0074\u0020\u0063a\u006e\u006e\u006f\u0074\u0020\u0062\u0065 \u006e\u0069\u006c\u002e");
+return nil ,_cedeg ;};var _eefd *TextChunk ;switch _egeec :=_degfa ._bdgb ._bdced .(type ){case *List :_eefd =&_egeec ._dabcb ;case *listItem :_eefd =&_egeec ._aeaf ;default:_da .Log .Error ("\u0025v\u0020\u0069s\u0020\u006e\u006ft\u0020\u0061\u0020\u0076\u0061\u006c\u0069d\u0020\u0070\u0061\u0072\u0065\u006et\u0020\u006e\u006f\u0064\u0065\u0020\u0066\u006f\u0072\u0020\u006ci\u0073\u0074\u0020\u006d\u0061\u0072\u006b\u0065\u0072",_egeec );
+return nil ,_cedeg ;};if _ ,_cabff :=_adebd .parseTextChunk (_degfa ,_eefd );_cabff !=nil {_da .Log .Error ("\u0043\u006f\u0075\u006c\u0064\u0020n\u006f\u0074\u0020\u0070\u0061\u0072\u0073\u0065\u0020\u006c\u0069\u0073\u0074 \u006d\u0061\u0072\u006b\u0065\u0072\u003a \u0060\u0025\u0076\u0060",_cabff );
+return nil ,nil ;};return _eefd ,nil ;};
 
-// Flip flips the active page on the specified axes.
-// If `flipH` is true, the page is flipped horizontally. Similarly, if `flipV`
-// is true, the page is flipped vertically. If both are true, the page is
-// flipped both horizontally and vertically.
-// NOTE: the flip transformations are applied when the creator is finalized,
-// which is at write time in most cases.
-func (_dbc *Creator )Flip (flipH ,flipV bool )error {_abgd :=_dbc .getActivePage ();if _abgd ==nil {return _d .New ("\u006e\u006f\u0020\u0070\u0061\u0067\u0065\u0020\u0061c\u0074\u0069\u0076\u0065");};_gfaa ,_fbg :=_dbc ._abf [_abgd ];if !_fbg {_gfaa =&pageTransformations {};
-_dbc ._abf [_abgd ]=_gfaa ;};_gfaa ._abfg =flipH ;_gfaa ._dgbe =flipV ;return nil ;};
-
-// SetRowHeight sets the height for a specified row.
-func (_ddecef *Table )SetRowHeight (row int ,h float64 )error {if row < 1||row > len (_ddecef ._gdgf ){return _d .New ("\u0072\u0061\u006e\u0067\u0065\u0020\u0063\u0068\u0065\u0063\u006b\u0020e\u0072\u0072\u006f\u0072");};_ddecef ._gdgf [row -1]=h ;return nil ;
-};
-
-// GeneratePageBlocks draw graphic svg into block.
-func (_bbgd *GraphicSVG )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_ggfb :=ctx ;_fgde :=_bbgd ._aabb .IsRelative ();var _dbff []*Block ;if _fgde {_gebde :=1.0;_agde :=_bbgd ._aafd .Top ;if _bbgd ._febb .Height > ctx .Height -_bbgd ._aafd .Top {_dbff =[]*Block {NewBlock (ctx .PageWidth ,ctx .PageHeight -ctx .Y )};
-var _dccff error ;if _ ,ctx ,_dccff =_aeea ().GeneratePageBlocks (ctx );_dccff !=nil {return nil ,ctx ,_dccff ;};_agde =0;};ctx .X +=_bbgd ._aafd .Left +_gebde ;ctx .Y +=_agde ;ctx .Width -=_bbgd ._aafd .Left +_bbgd ._aafd .Right +2*_gebde ;ctx .Height -=_agde ;
-}else {ctx .X =_bbgd ._bgfe ;ctx .Y =_bbgd ._fdegb ;};_deae :=_cd .NewContentCreator ();_deae .Translate (0,ctx .PageHeight );_deae .Scale (1,-1);_deae .Translate (ctx .X ,ctx .Y );_bbgd ._febb .ToContentCreator (_deae );_egab :=NewBlock (ctx .PageWidth ,ctx .PageHeight );
-if _babf :=_egab .addContentsByString (_deae .String ());_babf !=nil {return nil ,ctx ,_babf ;};if _fgde {_cbfba :=_bbgd .Height ()+_bbgd ._aafd .Bottom ;ctx .Y +=_cbfba ;ctx .Height -=_cbfba ;}else {ctx =_ggfb ;};_dbff =append (_dbff ,_egab );return _dbff ,ctx ,nil ;
-};
-
-// SetMargins sets the Paragraph's margins.
-func (_ccedb *Paragraph )SetMargins (left ,right ,top ,bottom float64 ){_ccedb ._eddc .Left =left ;_ccedb ._eddc .Right =right ;_ccedb ._eddc .Top =top ;_ccedb ._eddc .Bottom =bottom ;};func (_abfd *Rectangle )applyFitMode (_bfddb float64 ){_bfddb -=_abfd ._geacg .Left +_abfd ._geacg .Right +_abfd ._eacf ;
-switch _abfd ._debg {case FitModeFillWidth :_abfd .ScaleToWidth (_bfddb );};};func _dfec (_feee *templateProcessor ,_ddfff *templateNode )(interface{},error ){return _feee .parseStyledParagraph (_ddfff );};func (_dgbgd *TOCLine )prepareParagraph (_cbfbc *StyledParagraph ,_fdgc DrawContext ){_fgac :=_dgbgd .Title .Text ;
-if _dgbgd .Number .Text !=""{_fgac ="\u0020"+_fgac ;};_fgac +="\u0020";_cbfee :=_dgbgd .Page .Text ;if _cbfee !=""{_cbfee ="\u0020"+_cbfee ;};_cbfbc ._gdae =[]*TextChunk {{Text :_dgbgd .Number .Text ,Style :_dgbgd .Number .Style ,_cacbg :_dgbgd .getLineLink ()},{Text :_fgac ,Style :_dgbgd .Title .Style ,_cacbg :_dgbgd .getLineLink ()},{Text :_cbfee ,Style :_dgbgd .Page .Style ,_cacbg :_dgbgd .getLineLink ()}};
-_cbfbc .wrapText ();_feae :=len (_cbfbc ._cgfdg );if _feae ==0{return ;};_dbdbb :=_fdgc .Width *1000-_cbfbc .getTextLineWidth (_cbfbc ._cgfdg [_feae -1]);_fbfcb :=_cbfbc .getTextLineWidth ([]*TextChunk {&_dgbgd .Separator });_efge :=int (_dbdbb /_fbfcb );
-_fdcab :=_eg .Repeat (_dgbgd .Separator .Text ,_efge );_dabeff :=_dgbgd .Separator .Style ;_ddgc :=_cbfbc .Insert (2,_fdcab );_ddgc .Style =_dabeff ;_ddgc ._cacbg =_dgbgd .getLineLink ();_dbdbb =_dbdbb -float64 (_efge )*_fbfcb ;if _dbdbb > 500{_fdbae ,_cagc :=_dabeff .Font .GetRuneMetrics (' ');
-if _cagc &&_dbdbb > _fdbae .Wx {_bgea :=int (_dbdbb /_fdbae .Wx );if _bgea > 0{_agbad :=_dabeff ;_agbad .FontSize =1;_ddgc =_cbfbc .Insert (2,_eg .Repeat ("\u0020",_bgea ));_ddgc .Style =_agbad ;_ddgc ._cacbg =_dgbgd .getLineLink ();};};};};
-
-// GraphicSVG represents a drawable graphic SVG.
-// It is used to render the graphic SVG components using a creator instance.
-type GraphicSVG struct{_febb *_bga .GraphicSVG ;_aabb Positioning ;_bgfe float64 ;_fdegb float64 ;_aafd Margins ;};
-
-// SetPos sets the position of the graphic svg to the specified coordinates.
-// This method sets the graphic svg to use absolute positioning.
-func (_bbgg *GraphicSVG )SetPos (x ,y float64 ){_bbgg ._aabb =PositionAbsolute ;_bbgg ._bgfe =x ;_bbgg ._fdegb =y ;};
-
-// SetColumnWidths sets the fractional column widths.
-// Each width should be in the range 0-1 and is a fraction of the table width.
-// The number of width inputs must match number of columns, otherwise an error is returned.
-func (_faafef *Table )SetColumnWidths (widths ...float64 )error {if len (widths )!=_faafef ._eeecb {_cf .Log .Debug ("M\u0069\u0073\u006d\u0061\u0074\u0063\u0068\u0069\u006e\u0067\u0020\u006e\u0075\u006d\u0062\u0065\u0072\u0020o\u0066\u0020\u0077\u0069\u0064\u0074\u0068\u0073\u0020\u0061nd\u0020\u0063\u006fl\u0075m\u006e\u0073");
-return _d .New ("\u0072\u0061\u006e\u0067\u0065\u0020\u0063\u0068\u0065\u0063\u006b\u0020e\u0072\u0072\u006f\u0072");};_faafef ._cdgf =widths ;return nil ;};
-
-// Margins returns the margins of the component.
-func (_dedd *Division )Margins ()(_ccfd ,_gcac ,_gggd ,_dggf float64 ){return _dedd ._dcbe .Left ,_dedd ._dcbe .Right ,_dedd ._dcbe .Top ,_dedd ._dcbe .Bottom ;};
-
-// SetBackground sets the background properties of the component.
-func (_ecdc *Division )SetBackground (background *Background ){_ecdc ._dfea =background };func _ebefb (_cbegbe *templateProcessor ,_bffee *templateNode )(interface{},error ){return _cbegbe .parseBackground (_bffee );};
-
-// GeneratePageBlocks draws the curve onto page blocks.
-func (_aaf *Curve )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_fada :=NewBlock (ctx .PageWidth ,ctx .PageHeight );_dfba :=_cd .NewContentCreator ();_dfba .Add_q ().Add_w (_aaf ._begc ).SetStrokingColor (_dca (_aaf ._fbfg )).Add_m (_aaf ._gbd ,ctx .PageHeight -_aaf ._addf ).Add_v (_aaf ._agaf ,ctx .PageHeight -_aaf ._cec ,_aaf ._cce ,ctx .PageHeight -_aaf ._ddcf ).Add_S ().Add_Q ();
-_agdg :=_fada .addContentsByString (_dfba .String ());if _agdg !=nil {return nil ,ctx ,_agdg ;};return []*Block {_fada },ctx ,nil ;};func _feebd (_ebfed string )bool {_aega :=func (_fdga rune )bool {return _fdga =='\u000A'};_gggceb :=_eg .TrimFunc (_ebfed ,_aega );
-_gdbg :=_ca .Paragraph {};_ ,_afgg :=_gdbg .SetString (_gggceb );if _afgg !=nil {return true ;};_babd ,_afgg :=_gdbg .Order ();if _afgg !=nil {return true ;};if _babd .NumRuns ()< 1{return true ;};return _gdbg .IsLeftToRight ();};const (PositionRelative Positioning =iota ;
-PositionAbsolute ;);
-
-// SetLineColor sets the line color.
-func (_fccea *Polyline )SetLineColor (color Color ){_fccea ._cfdd .LineColor =_dca (color )};func (_cfcf *templateProcessor )parseFloatAttr (_eege ,_efabb string )float64 {_cf .Log .Debug ("\u0050\u0061rs\u0069\u006e\u0067 \u0066\u006c\u006f\u0061t a\u0074tr\u0069\u0062\u0075\u0074\u0065\u003a\u0020(`\u0025\u0073\u0060\u002c\u0020\u0025\u0073)\u002e",_eege ,_efabb );
-_ggag ,_ :=_egd .ParseFloat (_efabb ,64);return _ggag ;};func (_fecd *templateProcessor )processGradientColorPair (_edcfa []string )(_fadg []Color ,_cfffe []float64 ){for _ ,_dffeb :=range _edcfa {var (_dbda =_eg .Fields (_dffeb );_acadce =len (_dbda );
-);if _acadce ==0{continue ;};_gagbg :="";if _acadce > 1{_gagbg =_eg .TrimSpace (_dbda [1]);};_deba :=-1.0;if _eg .HasSuffix (_gagbg ,"\u0025"){_dfcb ,_gbee :=_egd .ParseFloat (_gagbg [:len (_gagbg )-1],64);if _gbee !=nil {_cf .Log .Debug ("\u0046\u0061\u0069\u006c\u0065\u0064\u0020\u0070\u0061\u0072s\u0069\u006e\u0067\u0020\u0070\u006f\u0069n\u0074\u0020\u0076\u0061\u006c\u0075\u0065\u003a\u0020\u0025\u0076",_gbee );
-};_deba =_dfcb /100.0;};_abaed :=_fecd .parseColor (_eg .TrimSpace (_dbda [0]));if _abaed !=nil {_fadg =append (_fadg ,_abaed );_cfffe =append (_cfffe ,_deba );};};if len (_fadg )!=len (_cfffe ){_cf .Log .Debug ("\u0049\u006e\u0076\u0061\u006ci\u0064\u0020\u006c\u0069\u006e\u0065\u0061\u0072\u0020\u0067\u0072\u0061\u0064i\u0065\u006e\u0074\u0020\u0063\u006f\u006c\u006f\u0072\u0020\u0064\u0065\u0066\u0069\u006e\u0069\u0074\u0069\u006f\u006e\u0021");
-return nil ,nil ;};_cefad :=-1;_eadf :=0.0;for _eabfd ,_gded :=range _cfffe {if _gded ==-1.0{if _eabfd ==0{_gded =0.0;_cfffe [_eabfd ]=0.0;continue ;};_cefad ++;if _eabfd < len (_cfffe )-1{continue ;}else {_gded =1.0;_cfffe [_eabfd ]=1.0;};};_bcgbf :=_cefad +1;
-for _cdaa :=_eabfd -_cefad ;_cdaa < _eabfd ;_cdaa ++{_cfffe [_cdaa ]=_eadf +(float64 (_cdaa )*(_gded -_eadf )/float64 (_bcgbf ));};_eadf =_gded ;_cefad =-1;};return _fadg ,_cfffe ;};func (_cfdgd *templateProcessor )parseChart (_bfgf *templateNode )(interface{},error ){var _gdgbe string ;
-for _ ,_dbdce :=range _bfgf ._feaff .Attr {_fgaab :=_dbdce .Value ;switch _gcbd :=_dbdce .Name .Local ;_gcbd {case "\u0073\u0072\u0063":_gdgbe =_fgaab ;};};if _gdgbe ==""{_cf .Log .Error ("\u0043\u0068\u0061\u0072\u0074\u0020\u0060\u0073\u0072\u0063\u0060\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u0020\u0063\u0061n\u006e\u006f\u0074\u0020\u0062e\u0020\u0065m\u0070\u0074\u0079\u002e");
-return nil ,_gfeb ;};_dedda ,_dgcca :=_cfdgd ._cfae .ChartMap [_gdgbe ];if !_dgcca {_cf .Log .Error ("\u0043\u006ful\u0064\u0020\u006eo\u0074\u0020\u0066\u0069nd \u0063ha\u0072\u0074\u0020\u0072\u0065\u0073\u006fur\u0063\u0065\u003a\u0020\u0060\u0025\u0073`\u002e",_gdgbe );
-return nil ,_gfeb ;};_abga :=NewChart (_dedda );for _ ,_edcbf :=range _bfgf ._feaff .Attr {_bbga :=_edcbf .Value ;switch _bgedd :=_edcbf .Name .Local ;_bgedd {case "\u0078":_abga .SetPos (_cfdgd .parseFloatAttr (_bgedd ,_bbga ),_abga ._fdd );case "\u0079":_abga .SetPos (_abga ._adcaa ,_cfdgd .parseFloatAttr (_bgedd ,_bbga ));
-case "\u006d\u0061\u0072\u0067\u0069\u006e":_aacba :=_cfdgd .parseMarginAttr (_bgedd ,_bbga );_abga .SetMargins (_aacba .Left ,_aacba .Right ,_aacba .Top ,_aacba .Bottom );case "\u0077\u0069\u0064t\u0068":_abga ._dde .SetWidth (int (_cfdgd .parseFloatAttr (_bgedd ,_bbga )));
-case "\u0068\u0065\u0069\u0067\u0068\u0074":_abga ._dde .SetHeight (int (_cfdgd .parseFloatAttr (_bgedd ,_bbga )));case "\u0073\u0072\u0063":break ;default:_cf .Log .Debug ("\u0055n\u0073\u0075p\u0070\u006f\u0072\u0074e\u0064\u0020\u0063h\u0061\u0072\u0074\u0020\u0061\u0074\u0074\u0072\u0069bu\u0074\u0065\u003a \u0060\u0025s\u0060\u002e\u0020\u0053\u006b\u0069p\u0070\u0069n\u0067\u002e",_bgedd );
-};};return _abga ,nil ;};
+// SetPos sets the Table's positioning to absolute mode and specifies the upper-left corner
+// coordinates as (x,y).
+// Note that this is only sensible to use when the table does not wrap over multiple pages.
+// TODO: Should be able to set width too (not just based on context/relative positioning mode).
+func (_bfca *Table )SetPos (x ,y float64 ){_bfca ._caga =PositionAbsolute ;_bfca ._bccdf =x ;_bfca ._fedc =y ;};
 
 // SetBorderColor sets the border color.
-func (_aacf *CurvePolygon )SetBorderColor (color Color ){_aacf ._dadd .BorderColor =_dca (color )};func _afcf (_feac ,_gbbf ,_eeb ,_ebf float64 )*border {_ffff :=&border {};_ffff ._dae =_feac ;_ffff ._deea =_gbbf ;_ffff ._cdg =_eeb ;_ffff ._gce =_ebf ;
-_ffff ._fdf =ColorBlack ;_ffff ._egdf =ColorBlack ;_ffff ._agbc =ColorBlack ;_ffff ._aeg =ColorBlack ;_ffff ._afed =0;_ffff ._aac =0;_ffff ._bac =0;_ffff ._egg =0;_ffff .LineStyle =_g .LineStyleSolid ;return _ffff ;};type templateTag struct{_ffbgf map[string ]struct{};
-_bdec func (*templateProcessor ,*templateNode )(interface{},error );};
+func (_gecb *CurvePolygon )SetBorderColor (color Color ){_gecb ._aaee .BorderColor =_cfd (color )};func (_gfec *templateProcessor )parseDivision (_bgcce *templateNode )(interface{},error ){_dfgf :=_gfec .creator .NewDivision ();for _ ,_ecbdb :=range _bgcce ._bdbga .Attr {_cddfg :=_ecbdb .Value ;
+switch _deaef :=_ecbdb .Name .Local ;_deaef {case "\u0065\u006ea\u0062\u006c\u0065-\u0070\u0061\u0067\u0065\u002d\u0077\u0072\u0061\u0070":_dfgf .EnablePageWrap (_gfec .parseBoolAttr (_deaef ,_cddfg ));case "\u006d\u0061\u0072\u0067\u0069\u006e":_gbgc :=_gfec .parseMarginAttr (_deaef ,_cddfg );
+_dfgf .SetMargins (_gbgc .Left ,_gbgc .Right ,_gbgc .Top ,_gbgc .Bottom );case "\u0070a\u0064\u0064\u0069\u006e\u0067":_bdgce :=_gfec .parseMarginAttr (_deaef ,_cddfg );_dfgf .SetPadding (_bdgce .Left ,_bdgce .Right ,_bdgce .Top ,_bdgce .Bottom );default:_da .Log .Debug ("U\u006e\u0073\u0075\u0070\u0070\u006f\u0072\u0074\u0065d\u0020\u0064\u0069\u0076\u0069\u0073\u0069on\u0020\u0061\u0074\u0074r\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025s`\u002e\u0020S\u006b\u0069\u0070\u0070\u0069\u006e\u0067\u002e",_deaef );
+};};return _dfgf ,nil ;};
 
-// GetMargins returns the margins of the rectangle: left, right, top, bottom.
-func (_aacfe *Rectangle )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _aacfe ._geacg .Left ,_aacfe ._geacg .Right ,_aacfe ._geacg .Top ,_aacfe ._geacg .Bottom ;};
+// Creator is a wrapper around functionality for creating PDF reports and/or adding new
+// content onto imported PDF pages, etc.
+type Creator struct{
 
-// GeneratePageBlocks generate the Page blocks. Multiple blocks are generated
-// if the contents wrap over multiple pages.
-func (_eggda *TOC )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_cfbcf :=ctx ;_ecccb ,ctx ,_dbfcc :=_eggda ._faef .GeneratePageBlocks (ctx );if _dbfcc !=nil {return _ecccb ,ctx ,_dbfcc ;};for _ ,_daed :=range _eggda ._baabb {_cadae :=_daed ._gdfbf ;
-if !_eggda ._afaba {_daed ._gdfbf =0;};_acfa ,_bgcfd ,_dcfb :=_daed .GeneratePageBlocks (ctx );_daed ._gdfbf =_cadae ;if _dcfb !=nil {return _ecccb ,ctx ,_dcfb ;};if len (_acfa )< 1{continue ;};_ecccb [len (_ecccb )-1].mergeBlocks (_acfa [0]);_ecccb =append (_ecccb ,_acfa [1:]...);
-ctx =_bgcfd ;};if _eggda ._gecb .IsRelative (){ctx .X =_cfbcf .X ;};if _eggda ._gecb .IsAbsolute (){return _ecccb ,_cfbcf ,nil ;};return _ecccb ,ctx ,nil ;};func _dca (_fec Color )_gf .PdfColor {if _fec ==nil {_fec =ColorBlack ;};switch _gbf :=_fec .(type ){case cmykColor :return _gf .NewPdfColorDeviceCMYK (_gbf ._cadf ,_gbf ._dfb ,_gbf ._cgcf ,_gbf ._efa );
-case *LinearShading :return _gf .NewPdfColorPatternType2 ();case *RadialShading :return _gf .NewPdfColorPatternType3 ();};return _gf .NewPdfColorDeviceRGB (_fec .ToRGB ());};func (_gfaeg *Image )rotatedSize ()(float64 ,float64 ){_ddde :=_gfaeg ._gebf ;
-_aaaaa :=_gfaeg ._dcde ;_aefg :=_gfaeg ._agebb ;if _aefg ==0{return _ddde ,_aaaaa ;};_gggg :=_g .Path {Points :[]_g .Point {_g .NewPoint (0,0).Rotate (_aefg ),_g .NewPoint (_ddde ,0).Rotate (_aefg ),_g .NewPoint (0,_aaaaa ).Rotate (_aefg ),_g .NewPoint (_ddde ,_aaaaa ).Rotate (_aefg )}}.GetBoundingBox ();
-return _gggg .Width ,_gggg .Height ;};
+// Errors keeps error messages that should not interrupt pdf processing and to be checked later.
+Errors []error ;
 
-// Positioning returns the type of positioning the line is set to use.
-func (_cege *Line )Positioning ()Positioning {return _cege ._fadc };func (_dbbda *TextStyle )horizontalScale ()float64 {return _dbbda .HorizontalScaling /100};func (_ffbf *Invoice )generateLineBlocks (_gdcgb DrawContext )([]*Block ,DrawContext ,error ){_afeeg :=_afcfg (len (_ffbf ._bacc ));
-_afeeg .SetMargins (0,0,25,0);for _ ,_afcfc :=range _ffbf ._bacc {_bfeb :=_ebab (_afcfc .TextStyle );_bfeb .SetMargins (0,0,1,0);_bfeb .Append (_afcfc .Value );_bfff :=_afeeg .NewCell ();_bfff .SetHorizontalAlignment (_afcfc .Alignment );_bfff .SetBackgroundColor (_afcfc .BackgroundColor );
-_ffbf .setCellBorder (_bfff ,_afcfc );_bfff .SetContent (_bfeb );};for _ ,_cbae :=range _ffbf ._ebcg {for _ ,_agbe :=range _cbae {_feeg :=_ebab (_agbe .TextStyle );_feeg .SetMargins (0,0,3,2);_feeg .Append (_agbe .Value );_dbaf :=_afeeg .NewCell ();_dbaf .SetHorizontalAlignment (_agbe .Alignment );
-_dbaf .SetBackgroundColor (_agbe .BackgroundColor );_ffbf .setCellBorder (_dbaf ,_agbe );_dbaf .SetContent (_feeg );};};return _afeeg .GeneratePageBlocks (_gdcgb );};func (_dfefe *templateProcessor )parseLine (_afda *templateNode )(interface{},error ){_decce :=_dfefe .creator .NewLine (0,0,0,0);
-for _ ,_gabg :=range _afda ._feaff .Attr {_afbec :=_gabg .Value ;switch _cffe :=_gabg .Name .Local ;_cffe {case "\u0078\u0031":_decce ._aecg =_dfefe .parseFloatAttr (_cffe ,_afbec );case "\u0079\u0031":_decce ._cdbf =_dfefe .parseFloatAttr (_cffe ,_afbec );
-case "\u0078\u0032":_decce ._badg =_dfefe .parseFloatAttr (_cffe ,_afbec );case "\u0079\u0032":_decce ._acba =_dfefe .parseFloatAttr (_cffe ,_afbec );case "\u0074h\u0069\u0063\u006b\u006e\u0065\u0073s":_decce .SetLineWidth (_dfefe .parseFloatAttr (_cffe ,_afbec ));
-case "\u0063\u006f\u006co\u0072":_decce .SetColor (_dfefe .parseColorAttr (_cffe ,_afbec ));case "\u0073\u0074\u0079l\u0065":_decce .SetStyle (_dfefe .parseLineStyleAttr (_cffe ,_afbec ));case "\u0064\u0061\u0073\u0068\u002d\u0061\u0072\u0072\u0061\u0079":_decce .SetDashPattern (_dfefe .parseInt64Array (_cffe ,_afbec ),_decce ._gdcae );
-case "\u0064\u0061\u0073\u0068\u002d\u0070\u0068\u0061\u0073\u0065":_decce .SetDashPattern (_decce ._deaff ,_dfefe .parseInt64Attr (_cffe ,_afbec ));case "\u006fp\u0061\u0063\u0069\u0074\u0079":_decce .SetOpacity (_dfefe .parseFloatAttr (_cffe ,_afbec ));
-case "\u0070\u006f\u0073\u0069\u0074\u0069\u006f\u006e":_decce .SetPositioning (_dfefe .parsePositioningAttr (_cffe ,_afbec ));case "\u0066\u0069\u0074\u002d\u006d\u006f\u0064\u0065":_decce .SetFitMode (_dfefe .parseFitModeAttr (_cffe ,_afbec ));case "\u006d\u0061\u0072\u0067\u0069\u006e":_gagbcd :=_dfefe .parseMarginAttr (_cffe ,_afbec );
-_decce .SetMargins (_gagbcd .Left ,_gagbcd .Right ,_gagbcd .Top ,_gagbcd .Bottom );default:_cf .Log .Debug ("\u0055\u006e\u0073\u0075\u0070\u0070\u006fr\u0074\u0065\u0064 \u006c\u0069\u006e\u0065 \u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073\u0060\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069\u006e\u0067\u002e",_cffe );
-};};return _decce ,nil ;};
+// UnsupportedCharacterReplacement is character that will be used to replace unsupported glyph.
+// The value will be passed to drawing context.
+UnsupportedCharacterReplacement rune ;_adbg []*_fee .PdfPage ;_adcea map[*_fee .PdfPage ]*Block ;_ecbb map[*_fee .PdfPage ]*pageTransformations ;_ebec *_fee .PdfPage ;_gee PageSize ;_ddd DrawContext ;_bbdf Margins ;_aef ,_cec float64 ;_afba int ;_badc func (_dcf FrontpageFunctionArgs );
+_cdfg func (_eccb *TOC )error ;_dbbg func (_gac *Block ,_adec HeaderFunctionArgs );_fdf func (_aeeab *Block ,_abff FooterFunctionArgs );_ecd func (_eabe PageFinalizeFunctionArgs )error ;_bcaa func (_egec *_fee .PdfWriter )error ;_aeg bool ;
 
-// SetWidth set the Image's document width to specified w. This does not change the raw image data, i.e.
-// no actual scaling of data is performed. That is handled by the PDF viewer.
-func (_abgea *Image )SetWidth (w float64 ){_abgea ._gebf =w };
+// Controls whether a table of contents will be generated.
+AddTOC bool ;
 
-// Width returns the width of the rectangle.
-// NOTE: the returned value does not include the border width of the rectangle.
-func (_ggggf *Rectangle )Width ()float64 {return _ggggf ._adeb };
+// CustomTOC specifies if the TOC is rendered by the user.
+// When the `CustomTOC` field is set to `true`, the default TOC component is not rendered.
+// Instead the TOC is drawn by the user, in the callback provided to
+// the `Creator.CreateTableOfContents` method.
+// If `CustomTOC` is set to `false`, the callback provided to
+// `Creator.CreateTableOfContents` customizes the style of the automatically generated TOC component.
+CustomTOC bool ;_fgde *TOC ;
 
-// SetLink makes the line an internal link.
-// The text parameter represents the text that is displayed.
-// The user is taken to the specified page, at the specified x and y
-// coordinates. Position 0, 0 is at the top left of the page.
-func (_cddfg *TOCLine )SetLink (page int64 ,x ,y float64 ){_cddfg ._ffcfg =x ;_cddfg ._fcae =y ;_cddfg ._gdfbf =page ;_ecfbfd :=_cddfg ._dfbba ._fcfd .Color ;_cddfg .Number .Style .Color =_ecfbfd ;_cddfg .Title .Style .Color =_ecfbfd ;_cddfg .Separator .Style .Color =_ecfbfd ;
-_cddfg .Page .Style .Color =_ecfbfd ;};
+// Controls whether outlines will be generated.
+AddOutlines bool ;_aeff *_fee .Outline ;_eaa *_fee .PdfOutlineTreeNode ;_ebgd *_fee .PdfAcroForm ;_dce _dd .PdfObject ;_cecf _fee .Optimizer ;_gbc []*_fee .PdfFont ;_eedd *_fee .PdfFont ;_gbad *_fee .PdfFont ;};func (_bbgef *templateProcessor )processGradientColorPair (_gadff []string )(_bebeg []Color ,_ccfb []float64 ){for _ ,_gffdc :=range _gadff {var (_efgg =_cf .Fields (_gffdc );
+_bbdb =len (_efgg ););if _bbdb ==0{continue ;};_afea :="";if _bbdb > 1{_afea =_cf .TrimSpace (_efgg [1]);};_daead :=-1.0;if _cf .HasSuffix (_afea ,"\u0025"){_cdaba ,_afbgb :=_fe .ParseFloat (_afea [:len (_afea )-1],64);if _afbgb !=nil {_da .Log .Debug ("\u0046\u0061\u0069\u006c\u0065\u0064\u0020\u0070\u0061\u0072s\u0069\u006e\u0067\u0020\u0070\u006f\u0069n\u0074\u0020\u0076\u0061\u006c\u0075\u0065\u003a\u0020\u0025\u0076",_afbgb );
+};_daead =_cdaba /100.0;};_gaffc :=_bbgef .parseColor (_cf .TrimSpace (_efgg [0]));if _gaffc !=nil {_bebeg =append (_bebeg ,_gaffc );_ccfb =append (_ccfb ,_daead );};};if len (_bebeg )!=len (_ccfb ){_da .Log .Debug ("\u0049\u006e\u0076\u0061\u006ci\u0064\u0020\u006c\u0069\u006e\u0065\u0061\u0072\u0020\u0067\u0072\u0061\u0064i\u0065\u006e\u0074\u0020\u0063\u006f\u006c\u006f\u0072\u0020\u0064\u0065\u0066\u0069\u006e\u0069\u0074\u0069\u006f\u006e\u0021");
+return nil ,nil ;};_dfgcd :=-1;_bfgg :=0.0;for _fade ,_efba :=range _ccfb {if _efba ==-1.0{if _fade ==0{_efba =0.0;_ccfb [_fade ]=0.0;continue ;};_dfgcd ++;if _fade < len (_ccfb )-1{continue ;}else {_efba =1.0;_ccfb [_fade ]=1.0;};};_cdbcc :=_dfgcd +1;
+for _babe :=_fade -_dfgcd ;_babe < _fade ;_babe ++{_ccfb [_babe ]=_bfgg +(float64 (_babe )*(_efba -_bfgg )/float64 (_cdbcc ));};_bfgg =_efba ;_dfgcd =-1;};return _bebeg ,_ccfb ;};
 
-// LevelOffset returns the amount of space an indentation level occupies.
-func (_bedeg *TOCLine )LevelOffset ()float64 {return _bedeg ._edaee };func _egfbgg (_gcaf float64 ,_fddaf float64 )float64 {return _ee .Round (_gcaf /_fddaf )*_fddaf };
+// Wrap wraps the text of the chunk into lines based on its style and the
+// specified width.
+func (_edbac *TextChunk )Wrap (width float64 )([]string ,error ){if int (width )<=0{return []string {_edbac .Text },nil ;};var _fdceb []string ;var _beefc []rune ;var _adge float64 ;var _bdbcb []float64 ;_ccag :=_edbac .Style ;_fbcc :=_cfcbf (_edbac .Text );
+for _ ,_bcfg :=range _edbac .Text {if _bcfg =='\u000A'{_fgdcf :=_bcgdb (string (_beefc ),_fbcc );_fdceb =append (_fdceb ,_cf .TrimRightFunc (_fgdcf ,_eb .IsSpace )+string (_bcfg ));_beefc =nil ;_adge =0;_bdbcb =nil ;continue ;};_afdc :=_bcfg ==' ';_fbefc ,_bcge :=_ccag .Font .GetRuneMetrics (_bcfg );
+if !_bcge {_da .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0052\u0075\u006e\u0065\u0020\u0063\u0068\u0061\u0072\u0020\u006det\u0072i\u0063\u0073\u0020\u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064!\u0020\u0072\u0075\u006e\u0065\u003d\u0030\u0078\u0025\u0030\u0034\u0078\u003d\u0025\u0063\u0020\u0066o\u006e\u0074\u003d\u0025\u0073\u0020\u0025\u0023\u0071",_bcfg ,_bcfg ,_ccag .Font .BaseFont (),_ccag .Font .Subtype ());
+_da .Log .Trace ("\u0046o\u006e\u0074\u003a\u0020\u0025\u0023v",_ccag .Font );_da .Log .Trace ("\u0045\u006e\u0063o\u0064\u0065\u0072\u003a\u0020\u0025\u0023\u0076",_ccag .Font .Encoder ());return nil ,_d .New ("\u0067\u006c\u0079\u0070\u0068\u0020\u0063\u0068\u0061\u0072\u0020m\u0065\u0074\u0072\u0069\u0063\u0073\u0020\u006d\u0069\u0073s\u0069\u006e\u0067");
+};_fgcdf :=_ccag .FontSize *_fbefc .Wx ;_gbfge :=_fgcdf ;if !_afdc {_gbfge =_fgcdf +_ccag .CharSpacing *1000.0;};if _adge +_fgcdf > width *1000.0{_cdad :=-1;if !_afdc {for _ffdaef :=len (_beefc )-1;_ffdaef >=0;_ffdaef --{if _beefc [_ffdaef ]==' '{_cdad =_ffdaef ;
+break ;};};};_ecfb :=string (_beefc );if _cdad > 0{_ecfb =string (_beefc [0:_cdad +1]);_beefc =append (_beefc [_cdad +1:],_bcfg );_bdbcb =append (_bdbcb [_cdad +1:],_gbfge );_adge =0;for _ ,_gcba :=range _bdbcb {_adge +=_gcba ;};}else {if _afdc {_beefc =[]rune {};
+_bdbcb =[]float64 {};_adge =0;}else {_beefc =[]rune {_bcfg };_bdbcb =[]float64 {_gbfge };_adge =_gbfge ;};};_ecfb =_bcgdb (_ecfb ,_fbcc );_fdceb =append (_fdceb ,_cf .TrimRightFunc (_ecfb ,_eb .IsSpace ));}else {_beefc =append (_beefc ,_bcfg );_adge +=_gbfge ;
+_bdbcb =append (_bdbcb ,_gbfge );};};if len (_beefc )> 0{_bbeeb :=string (_beefc );_bbeeb =_bcgdb (_bbeeb ,_fbcc );_fdceb =append (_fdceb ,_bbeeb );};return _fdceb ,nil ;};func _cdbf ()*FilledCurve {_gaccc :=FilledCurve {};_gaccc ._ddfce =[]_bg .CubicBezierCurve {};
+return &_gaccc ;};func (_gdfb *Creator )getActivePage ()*_fee .PdfPage {if _gdfb ._ebec ==nil {if len (_gdfb ._adbg )==0{return nil ;};return _gdfb ._adbg [len (_gdfb ._adbg )-1];};return _gdfb ._ebec ;};func _geegg (_dgfad *templateProcessor ,_ggdg *templateNode )(interface{},error ){return _dgfad .parseChart (_ggdg );
+};func _cged (_gdgaf string ,_bedf ,_eecf TextStyle )*TOC {_ggea :=_eecf ;_ggea .FontSize =14;_gccgb :=_dccc (_ggea );_gccgb .SetEnableWrap (true );_gccgb .SetTextAlignment (TextAlignmentLeft );_gccgb .SetMargins (0,0,0,5);_aeegf :=_gccgb .Append (_gdgaf );
+_aeegf .Style =_ggea ;return &TOC {_bfaa :_gccgb ,_bbfe :[]*TOCLine {},_bbda :_bedf ,_gaebe :_bedf ,_ffedc :_bedf ,_ddege :_bedf ,_gabb :"\u002e",_gfdfe :10,_fdgc :Margins {0,0,2,2},_eebf :PositionRelative ,_dcdcg :_bedf ,_ffag :true };};func (_afgfe *Table )resetColumnWidths (){_afgfe ._fadgg =[]float64 {};
+_feefc :=float64 (1.0)/float64 (_afgfe ._fcfd );for _ebbde :=0;_ebbde < _afgfe ._fcfd ;_ebbde ++{_afgfe ._fadgg =append (_afgfe ._fadgg ,_feefc );};};
 
-// RadialShading holds information that will be used to render a radial shading.
-type RadialShading struct{_acce *shading ;_bbgb *_gf .PdfRectangle ;_bdded AnchorPoint ;_edebb float64 ;_bdbf float64 ;_cfgd float64 ;_ccfad float64 ;};
+// Width is not used. Not used as a Table element is designed to fill into
+// available width depending on the context. Returns 0.
+func (_gagaa *Table )Width ()float64 {return 0};func (_aefac *templateProcessor )parseImage (_efabc *templateNode )(interface{},error ){var _aege string ;for _ ,_gdeg :=range _efabc ._bdbga .Attr {_cdagf :=_gdeg .Value ;switch _bbdfc :=_gdeg .Name .Local ;
+_bbdfc {case "\u0073\u0072\u0063":_aege =_cdagf ;};};_fcbd ,_cbcbd :=_aefac .loadImageFromSrc (_aege );if _cbcbd !=nil {return nil ,_cbcbd ;};for _ ,_gdaea :=range _efabc ._bdbga .Attr {_afccae :=_gdaea .Value ;switch _bbcfe :=_gdaea .Name .Local ;_bbcfe {case "\u0061\u006c\u0069g\u006e":_fcbd .SetHorizontalAlignment (_aefac .parseHorizontalAlignmentAttr (_bbcfe ,_afccae ));
+case "\u006fp\u0061\u0063\u0069\u0074\u0079":_fcbd .SetOpacity (_aefac .parseFloatAttr (_bbcfe ,_afccae ));case "\u006d\u0061\u0072\u0067\u0069\u006e":_bdgfa :=_aefac .parseMarginAttr (_bbcfe ,_afccae );_fcbd .SetMargins (_bdgfa .Left ,_bdgfa .Right ,_bdgfa .Top ,_bdgfa .Bottom );
+case "\u0066\u0069\u0074\u002d\u006d\u006f\u0064\u0065":_fcbd .SetFitMode (_aefac .parseFitModeAttr (_bbcfe ,_afccae ));case "\u0078":_fcbd .SetPos (_aefac .parseFloatAttr (_bbcfe ,_afccae ),_fcbd ._egbgf );case "\u0079":_fcbd .SetPos (_fcbd ._gbcdd ,_aefac .parseFloatAttr (_bbcfe ,_afccae ));
+case "\u0077\u0069\u0064t\u0068":_fcbd .SetWidth (_aefac .parseFloatAttr (_bbcfe ,_afccae ));case "\u0068\u0065\u0069\u0067\u0068\u0074":_fcbd .SetHeight (_aefac .parseFloatAttr (_bbcfe ,_afccae ));case "\u0061\u006e\u0067l\u0065":_fcbd .SetAngle (_aefac .parseFloatAttr (_bbcfe ,_afccae ));
+case "\u0073\u0072\u0063":break ;default:_da .Log .Debug ("\u0055n\u0073\u0075p\u0070\u006f\u0072\u0074e\u0064\u0020\u0069m\u0061\u0067\u0065\u0020\u0061\u0074\u0074\u0072\u0069bu\u0074\u0065\u003a \u0060\u0025s\u0060\u002e\u0020\u0053\u006b\u0069p\u0070\u0069n\u0067\u002e",_bbcfe );
+};};return _fcbd ,nil ;};func _gfbde (_adfbcd *_fee .PdfAnnotation )*_fee .PdfAnnotation {if _adfbcd ==nil {return nil ;};var _cgda *_fee .PdfAnnotation ;switch _adfcc :=_adfbcd .GetContext ().(type ){case *_fee .PdfAnnotationLink :if _fabb :=_ceefe (_adfcc );
+_fabb !=nil {_cgda =_fabb .PdfAnnotation ;};};return _cgda ;};const (CellHorizontalAlignmentLeft CellHorizontalAlignment =iota ;CellHorizontalAlignmentCenter ;CellHorizontalAlignmentRight ;);
+
+// SetHeading sets the text and the style of the heading of the TOC component.
+func (_bebgf *TOC )SetHeading (text string ,style TextStyle ){_gfecg :=_bebgf .Heading ();_gfecg .Reset ();_agbfe :=_gfecg .Append (text );_agbfe .Style =style ;};
+
+// SetFitMode sets the fit mode of the ellipse.
+// NOTE: The fit mode is only applied if relative positioning is used.
+func (_dgdg *Ellipse )SetFitMode (fitMode FitMode ){_dgdg ._ffgf =fitMode };func (_cbeff *Invoice )newCell (_bcadc string ,_gfbe InvoiceCellProps )*InvoiceCell {return &InvoiceCell {_gfbe ,_bcadc };};
+
+// HeaderFunctionArgs holds the input arguments to a header drawing function.
+// It is designed as a struct, so additional parameters can be added in the future with backwards
+// compatibility.
+type HeaderFunctionArgs struct{PageNum int ;TotalPages int ;};
+
+// SetLineSeparatorStyle sets the style for the separator part of all new
+// lines of the table of contents.
+func (_ebfdf *TOC )SetLineSeparatorStyle (style TextStyle ){_ebfdf ._ffedc =style };
+
+// Scale sets the scale ratio with `X` factor and `Y` factor for the graphic svg.
+func (_fdbg *GraphicSVG )Scale (xFactor ,yFactor float64 ){_fdbg ._cfff .Width =xFactor *_fdbg ._cfff .Width ;_fdbg ._cfff .Height =yFactor *_fdbg ._cfff .Height ;_fdbg ._cfff .SetScaling (xFactor ,yFactor );};
+
+// NewImage create a new image from a unidoc image (model.Image).
+func (_ggc *Creator )NewImage (img *_fee .Image )(*Image ,error ){return _gccg (img )};
+
+// SetCoords sets the center coordinates of the ellipse.
+func (_gfcg *Ellipse )SetCoords (xc ,yc float64 ){_gfcg ._gbd =xc ;_gfcg ._efd =yc };
+
+// SetStyle sets the style of the line (solid or dashed).
+func (_gdad *Line )SetStyle (style _bg .LineStyle ){_gdad ._gffb =style };
+
+// SetBorderWidth sets the border width.
+func (_fcacb *CurvePolygon )SetBorderWidth (borderWidth float64 ){_fcacb ._aaee .BorderWidth =borderWidth ;};func (_egcg *pageTransformations )applyFlip (_dddf *_fee .PdfPage )error {_dgee ,_fagbe :=_egcg ._ceeg ,_egcg ._agc ;if !_dgee &&!_fagbe {return nil ;
+};if _dddf ==nil {return _d .New ("\u006e\u006f\u0020\u0070\u0061\u0067\u0065\u0020\u0061c\u0074\u0069\u0076\u0065");};_daef ,_fce :=_dddf .GetMediaBox ();if _fce !=nil {return _fce ;};_bgfd ,_fcea :=_daef .Width (),_daef .Height ();_gcf ,_fce :=_dddf .GetRotate ();
+if _fce !=nil {_da .Log .Debug ("\u0045\u0052R\u004f\u0052\u003a\u0020\u0025\u0073\u0020\u002d\u0020\u0069\u0067\u006e\u006f\u0072\u0069\u006e\u0067\u0020\u0061\u006e\u0064\u0020\u0061\u0073\u0073\u0075\u006d\u0069\u006e\u0067\u0020\u006e\u006f\u0020\u0072\u006f\u0074\u0061\u0074\u0069\u006f\u006e\u000a",_fce .Error ());
+};if _egd :=_gcf %360!=0&&_gcf %90==0;_egd {if _dbbgd :=(360+_gcf %360)%360;_dbbgd ==90||_dbbgd ==270{_dgee ,_fagbe =_fagbe ,_dgee ;};};_bbgd ,_eefg :=1.0,0.0;if _dgee {_bbgd ,_eefg =-1.0,-_bgfd ;};_dcfd ,_eddd :=1.0,0.0;if _fagbe {_dcfd ,_eddd =-1.0,-_fcea ;
+};_dgf :=_ebc .NewContentCreator ().Scale (_bbgd ,_dcfd ).Translate (_eefg ,_eddd );_ebea ,_fce :=_dd .MakeStream (_dgf .Bytes (),_dd .NewFlateEncoder ());if _fce !=nil {return _fce ;};_gbcd :=_dd .MakeArray (_ebea );_gbcd .Append (_dddf .GetContentStreamObjs ()...);
+_dddf .Contents =_gbcd ;return nil ;};
+
+// SetBackground sets the background properties of the component.
+func (_gccde *Division )SetBackground (background *Background ){_gccde ._dgce =background };
+
+// Append adds a new text chunk to the paragraph.
+func (_gbgdf *StyledParagraph )Append (text string )*TextChunk {_babbc :=NewTextChunk (text ,_gbgdf ._cefc );return _gbgdf .appendChunk (_babbc );};
+
+// SetAntiAlias enables anti alias config.
+//
+// Anti alias is disabled by default.
+func (_abeb *shading )SetAntiAlias (enable bool ){_abeb ._fbfeg =enable };
+
+// SetExtends specifies whether ot extend the shading beyond the starting and ending points.
+//
+// Text extends is set to `[]bool{false, false}` by default.
+func (_becb *RadialShading )SetExtends (start bool ,end bool ){_becb ._ecef .SetExtends (start ,end )};
+
+// AddPatternResource adds pattern dictionary inside the resources dictionary.
+func (_ddcgd *RadialShading )AddPatternResource (block *Block )(_gagb _dd .PdfObjectName ,_aeeg error ){_ecca :=1;_caec :=_dd .PdfObjectName ("\u0050"+_fe .Itoa (_ecca ));for block ._gf .HasPatternByName (_caec ){_ecca ++;_caec =_dd .PdfObjectName ("\u0050"+_fe .Itoa (_ecca ));
+};if _baed :=block ._gf .SetPatternByName (_caec ,_ddcgd .ToPdfShadingPattern ().ToPdfObject ());_baed !=nil {return "",_baed ;};return _caec ,nil ;};
+
+// GetMargins returns the Paragraph's margins: left, right, top, bottom.
+func (_fbbe *StyledParagraph )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _fbbe ._eebag .Left ,_fbbe ._eebag .Right ,_fbbe ._eebag .Top ,_fbbe ._eebag .Bottom ;};func (_cff *Block )addContents (_ab *_ebc .ContentStreamOperations ){_cff ._db .WrapIfNeeded ();
+_ab .WrapIfNeeded ();*_cff ._db =append (*_cff ._db ,*_ab ...);};
+
+// SetHeaderRows turns the selected table rows into headers that are repeated
+// for every page the table spans. startRow and endRow are inclusive.
+func (_dbfa *Table )SetHeaderRows (startRow ,endRow int )error {if startRow <=0{return _d .New ("\u0068\u0065\u0061\u0064\u0065\u0072\u0020\u0073\u0074\u0061\u0072\u0074\u0020r\u006f\u0077\u0020\u006d\u0075\u0073t\u0020\u0062\u0065\u0020\u0067\u0072\u0065\u0061\u0074\u0065\u0072\u0020\u0074h\u0061\u006e\u0020\u0030");
+};if endRow <=0{return _d .New ("\u0068\u0065a\u0064\u0065\u0072\u0020e\u006e\u0064 \u0072\u006f\u0077\u0020\u006d\u0075\u0073\u0074 \u0062\u0065\u0020\u0067\u0072\u0065\u0061\u0074\u0065\u0072\u0020\u0074h\u0061\u006e\u0020\u0030");};if startRow > endRow {return _d .New ("\u0068\u0065\u0061\u0064\u0065\u0072\u0020\u0073\u0074\u0061\u0072\u0074\u0020\u0072\u006f\u0077\u0020\u0020\u006d\u0075s\u0074\u0020\u0062\u0065\u0020\u006c\u0065\u0073\u0073\u0020\u0074\u0068\u0061\u006e\u0020\u006f\u0072\u0020\u0065\u0071\u0075\u0061\u006c\u0020\u0074\u006f\u0020\u0074\u0068\u0065 \u0065\u006e\u0064\u0020\u0072o\u0077");
+};_dbfa ._dgaa =true ;_dbfa ._cfcgb =startRow ;_dbfa ._bgda =endRow ;return nil ;};
+
+// NewTextStyle creates a new text style object which can be used to style
+// chunks of text.
+// Default attributes:
+// Font: Helvetica
+// Font size: 10
+// Encoding: WinAnsiEncoding
+// Text color: black
+func (_befe *Creator )NewTextStyle ()TextStyle {return _fcff (_befe ._eedd )};func (_cfgfb *StyledParagraph )appendChunk (_eefgd *TextChunk )*TextChunk {_cfgfb ._adeb =append (_cfgfb ._adeb ,_eefgd );_cfgfb .wrapText ();return _eefgd ;};
+
+// SetMargins sets the Paragraph's margins.
+func (_cabf *Paragraph )SetMargins (left ,right ,top ,bottom float64 ){_cabf ._efbg .Left =left ;_cabf ._efbg .Right =right ;_cabf ._efbg .Top =top ;_cabf ._efbg .Bottom =bottom ;};func (_eggf *templateProcessor )parseColorAttr (_gfdef ,_aeaa string )Color {_da .Log .Debug ("\u0050\u0061rs\u0069\u006e\u0067 \u0063\u006f\u006c\u006fr a\u0074tr\u0069\u0062\u0075\u0074\u0065\u003a\u0020(`\u0025\u0073\u0060\u002c\u0020\u0025\u0073)\u002e",_gfdef ,_aeaa );
+_aeaa =_cf .TrimSpace (_aeaa );if _cf .HasPrefix (_aeaa ,"\u006c\u0069n\u0065\u0061\u0072-\u0067\u0072\u0061\u0064\u0069\u0065\u006e\u0074\u0028")&&_cf .HasSuffix (_aeaa ,"\u0029")&&len (_aeaa )> 17{return _eggf .parseLinearGradientAttr (_eggf .creator ,_aeaa );
+};if _cf .HasPrefix (_aeaa ,"\u0072\u0061d\u0069\u0061\u006c-\u0067\u0072\u0061\u0064\u0069\u0065\u006e\u0074\u0028")&&_cf .HasSuffix (_aeaa ,"\u0029")&&len (_aeaa )> 17{return _eggf .parseRadialGradientAttr (_eggf .creator ,_aeaa );};if _dcbde :=_eggf .parseColor (_aeaa );
+_dcbde !=nil {return _dcbde ;};return ColorBlack ;};
+
+// DrawHeader sets a function to draw a header on created output pages.
+func (_acf *Creator )DrawHeader (drawHeaderFunc func (_afdb *Block ,_ebecd HeaderFunctionArgs )){_acf ._dbbg =drawHeaderFunc ;};
+
+// GeneratePageBlocks draws the composite Bezier curve on a new block
+// representing the page. Implements the Drawable interface.
+func (_fdddb *PolyBezierCurve )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_bceef :=NewBlock (ctx .PageWidth ,ctx .PageHeight );_bgaag ,_dcae :=_bceef .setOpacity (_fdddb ._aabg ,_fdddb ._ebef );if _dcae !=nil {return nil ,ctx ,_dcae ;
+};_gfeab :=_fdddb ._cceb ;_gfeab .FillEnabled =_gfeab .FillColor !=nil ;var (_becfa =ctx .PageHeight ;_ebcg =_gfeab .Curves ;_gedae =make ([]_bg .CubicBezierCurve ,0,len (_gfeab .Curves )););_beaba :=_fee .PdfRectangle {};for _adbb :=range _gfeab .Curves {_eeabe :=_ebcg [_adbb ];
+_eeabe .P0 .Y =_becfa -_eeabe .P0 .Y ;_eeabe .P1 .Y =_becfa -_eeabe .P1 .Y ;_eeabe .P2 .Y =_becfa -_eeabe .P2 .Y ;_eeabe .P3 .Y =_becfa -_eeabe .P3 .Y ;_gedae =append (_gedae ,_eeabe );_cbea :=_eeabe .GetBounds ();if _adbb ==0{_beaba =_cbea ;}else {_beaba .Llx =_fa .Min (_beaba .Llx ,_cbea .Llx );
+_beaba .Lly =_fa .Min (_beaba .Lly ,_cbea .Lly );_beaba .Urx =_fa .Max (_beaba .Urx ,_cbea .Urx );_beaba .Ury =_fa .Max (_beaba .Ury ,_cbea .Ury );};};_gfeab .Curves =_gedae ;defer func (){_gfeab .Curves =_ebcg }();if _gfeab .FillEnabled {_gfdd :=_aacgba (_bceef ,_fdddb ._cceb .FillColor ,_fdddb ._dcfb ,func ()Rectangle {return Rectangle {_cfbab :_beaba .Llx ,_cffbf :_beaba .Lly ,_bfddd :_beaba .Width (),_abfd :_beaba .Height ()};
+});if _gfdd !=nil {return nil ,ctx ,_gfdd ;};};_dfggb ,_ ,_dcae :=_gfeab .Draw (_bgaag );if _dcae !=nil {return nil ,ctx ,_dcae ;};if _dcae =_bceef .addContentsByString (string (_dfggb ));_dcae !=nil {return nil ,ctx ,_dcae ;};return []*Block {_bceef },ctx ,nil ;
+};
+
+// VectorDrawable is a Drawable with a specified width and height.
+type VectorDrawable interface{Drawable ;
+
+// Width returns the width of the Drawable.
+Width ()float64 ;
+
+// Height returns the height of the Drawable.
+Height ()float64 ;};func (_fabd *templateProcessor )parseTableCell (_bded *templateNode )(interface{},error ){if _bded ._bdgb ==nil {_da .Log .Error ("\u0054\u0061\u0062\u006c\u0065\u0020\u0063\u0065\u006c\u006c\u0020\u0070\u0061\u0072\u0065n\u0074 \u0063\u0061\u006e\u006e\u006f\u0074\u0020\u0062\u0065\u0020\u006e\u0069\u006c\u002e");
+return nil ,_cedeg ;};_ebfcf ,_fgeeg :=_bded ._bdgb ._bdced .(*Table );if !_fgeeg {_da .Log .Error ("\u0054\u0061\u0062\u006c\u0065\u0020\u0063\u0065\u006c\u006c\u0020\u0070\u0061\u0072\u0065\u006e\u0074\u0020\u0028\u0025\u0054\u0029\u0020\u0069s\u0020\u006e\u006f\u0074\u0020a\u0020\u0074a\u0062\u006c\u0065\u002e",_bded ._bdgb ._bdced );
+return nil ,_cedeg ;};var _gabcd ,_cfffdg int64 ;for _ ,_ffgbg :=range _bded ._bdbga .Attr {_fegaa :=_ffgbg .Value ;switch _ddfaa :=_ffgbg .Name .Local ;_ddfaa {case "\u0063o\u006c\u0073\u0070\u0061\u006e":_gabcd =_fabd .parseInt64Attr (_ddfaa ,_fegaa );
+case "\u0072o\u0077\u0073\u0070\u0061\u006e":_cfffdg =_fabd .parseInt64Attr (_ddfaa ,_fegaa );};};if _gabcd <=0{_gabcd =1;};if _cfffdg <=0{_cfffdg =1;};_bdgdaf :=_ebfcf .MultiCell (int (_cfffdg ),int (_gabcd ));for _ ,_babce :=range _bded ._bdbga .Attr {_ccaeb :=_babce .Value ;
+switch _fbbba :=_babce .Name .Local ;_fbbba {case "\u0069\u006e\u0064\u0065\u006e\u0074":_bdgdaf .SetIndent (_fabd .parseFloatAttr (_fbbba ,_ccaeb ));case "\u0061\u006c\u0069g\u006e":_bdgdaf .SetHorizontalAlignment (_fabd .parseCellAlignmentAttr (_fbbba ,_ccaeb ));
+case "\u0076\u0065\u0072\u0074\u0069\u0063\u0061\u006c\u002da\u006c\u0069\u0067\u006e":_bdgdaf .SetVerticalAlignment (_fabd .parseCellVerticalAlignmentAttr (_fbbba ,_ccaeb ));case "\u0062\u006f\u0072d\u0065\u0072\u002d\u0073\u0074\u0079\u006c\u0065":_bdgdaf .SetSideBorderStyle (CellBorderSideAll ,_fabd .parseCellBorderStyleAttr (_fbbba ,_ccaeb ));
+case "\u0062\u006fr\u0064\u0065\u0072-\u0073\u0074\u0079\u006c\u0065\u002d\u0074\u006f\u0070":_bdgdaf .SetSideBorderStyle (CellBorderSideTop ,_fabd .parseCellBorderStyleAttr (_fbbba ,_ccaeb ));case "\u0062\u006f\u0072\u0064er\u002d\u0073\u0074\u0079\u006c\u0065\u002d\u0062\u006f\u0074\u0074\u006f\u006d":_bdgdaf .SetSideBorderStyle (CellBorderSideBottom ,_fabd .parseCellBorderStyleAttr (_fbbba ,_ccaeb ));
+case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u0073\u0074\u0079\u006c\u0065-\u006c\u0065\u0066\u0074":_bdgdaf .SetSideBorderStyle (CellBorderSideLeft ,_fabd .parseCellBorderStyleAttr (_fbbba ,_ccaeb ));case "\u0062o\u0072d\u0065\u0072\u002d\u0073\u0074y\u006c\u0065-\u0072\u0069\u0067\u0068\u0074":_bdgdaf .SetSideBorderStyle (CellBorderSideRight ,_fabd .parseCellBorderStyleAttr (_fbbba ,_ccaeb ));
+case "\u0062\u006f\u0072d\u0065\u0072\u002d\u0077\u0069\u0064\u0074\u0068":_bdgdaf .SetSideBorderWidth (CellBorderSideAll ,_fabd .parseFloatAttr (_fbbba ,_ccaeb ));case "\u0062\u006fr\u0064\u0065\u0072-\u0077\u0069\u0064\u0074\u0068\u002d\u0074\u006f\u0070":_bdgdaf .SetSideBorderWidth (CellBorderSideTop ,_fabd .parseFloatAttr (_fbbba ,_ccaeb ));
+case "\u0062\u006f\u0072\u0064er\u002d\u0077\u0069\u0064\u0074\u0068\u002d\u0062\u006f\u0074\u0074\u006f\u006d":_bdgdaf .SetSideBorderWidth (CellBorderSideBottom ,_fabd .parseFloatAttr (_fbbba ,_ccaeb ));case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u0077\u0069\u0064\u0074\u0068-\u006c\u0065\u0066\u0074":_bdgdaf .SetSideBorderWidth (CellBorderSideLeft ,_fabd .parseFloatAttr (_fbbba ,_ccaeb ));
+case "\u0062o\u0072d\u0065\u0072\u002d\u0077\u0069d\u0074\u0068-\u0072\u0069\u0067\u0068\u0074":_bdgdaf .SetSideBorderWidth (CellBorderSideRight ,_fabd .parseFloatAttr (_fbbba ,_ccaeb ));case "\u0062\u006f\u0072d\u0065\u0072\u002d\u0063\u006f\u006c\u006f\u0072":_bdgdaf .SetSideBorderColor (CellBorderSideAll ,_fabd .parseColorAttr (_fbbba ,_ccaeb ));
+case "\u0062\u006fr\u0064\u0065\u0072-\u0063\u006f\u006c\u006f\u0072\u002d\u0074\u006f\u0070":_bdgdaf .SetSideBorderColor (CellBorderSideTop ,_fabd .parseColorAttr (_fbbba ,_ccaeb ));case "\u0062\u006f\u0072\u0064er\u002d\u0063\u006f\u006c\u006f\u0072\u002d\u0062\u006f\u0074\u0074\u006f\u006d":_bdgdaf .SetSideBorderColor (CellBorderSideBottom ,_fabd .parseColorAttr (_fbbba ,_ccaeb ));
+case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u0063\u006f\u006c\u006f\u0072-\u006c\u0065\u0066\u0074":_bdgdaf .SetSideBorderColor (CellBorderSideLeft ,_fabd .parseColorAttr (_fbbba ,_ccaeb ));case "\u0062o\u0072d\u0065\u0072\u002d\u0063\u006fl\u006f\u0072-\u0072\u0069\u0067\u0068\u0074":_bdgdaf .SetSideBorderColor (CellBorderSideRight ,_fabd .parseColorAttr (_fbbba ,_ccaeb ));
+case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u006c\u0069\u006e\u0065\u002ds\u0074\u0079\u006c\u0065":_bdgdaf .SetBorderLineStyle (_fabd .parseLineStyleAttr (_fbbba ,_ccaeb ));case "\u0062\u0061c\u006b\u0067\u0072o\u0075\u006e\u0064\u002d\u0063\u006f\u006c\u006f\u0072":_bdgdaf .SetBackgroundColor (_fabd .parseColorAttr (_fbbba ,_ccaeb ));
+case "\u0063o\u006c\u0073\u0070\u0061\u006e","\u0072o\u0077\u0073\u0070\u0061\u006e":break ;default:_da .Log .Debug ("\u0055\u006e\u0073\u0075\u0070\u0070o\u0072\u0074\u0065\u0064\u0020\u0074\u0061\u0062\u006c\u0065\u0020\u0063\u0065\u006c\u006c\u0020\u0061\u0074\u0074\u0072i\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073\u0060\u002e\u0020\u0053\u006bi\u0070p\u0069\u006e\u0067\u002e",_fbbba );
+};};return _bdgdaf ,nil ;};
+
+// SetPdfWriterAccessFunc sets a PdfWriter access function/hook.
+// Exposes the PdfWriter just prior to writing the PDF.  Can be used to encrypt the output PDF, etc.
+//
+// Example of encrypting with a user/owner password "password"
+// Prior to calling c.WriteFile():
+//
+//	c.SetPdfWriterAccessFunc(func(w *model.PdfWriter) error {
+//		userPass := []byte("password")
+//		ownerPass := []byte("password")
+//		err := w.Encrypt(userPass, ownerPass, nil)
+//		return err
+//	})
+func (_aeec *Creator )SetPdfWriterAccessFunc (pdfWriterAccessFunc func (_ebdd *_fee .PdfWriter )error ){_aeec ._bcaa =pdfWriterAccessFunc ;};func _dgefe (_fccb *templateProcessor ,_ecacb *templateNode )(interface{},error ){return _fccb .parseDivision (_ecacb );
+};
 
 // DrawContext defines the drawing context. The DrawContext is continuously used and updated when
 // drawing the page contents in relative mode.  Keeps track of current X, Y position, available
@@ -2688,76 +2270,110 @@ Margins Margins ;
 PageWidth float64 ;PageHeight float64 ;
 
 // Controls whether the components are stacked horizontally
-Inline bool ;_aegb rune ;_gbeb []error ;};
+Inline bool ;_cbc rune ;_ggce []error ;};
 
-// SetPos sets absolute positioning with specified coordinates.
-func (_ccge *StyledParagraph )SetPos (x ,y float64 ){_ccge ._cdcdd =PositionAbsolute ;_ccge ._eaceb =x ;_ccge ._gdgb =y ;};
+// NewColumn returns a new column for the line items invoice table.
+func (_fed *Invoice )NewColumn (description string )*InvoiceCell {return _fed .newColumn (description ,CellHorizontalAlignmentLeft );};
 
-// NewRadialGradientColor creates a radial gradient color that could act as a color in other componenents.
-// Note: The innerRadius must be smaller than outerRadius for the circle to render properly.
-func (_dcag *Creator )NewRadialGradientColor (x float64 ,y float64 ,innerRadius float64 ,outerRadius float64 ,colorPoints []*ColorPoint )*RadialShading {return _baccf (x ,y ,innerRadius ,outerRadius ,colorPoints );};func (_becdf *templateProcessor )parseFitModeAttr (_edfa ,_ffag string )FitMode {_cf .Log .Debug ("\u0050\u0061\u0072\u0073\u0069\u006e\u0067\u0020\u0066\u0069\u0074\u0020\u006do\u0064\u0065\u0020\u0061\u0074\u0074r\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0028\u0060\u0025\u0073\u0060\u002c \u0025\u0073\u0029\u002e",_edfa ,_ffag );
-_aacd :=map[string ]FitMode {"\u006e\u006f\u006e\u0065":FitModeNone ,"\u0066\u0069\u006c\u006c\u002d\u0077\u0069\u0064\u0074\u0068":FitModeFillWidth }[_ffag ];return _aacd ;};
+// SetIndent sets the cell's left indent.
+func (_ffbe *TableCell )SetIndent (indent float64 ){_ffbe ._bdff =indent };
 
-// SetAnchor set gradient position anchor.
-// Default to center.
-func (_aedf *RadialShading )SetAnchor (anchor AnchorPoint ){_aedf ._bdded =anchor };
+// NewPolygon creates a new polygon.
+func (_ebed *Creator )NewPolygon (points [][]_bg .Point )*Polygon {return _aaefc (points )};
 
-// GeneratePageBlocks generate the Page blocks.  Multiple blocks are generated if the contents wrap
-// over multiple pages.
-func (_addb *Chapter )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_fcgc :=ctx ;if _addb ._bfdd .IsRelative (){ctx .X +=_addb ._fbcg .Left ;ctx .Y +=_addb ._fbcg .Top ;ctx .Width -=_addb ._fbcg .Left +_addb ._fbcg .Right ;ctx .Height -=_addb ._fbcg .Top ;
-};_bdee ,_bbea ,_egacc :=_addb ._agdbe .GeneratePageBlocks (ctx );if _egacc !=nil {return _bdee ,ctx ,_egacc ;};ctx =_bbea ;_geb :=ctx .X ;_dgc :=ctx .Y -_addb ._agdbe .Height ();_dedg :=int64 (ctx .Page );_gab :=_addb .headingNumber ();_addc :=_addb .headingText ();
-if _addb ._aaaa {_cee :=_addb ._acc .Add (_gab ,_addb ._gfbfc ,_egd .FormatInt (_dedg ,10),_addb ._dba );if _addb ._acc ._afaba {_cee .SetLink (_dedg ,_geb ,_dgc );};};if _addb ._egfee ==nil {_addb ._egfee =_gf .NewOutlineItem (_addc ,_gf .NewOutlineDest (_dedg -1,_geb ,_dgc ));
-if _addb ._bcgb !=nil {_addb ._bcgb ._egfee .Add (_addb ._egfee );}else {_addb ._ffffg .Add (_addb ._egfee );};}else {_cfda :=&_addb ._egfee .Dest ;_cfda .Page =_dedg -1;_cfda .X =_geb ;_cfda .Y =_dgc ;};for _ ,_gbea :=range _addb ._cgc {_bcf ,_gbae ,_bed :=_gbea .GeneratePageBlocks (ctx );
-if _bed !=nil {return _bdee ,ctx ,_bed ;};if len (_bcf )< 1{continue ;};_bdee [len (_bdee )-1].mergeBlocks (_bcf [0]);_bdee =append (_bdee ,_bcf [1:]...);ctx =_gbae ;};if _addb ._bfdd .IsRelative (){ctx .X =_fcgc .X ;};if _addb ._bfdd .IsAbsolute (){return _bdee ,_fcgc ,nil ;
-};return _bdee ,ctx ,nil ;};
+// GetMargins returns the left, right, top, bottom Margins.
+func (_eeegg *Table )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _eeegg ._dceg .Left ,_eeegg ._dceg .Right ,_eeegg ._dceg .Top ,_eeegg ._dceg .Bottom ;};
 
-// SetMargins sets the margins for the Image (in relative mode): left, right, top, bottom.
-func (_efba *Image )SetMargins (left ,right ,top ,bottom float64 ){_efba ._gbeae .Left =left ;_efba ._gbeae .Right =right ;_efba ._gbeae .Top =top ;_efba ._gbeae .Bottom =bottom ;};
+// SetAnnotation sets a annotation on a TextChunk.
+func (_bacba *TextChunk )SetAnnotation (annotation *_fee .PdfAnnotation ){_bacba ._beebgd =annotation };
 
-// GeneratePageBlocks draws the composite Bezier curve on a new block
-// representing the page. Implements the Drawable interface.
-func (_eaagg *PolyBezierCurve )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_eecb :=NewBlock (ctx .PageWidth ,ctx .PageHeight );_ebeag ,_begd :=_eecb .setOpacity (_eaagg ._bcbcf ,_eaagg ._cbec );if _begd !=nil {return nil ,ctx ,_begd ;
-};_gadb :=_eaagg ._debe ;_gadb .FillEnabled =_gadb .FillColor !=nil ;var (_egbe =ctx .PageHeight ;_aagg =_gadb .Curves ;_begde =make ([]_g .CubicBezierCurve ,0,len (_gadb .Curves )););_ccdd :=_gf .PdfRectangle {};for _bcec :=range _gadb .Curves {_adcc :=_aagg [_bcec ];
-_adcc .P0 .Y =_egbe -_adcc .P0 .Y ;_adcc .P1 .Y =_egbe -_adcc .P1 .Y ;_adcc .P2 .Y =_egbe -_adcc .P2 .Y ;_adcc .P3 .Y =_egbe -_adcc .P3 .Y ;_begde =append (_begde ,_adcc );_ddacd :=_adcc .GetBounds ();if _bcec ==0{_ccdd =_ddacd ;}else {_ccdd .Llx =_ee .Min (_ccdd .Llx ,_ddacd .Llx );
-_ccdd .Lly =_ee .Min (_ccdd .Lly ,_ddacd .Lly );_ccdd .Urx =_ee .Max (_ccdd .Urx ,_ddacd .Urx );_ccdd .Ury =_ee .Max (_ccdd .Ury ,_ddacd .Ury );};};_gadb .Curves =_begde ;defer func (){_gadb .Curves =_aagg }();if _gadb .FillEnabled {_febd :=_ggfba (_eecb ,_eaagg ._debe .FillColor ,_eaagg ._defeb ,func ()Rectangle {return Rectangle {_fgfd :_ccdd .Llx ,_aedgf :_ccdd .Lly ,_adeb :_ccdd .Width (),_dffef :_ccdd .Height ()};
-});if _febd !=nil {return nil ,ctx ,_febd ;};};_befgd ,_ ,_begd :=_gadb .Draw (_ebeag );if _begd !=nil {return nil ,ctx ,_begd ;};if _begd =_eecb .addContentsByString (string (_befgd ));_begd !=nil {return nil ,ctx ,_begd ;};return []*Block {_eecb },ctx ,nil ;
+// GeneratePageBlocks generates the page blocks.  Multiple blocks are generated if the contents wrap
+// over multiple pages. Implements the Drawable interface.
+func (_adfd *Paragraph )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_ecgeb :=ctx ;var _gdcd []*Block ;_cagb :=NewBlock (ctx .PageWidth ,ctx .PageHeight );if _adfd ._fgecf .IsRelative (){ctx .X +=_adfd ._efbg .Left ;ctx .Y +=_adfd ._efbg .Top ;
+ctx .Width -=_adfd ._efbg .Left +_adfd ._efbg .Right ;ctx .Height -=_adfd ._efbg .Top ;_adfd .SetWidth (ctx .Width );if _adfd .Height ()> ctx .Height {_gdcd =append (_gdcd ,_cagb );_cagb =NewBlock (ctx .PageWidth ,ctx .PageHeight );ctx .Page ++;_gbga :=ctx ;
+_gbga .Y =ctx .Margins .Top ;_gbga .X =ctx .Margins .Left +_adfd ._efbg .Left ;_gbga .Height =ctx .PageHeight -ctx .Margins .Top -ctx .Margins .Bottom ;_gbga .Width =ctx .PageWidth -ctx .Margins .Left -ctx .Margins .Right -_adfd ._efbg .Left -_adfd ._efbg .Right ;
+ctx =_gbga ;};}else {if int (_adfd ._bgdg )<=0{_adfd .SetWidth (_adfd .getTextWidth ());};ctx .X =_adfd ._gbfc ;ctx .Y =_adfd ._bfcd ;};ctx ,_adag :=_ccea (_cagb ,_adfd ,ctx );if _adag !=nil {_da .Log .Debug ("\u0045R\u0052\u004f\u0052\u003a\u0020\u0025v",_adag );
+return nil ,ctx ,_adag ;};_gdcd =append (_gdcd ,_cagb );if _adfd ._fgecf .IsRelative (){ctx .Y +=_adfd ._efbg .Bottom ;ctx .Height -=_adfd ._efbg .Bottom ;if !ctx .Inline {ctx .X =_ecgeb .X ;ctx .Width =_ecgeb .Width ;};return _gdcd ,ctx ,nil ;};return _gdcd ,_ecgeb ,nil ;
 };
 
-// HorizontalAlignment represents the horizontal alignment of components
-// within a page.
-type HorizontalAlignment int ;
+// SetExtends specifies whether ot extend the shading beyond the starting and ending points.
+//
+// Text extends is set to `[]bool{false, false}` by default.
+func (_gcab *LinearShading )SetExtends (start bool ,end bool ){_gcab ._adece .SetExtends (start ,end )};
 
-// GeneratePageBlocks generate the Page blocks. Multiple blocks are generated
-// if the contents wrap over multiple pages.
-func (_aafae *TOCLine )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_gbef :=ctx ;_bbbbb ,ctx ,_cceaa :=_aafae ._dfbba .GeneratePageBlocks (ctx );if _cceaa !=nil {return _bbbbb ,ctx ,_cceaa ;};if _aafae ._gfdb .IsRelative (){ctx .X =_gbef .X ;
-};if _aafae ._gfdb .IsAbsolute (){return _bbbbb ,_gbef ,nil ;};return _bbbbb ,ctx ,nil ;};
+// SetMargins sets the margins of the graphic svg component.
+func (_ecdea *GraphicSVG )SetMargins (left ,right ,top ,bottom float64 ){_ecdea ._dadde .Left =left ;_ecdea ._dadde .Right =right ;_ecdea ._dadde .Top =top ;_ecdea ._dadde .Bottom =bottom ;};var (_ggdbc =_ae .MustCompile ("\u0028[\u005cw\u002d\u005d\u002b\u0029\u005c(\u0027\u0028.\u002b\u0029\u0027\u005c\u0029");
+_eacgc =_d .New ("\u0069\u006e\u0076\u0061\u006c\u0069d\u0020\u0074\u0065\u006d\u0070\u006c\u0061\u0074\u0065\u0020\u0063\u0072\u0065a\u0074\u006f\u0072\u0020\u0069\u006e\u0073t\u0061\u006e\u0063\u0065");_cedeg =_d .New ("\u0069\u006e\u0076\u0061l\u0069\u0064\u0020\u0074\u0065\u006d\u0070\u006c\u0061\u0074e\u0020p\u0061\u0072\u0065\u006e\u0074\u0020\u006eo\u0064\u0065");
+_gffbc =_d .New ("i\u006e\u0076\u0061\u006c\u0069\u0064 \u0074\u0065\u006d\u0070\u006c\u0061\u0074\u0065\u0020c\u0068\u0069\u006cd\u0020n\u006f\u0064\u0065");_gaeg =_d .New ("\u0069n\u0076\u0061\u006c\u0069d\u0020\u0074\u0065\u006d\u0070l\u0061t\u0065 \u0072\u0065\u0073\u006f\u0075\u0072\u0063e");
+);
 
-// AddPatternResource adds pattern dictionary inside the resources dictionary.
-func (_eaad *RadialShading )AddPatternResource (block *Block )(_bead _acb .PdfObjectName ,_egdb error ){_fddgb :=1;_faaf :=_acb .PdfObjectName ("\u0050"+_egd .Itoa (_fddgb ));for block ._cff .HasPatternByName (_faaf ){_fddgb ++;_faaf =_acb .PdfObjectName ("\u0050"+_egd .Itoa (_fddgb ));
-};if _caef :=block ._cff .SetPatternByName (_faaf ,_eaad .ToPdfShadingPattern ().ToPdfObject ());_caef !=nil {return "",_caef ;};return _faaf ,nil ;};
+// SetLevelOffset sets the amount of space an indentation level occupies.
+func (_acfgd *TOCLine )SetLevelOffset (levelOffset float64 ){_acfgd ._eedde =levelOffset ;_acfgd ._dabee ._eebag .Left =_acfgd ._gfgb +float64 (_acfgd ._bbec -1)*_acfgd ._eedde ;};
 
-// AddColorStop add color stop information for rendering gradient.
-func (_gecgg *shading )AddColorStop (color Color ,point float64 ){_gecgg ._dfae =append (_gecgg ._dfae ,_dgefb (color ,point ));};
+// TextAlignment options for paragraph.
+type TextAlignment int ;
 
-// BuyerAddress returns the buyer address used in the invoice template.
-func (_fbbb *Invoice )BuyerAddress ()*InvoiceAddress {return _fbbb ._bcdc };
+// SetMargins sets the margins of the paragraph.
+func (_bfgd *List )SetMargins (left ,right ,top ,bottom float64 ){_bfgd ._bffg .Left =left ;_bfgd ._bffg .Right =right ;_bfgd ._bffg .Top =top ;_bfgd ._bffg .Bottom =bottom ;};func _ffcc (_adgdd *templateProcessor ,_ggege *templateNode )(interface{},error ){return _adgdd .parseChapter (_ggege );
+};func _ggb (_fcf string )string {_dgca :=_bee .FindAllString (_fcf ,-1);if len (_dgca )==0{_fcf =_fcf +"\u0030";}else {_acbe ,_eee :=_fe .Atoi (_dgca [len (_dgca )-1]);if _eee !=nil {_da .Log .Debug ("\u0045r\u0072\u006f\u0072 \u0063\u006f\u006ev\u0065rt\u0069\u006e\u0067\u0020\u0064\u0069\u0067i\u0074\u0020\u0063\u006f\u006d\u0070\u006f\u006e\u0065\u006e\u0074\u0020\u0069\u006e\u0020\u0072\u0065\u0073\u006f\u0075\u0072\u0063\u0065\u0073\u0020\u006e\u0061\u006de,\u0020f\u0061\u006c\u006c\u0062\u0061\u0063k\u0020\u0074\u006f\u0020\u0062a\u0073\u0069\u0063\u0020\u006d\u0065\u0074\u0068\u006f\u0064\u003a \u0025\u0076",_eee );
+_fcf =_fcf +"\u0030";}else {_acbe ++;_cbee :=_cf .LastIndex (_fcf ,_dgca [len (_dgca )-1]);if _cbee ==-1{_fcf =_fb .Sprintf ("\u0025\u0073\u0025\u0064",_fcf [:len (_fcf )-1],_acbe );}else {_fcf =_fcf [:_cbee ]+_fe .Itoa (_acbe );};};};return _fcf ;};func (_faee *templateProcessor )parsePositioningAttr (_faca ,_face string )Positioning {_da .Log .Debug ("\u0050\u0061\u0072s\u0069\u006e\u0067\u0020\u0070\u006f\u0073\u0069\u0074\u0069\u006f\u006e\u0069\u006e\u0067\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0028\u0060%\u0073\u0060\u002c\u0020\u0025\u0073\u0029\u002e",_faca ,_face );
+_dfag :=map[string ]Positioning {"\u0072\u0065\u006c\u0061\u0074\u0069\u0076\u0065":PositionRelative ,"\u0061\u0062\u0073\u006f\u006c\u0075\u0074\u0065":PositionAbsolute }[_face ];return _dfag ;};
 
-// NewCell returns a new invoice table cell.
-func (_fgfag *Invoice )NewCell (value string )*InvoiceCell {return _fgfag .newCell (value ,_fgfag .NewCellProps ());};
+// GeneratePageBlocks draws the polygon on a new block representing the page.
+// Implements the Drawable interface.
+func (_agbge *Polygon )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_ebebc :=NewBlock (ctx .PageWidth ,ctx .PageHeight );_egce ,_bacfa :=_ebebc .setOpacity (_agbge ._aacf ,_agbge ._ecbgf );if _bacfa !=nil {return nil ,ctx ,_bacfa ;
+};_deeg :=_agbge ._ebdcd ;_deeg .FillEnabled =_deeg .FillColor !=nil ;_deeg .BorderEnabled =_deeg .BorderColor !=nil &&_deeg .BorderWidth > 0;_acgcf :=_deeg .Points ;_ded :=_fee .PdfRectangle {};_effcd :=false ;for _agcc :=range _acgcf {for _abbg :=range _acgcf [_agcc ]{_adef :=&_acgcf [_agcc ][_abbg ];
+_adef .Y =ctx .PageHeight -_adef .Y ;if !_effcd {_ded .Llx =_adef .X ;_ded .Lly =_adef .Y ;_ded .Urx =_adef .X ;_ded .Ury =_adef .Y ;_effcd =true ;}else {_ded .Llx =_fa .Min (_ded .Llx ,_adef .X );_ded .Lly =_fa .Min (_ded .Lly ,_adef .Y );_ded .Urx =_fa .Max (_ded .Urx ,_adef .X );
+_ded .Ury =_fa .Max (_ded .Ury ,_adef .Y );};};};if _deeg .FillEnabled {_gfefg :=_aacgba (_ebebc ,_agbge ._ebdcd .FillColor ,_agbge ._ecad ,func ()Rectangle {return Rectangle {_cfbab :_ded .Llx ,_cffbf :_ded .Lly ,_bfddd :_ded .Width (),_abfd :_ded .Height ()};
+});if _gfefg !=nil {return nil ,ctx ,_gfefg ;};};_afcee ,_ ,_bacfa :=_deeg .Draw (_egce );if _bacfa !=nil {return nil ,ctx ,_bacfa ;};if _bacfa =_ebebc .addContentsByString (string (_afcee ));_bacfa !=nil {return nil ,ctx ,_bacfa ;};return []*Block {_ebebc },ctx ,nil ;
+};
 
-// NewGraphicSVGFromString creates a graphic SVG from a SVG string.
-func NewGraphicSVGFromString (svgStr string )(*GraphicSVG ,error ){return _afbgeg (svgStr )};func (_eggab *templateProcessor )parseDivision (_eafggb *templateNode )(interface{},error ){_eaffc :=_eggab .creator .NewDivision ();for _ ,_afcgb :=range _eafggb ._feaff .Attr {_ddce :=_afcgb .Value ;
-switch _fbfa :=_afcgb .Name .Local ;_fbfa {case "\u0065\u006ea\u0062\u006c\u0065-\u0070\u0061\u0067\u0065\u002d\u0077\u0072\u0061\u0070":_eaffc .EnablePageWrap (_eggab .parseBoolAttr (_fbfa ,_ddce ));case "\u006d\u0061\u0072\u0067\u0069\u006e":_gagg :=_eggab .parseMarginAttr (_fbfa ,_ddce );
-_eaffc .SetMargins (_gagg .Left ,_gagg .Right ,_gagg .Top ,_gagg .Bottom );case "\u0070a\u0064\u0064\u0069\u006e\u0067":_dbgd :=_eggab .parseMarginAttr (_fbfa ,_ddce );_eaffc .SetPadding (_dbgd .Left ,_dbgd .Right ,_dbgd .Top ,_dbgd .Bottom );default:_cf .Log .Debug ("U\u006e\u0073\u0075\u0070\u0070\u006f\u0072\u0074\u0065d\u0020\u0064\u0069\u0076\u0069\u0073\u0069on\u0020\u0061\u0074\u0074r\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025s`\u002e\u0020S\u006b\u0069\u0070\u0070\u0069\u006e\u0067\u002e",_fbfa );
-};};return _eaffc ,nil ;};func _cdag (_caded string )*_gf .PdfAnnotation {_agebc :=_gf .NewPdfAnnotationLink ();_cbcc :=_gf .NewBorderStyle ();_cbcc .SetBorderWidth (0);_agebc .BS =_cbcc .ToPdfObject ();_eaada :=_gf .NewPdfActionURI ();_eaada .URI =_acb .MakeString (_caded );
-_agebc .SetAction (_eaada .PdfAction );return _agebc .PdfAnnotation ;};func _cbb ()*Division {return &Division {_befa :true }};
+// GeneratePageBlocks implements drawable interface.
+func (_cccg *border )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_dccg :=NewBlock (ctx .PageWidth ,ctx .PageHeight );_bbag :=_cccg ._bgg ;_babb :=ctx .PageHeight -_cccg ._ebg ;if _cccg ._aeea !=nil {_aea :=_bg .Rectangle {Opacity :1.0,X :_cccg ._bgg ,Y :ctx .PageHeight -_cccg ._ebg -_cccg ._aed ,Height :_cccg ._aed ,Width :_cccg ._dgda };
+_aea .FillEnabled =true ;_gbb :=_cfd (_cccg ._aeea );_cdfb :=_aacgba (_dccg ,_gbb ,_cccg ._aeea ,func ()Rectangle {return Rectangle {_cfbab :_aea .X ,_cffbf :_aea .Y ,_bfddd :_aea .Width ,_abfd :_aea .Height };});if _cdfb !=nil {return nil ,ctx ,_cdfb ;
+};_aea .FillColor =_gbb ;_aea .BorderEnabled =false ;_dbc ,_ ,_cdfb :=_aea .Draw ("");if _cdfb !=nil {return nil ,ctx ,_cdfb ;};_cdfb =_dccg .addContentsByString (string (_dbc ));if _cdfb !=nil {return nil ,ctx ,_cdfb ;};};_cdfa :=_cccg ._gab ;_egef :=_cccg ._eec ;
+_ccg :=_cccg ._bbd ;_gfad :=_cccg ._cee ;_gdaa :=_cccg ._gab ;if _cccg ._cffc ==CellBorderStyleDouble {_gdaa +=2*_cdfa ;};_bgb :=_cccg ._eec ;if _cccg ._beb ==CellBorderStyleDouble {_bgb +=2*_egef ;};_bffa :=_cccg ._bbd ;if _cccg ._ece ==CellBorderStyleDouble {_bffa +=2*_ccg ;
+};_fead :=_cccg ._cee ;if _cccg ._eccg ==CellBorderStyleDouble {_fead +=2*_gfad ;};_abfc :=(_gdaa -_bffa )/2;_adgb :=(_gdaa -_fead )/2;_gec :=(_bgb -_bffa )/2;_gfag :=(_bgb -_fead )/2;if _cccg ._gab !=0{_cdab :=_bbag ;_gde :=_babb ;if _cccg ._cffc ==CellBorderStyleDouble {_gde -=_cdfa ;
+_acbg :=_bg .BasicLine {LineColor :_cfd (_cccg ._bfgc ),Opacity :1.0,LineWidth :_cccg ._gab ,LineStyle :_cccg .LineStyle ,X1 :_cdab -_gdaa /2+_abfc ,Y1 :_gde +2*_cdfa ,X2 :_cdab +_gdaa /2-_adgb +_cccg ._dgda ,Y2 :_gde +2*_cdfa };_ddg ,_ ,_adfa :=_acbg .Draw ("");
+if _adfa !=nil {return nil ,ctx ,_adfa ;};_adfa =_dccg .addContentsByString (string (_ddg ));if _adfa !=nil {return nil ,ctx ,_adfa ;};};_bdd :=_bg .BasicLine {LineWidth :_cccg ._gab ,Opacity :1.0,LineColor :_cfd (_cccg ._bfgc ),LineStyle :_cccg .LineStyle ,X1 :_cdab -_gdaa /2+_abfc +(_bffa -_cccg ._bbd ),Y1 :_gde ,X2 :_cdab +_gdaa /2-_adgb +_cccg ._dgda -(_fead -_cccg ._cee ),Y2 :_gde };
+_bcdd ,_ ,_afb :=_bdd .Draw ("");if _afb !=nil {return nil ,ctx ,_afb ;};_afb =_dccg .addContentsByString (string (_bcdd ));if _afb !=nil {return nil ,ctx ,_afb ;};};if _cccg ._eec !=0{_adfab :=_bbag ;_efg :=_babb -_cccg ._aed ;if _cccg ._beb ==CellBorderStyleDouble {_efg +=_egef ;
+_cba :=_bg .BasicLine {LineWidth :_cccg ._eec ,Opacity :1.0,LineColor :_cfd (_cccg ._beed ),LineStyle :_cccg .LineStyle ,X1 :_adfab -_bgb /2+_gec ,Y1 :_efg -2*_egef ,X2 :_adfab +_bgb /2-_gfag +_cccg ._dgda ,Y2 :_efg -2*_egef };_ebe ,_ ,_adc :=_cba .Draw ("");
+if _adc !=nil {return nil ,ctx ,_adc ;};_adc =_dccg .addContentsByString (string (_ebe ));if _adc !=nil {return nil ,ctx ,_adc ;};};_cfge :=_bg .BasicLine {LineWidth :_cccg ._eec ,Opacity :1.0,LineColor :_cfd (_cccg ._beed ),LineStyle :_cccg .LineStyle ,X1 :_adfab -_bgb /2+_gec +(_bffa -_cccg ._bbd ),Y1 :_efg ,X2 :_adfab +_bgb /2-_gfag +_cccg ._dgda -(_fead -_cccg ._cee ),Y2 :_efg };
+_dfb ,_ ,_ggba :=_cfge .Draw ("");if _ggba !=nil {return nil ,ctx ,_ggba ;};_ggba =_dccg .addContentsByString (string (_dfb ));if _ggba !=nil {return nil ,ctx ,_ggba ;};};if _cccg ._bbd !=0{_fagb :=_bbag ;_abdd :=_babb ;if _cccg ._ece ==CellBorderStyleDouble {_fagb +=_ccg ;
+_aeeb :=_bg .BasicLine {LineWidth :_cccg ._bbd ,Opacity :1.0,LineColor :_cfd (_cccg ._ege ),LineStyle :_cccg .LineStyle ,X1 :_fagb -2*_ccg ,Y1 :_abdd +_bffa /2+_abfc ,X2 :_fagb -2*_ccg ,Y2 :_abdd -_bffa /2-_gec -_cccg ._aed };_dbcb ,_ ,_ceb :=_aeeb .Draw ("");
+if _ceb !=nil {return nil ,ctx ,_ceb ;};_ceb =_dccg .addContentsByString (string (_dbcb ));if _ceb !=nil {return nil ,ctx ,_ceb ;};};_dbde :=_bg .BasicLine {LineWidth :_cccg ._bbd ,Opacity :1.0,LineColor :_cfd (_cccg ._ege ),LineStyle :_cccg .LineStyle ,X1 :_fagb ,Y1 :_abdd +_bffa /2+_abfc -(_gdaa -_cccg ._gab ),X2 :_fagb ,Y2 :_abdd -_bffa /2-_gec -_cccg ._aed +(_bgb -_cccg ._eec )};
+_fdb ,_ ,_egff :=_dbde .Draw ("");if _egff !=nil {return nil ,ctx ,_egff ;};_egff =_dccg .addContentsByString (string (_fdb ));if _egff !=nil {return nil ,ctx ,_egff ;};};if _cccg ._cee !=0{_dbg :=_bbag +_cccg ._dgda ;_ccbf :=_babb ;if _cccg ._eccg ==CellBorderStyleDouble {_dbg -=_gfad ;
+_bbg :=_bg .BasicLine {LineWidth :_cccg ._cee ,Opacity :1.0,LineColor :_cfd (_cccg ._ecba ),LineStyle :_cccg .LineStyle ,X1 :_dbg +2*_gfad ,Y1 :_ccbf +_fead /2+_adgb ,X2 :_dbg +2*_gfad ,Y2 :_ccbf -_fead /2-_gfag -_cccg ._aed };_gcd ,_ ,_gecc :=_bbg .Draw ("");
+if _gecc !=nil {return nil ,ctx ,_gecc ;};_gecc =_dccg .addContentsByString (string (_gcd ));if _gecc !=nil {return nil ,ctx ,_gecc ;};};_cbefe :=_bg .BasicLine {LineWidth :_cccg ._cee ,Opacity :1.0,LineColor :_cfd (_cccg ._ecba ),LineStyle :_cccg .LineStyle ,X1 :_dbg ,Y1 :_ccbf +_fead /2+_adgb -(_gdaa -_cccg ._gab ),X2 :_dbg ,Y2 :_ccbf -_fead /2-_gfag -_cccg ._aed +(_bgb -_cccg ._eec )};
+_aace ,_ ,_aab :=_cbefe .Draw ("");if _aab !=nil {return nil ,ctx ,_aab ;};_aab =_dccg .addContentsByString (string (_aace ));if _aab !=nil {return nil ,ctx ,_aab ;};};return []*Block {_dccg },ctx ,nil ;};
 
-// Positioning represents the positioning type for drawing creator components (relative/absolute).
-type Positioning int ;
+// ColorCMYKFrom8bit creates a Color from c,m,y,k values (0-100).
+// Example:
+//   red := ColorCMYKFrom8Bit(0, 100, 100, 0)
+func ColorCMYKFrom8bit (c ,m ,y ,k byte )Color {return cmykColor {_bcc :_fa .Min (float64 (c ),100)/100.0,_gdg :_fa .Min (float64 (m ),100)/100.0,_fbba :_fa .Min (float64 (y ),100)/100.0,_dgdaf :_fa .Min (float64 (k ),100)/100.0};};
 
-// SetWidth sets the the Paragraph width. This is essentially the wrapping width, i.e. the width the
-// text can extend to prior to wrapping over to next line.
-func (_fdaed *Paragraph )SetWidth (width float64 ){_fdaed ._bdcb =width ;_fdaed .wrapText ()};
+// SetEnableWrap sets the line wrapping enabled flag.
+func (_eagc *StyledParagraph )SetEnableWrap (enableWrap bool ){_eagc ._egge =enableWrap ;_eagc ._cbbga =false ;};func _abgd (_bcg []byte )(*Image ,error ){_eeeb :=_c .NewReader (_bcg );_cddc ,_cedf :=_fee .ImageHandling .Read (_eeeb );if _cedf !=nil {_da .Log .Error ("\u0045\u0072\u0072or\u0020\u006c\u006f\u0061\u0064\u0069\u006e\u0067\u0020\u0069\u006d\u0061\u0067\u0065\u003a\u0020\u0025\u0073",_cedf );
+return nil ,_cedf ;};return _gccg (_cddc );};func _gddgf (_ggag []*ColorPoint )*LinearShading {return &LinearShading {_adece :&shading {_bbcfd :ColorWhite ,_fbfeg :false ,_gcefb :[]bool {false ,false },_ccff :_ggag },_ecbd :&_fee .PdfRectangle {}};};func _gdfbf (_cege [][]_bg .CubicBezierCurve )*CurvePolygon {return &CurvePolygon {_aaee :&_bg .CurvePolygon {Rings :_cege },_febb :1.0,_efeb :1.0};
+};
+
+// SetAntiAlias enables anti alias config.
+//
+// Anti alias is disabled by default.
+func (_acacc *LinearShading )SetAntiAlias (enable bool ){_acacc ._adece .SetAntiAlias (enable )};
+
+// PageFinalizeFunctionArgs holds the input arguments provided to the page
+// finalize callback function which can be set using Creator.PageFinalize.
+type PageFinalizeFunctionArgs struct{PageNum int ;PageWidth float64 ;PageHeight float64 ;TOCPages int ;TotalPages int ;};func (_ddfeb *templateProcessor )parseBackground (_ccbcf *templateNode )(interface{},error ){_fggaf :=&Background {};for _ ,_bafb :=range _ccbcf ._bdbga .Attr {_eaceg :=_bafb .Value ;
+switch _ebebf :=_bafb .Name .Local ;_ebebf {case "\u0066\u0069\u006c\u006c\u002d\u0063\u006f\u006c\u006f\u0072":_fggaf .FillColor =_ddfeb .parseColorAttr (_ebebf ,_eaceg );case "\u0062\u006f\u0072d\u0065\u0072\u002d\u0063\u006f\u006c\u006f\u0072":_fggaf .BorderColor =_ddfeb .parseColorAttr (_ebebf ,_eaceg );
+case "b\u006f\u0072\u0064\u0065\u0072\u002d\u0073\u0069\u007a\u0065":_fggaf .BorderSize =_ddfeb .parseFloatAttr (_ebebf ,_eaceg );case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u0072\u0061\u0064\u0069\u0075\u0073":_faed ,_bdefa ,_fdef ,_effea :=_ddfeb .parseBorderRadiusAttr (_ebebf ,_eaceg );
+_fggaf .SetBorderRadius (_faed ,_bdefa ,_effea ,_fdef );case "\u0062\u006f\u0072\u0064er\u002d\u0074\u006f\u0070\u002d\u006c\u0065\u0066\u0074\u002d\u0072\u0061\u0064\u0069u\u0073":_fggaf .BorderRadiusTopLeft =_ddfeb .parseFloatAttr (_ebebf ,_eaceg );case "\u0062\u006f\u0072de\u0072\u002d\u0074\u006f\u0070\u002d\u0072\u0069\u0067\u0068\u0074\u002d\u0072\u0061\u0064\u0069\u0075\u0073":_fggaf .BorderRadiusTopRight =_ddfeb .parseFloatAttr (_ebebf ,_eaceg );
+case "\u0062o\u0072\u0064\u0065\u0072-\u0062\u006f\u0074\u0074\u006fm\u002dl\u0065f\u0074\u002d\u0072\u0061\u0064\u0069\u0075s":_fggaf .BorderRadiusBottomLeft =_ddfeb .parseFloatAttr (_ebebf ,_eaceg );case "\u0062\u006f\u0072\u0064\u0065\u0072\u002d\u0062\u006f\u0074\u0074o\u006d\u002d\u0072\u0069\u0067\u0068\u0074\u002d\u0072\u0061d\u0069\u0075\u0073":_fggaf .BorderRadiusBottomRight =_ddfeb .parseFloatAttr (_ebebf ,_eaceg );
+default:_da .Log .Debug ("\u0055\u006e\u0073\u0075\u0070\u0070o\u0072\u0074\u0065\u0064\u0020\u0062\u0061\u0063\u006b\u0067\u0072\u006f\u0075\u006e\u0064\u0020\u0061\u0074\u0074\u0072i\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073\u0060\u002e\u0020\u0053\u006bi\u0070p\u0069\u006e\u0067\u002e",_ebebf );
+};};return _fggaf ,nil ;};func _aagf (_aageb *templateProcessor ,_dgaecc *templateNode )(interface{},error ){return _aageb .parseEllipse (_dgaecc );};func (_ccdbc *templateProcessor )parseMarginAttr (_fbefg ,_effeb string )Margins {_da .Log .Debug ("\u0050\u0061r\u0073\u0069\u006e\u0067 \u006d\u0061r\u0067\u0069\u006e\u0020\u0061\u0074\u0074\u0072i\u0062\u0075\u0074\u0065\u003a\u0020\u0028\u0060\u0025\u0073\u0060\u002c \u0025\u0073\u0029\u002e",_fbefg ,_effeb );
+_cbdb :=Margins {};switch _daab :=_cf .Fields (_effeb );len (_daab ){case 1:_cbdb .Top ,_ =_fe .ParseFloat (_daab [0],64);_cbdb .Bottom =_cbdb .Top ;_cbdb .Left =_cbdb .Top ;_cbdb .Right =_cbdb .Top ;case 2:_cbdb .Top ,_ =_fe .ParseFloat (_daab [0],64);
+_cbdb .Bottom =_cbdb .Top ;_cbdb .Left ,_ =_fe .ParseFloat (_daab [1],64);_cbdb .Right =_cbdb .Left ;case 3:_cbdb .Top ,_ =_fe .ParseFloat (_daab [0],64);_cbdb .Left ,_ =_fe .ParseFloat (_daab [1],64);_cbdb .Right =_cbdb .Left ;_cbdb .Bottom ,_ =_fe .ParseFloat (_daab [2],64);
+case 4:_cbdb .Top ,_ =_fe .ParseFloat (_daab [0],64);_cbdb .Right ,_ =_fe .ParseFloat (_daab [1],64);_cbdb .Bottom ,_ =_fe .ParseFloat (_daab [2],64);_cbdb .Left ,_ =_fe .ParseFloat (_daab [3],64);};return _cbdb ;};
 
 // NewLine creates a new line between (x1, y1) to (x2, y2),
 // using default attributes.
@@ -2766,129 +2382,518 @@ func (_fdaed *Paragraph )SetWidth (width float64 ){_fdaed ._bdcb =width ;_fdaed 
 // the second point in relation to the first one (used just as a measurement
 // of size). Furthermore, when the fit mode is set to fill the context width,
 // `x2` is set to the right edge coordinate of the context.
-func (_fcag *Creator )NewLine (x1 ,y1 ,x2 ,y2 float64 )*Line {return _aaeb (x1 ,y1 ,x2 ,y2 )};
+func (_bffae *Creator )NewLine (x1 ,y1 ,x2 ,y2 float64 )*Line {return _bbcf (x1 ,y1 ,x2 ,y2 )};
 
-// Height returns the height of the list.
-func (_gggce *List )Height ()float64 {var _edaa float64 ;for _ ,_eecf :=range _gggce ._eccb {_edaa +=_eecf .ctxHeight (_gggce .Width ());};return _edaa ;};var _fedd =_c .MustCompile ("\u005c\u0064\u002b");
+// SetLink makes the line an internal link.
+// The text parameter represents the text that is displayed.
+// The user is taken to the specified page, at the specified x and y
+// coordinates. Position 0, 0 is at the top left of the page.
+func (_bcca *TOCLine )SetLink (page int64 ,x ,y float64 ){_bcca ._becg =x ;_bcca ._gfcef =y ;_bcca ._edbf =page ;_gbdge :=_bcca ._dabee ._fecf .Color ;_bcca .Number .Style .Color =_gbdge ;_bcca .Title .Style .Color =_gbdge ;_bcca .Separator .Style .Color =_gbdge ;
+_bcca .Page .Style .Color =_gbdge ;};func _cefa (_babbb *templateProcessor ,_ecabe *templateNode )(interface{},error ){return _babbb .parseBackground (_ecabe );};func _afbgg (_febbg _a .Image )(*Image ,error ){_dbga ,_acd :=_fee .ImageHandling .NewImageFromGoImage (_febbg );
+if _acd !=nil {return nil ,_acd ;};return _gccg (_dbga );};func (_gcbe *Invoice )generateTotalBlocks (_cga DrawContext )([]*Block ,DrawContext ,error ){_ffdf :=_agegf (4);_ffdf .SetMargins (0,0,10,10);_bfgb :=[][2]*InvoiceCell {_gcbe ._decgf };_bfgb =append (_bfgb ,_gcbe ._gcffc ...);
+_bfgb =append (_bfgb ,_gcbe ._abb );for _ ,_acce :=range _bfgb {_cbba ,_dbba :=_acce [0],_acce [1];if _dbba .Value ==""{continue ;};_ffdf .SkipCells (2);_dca :=_ffdf .NewCell ();_dca .SetBackgroundColor (_cbba .BackgroundColor );_dca .SetHorizontalAlignment (_dbba .Alignment );
+_gcbe .setCellBorder (_dca ,_cbba );_egfe :=_dccc (_cbba .TextStyle );_egfe .SetMargins (0,0,2,1);_egfe .Append (_cbba .Value );_dca .SetContent (_egfe );_dca =_ffdf .NewCell ();_dca .SetBackgroundColor (_dbba .BackgroundColor );_dca .SetHorizontalAlignment (_dbba .Alignment );
+_gcbe .setCellBorder (_dca ,_cbba );_egfe =_dccc (_dbba .TextStyle );_egfe .SetMargins (0,0,2,1);_egfe .Append (_dbba .Value );_dca .SetContent (_egfe );};return _ffdf .GeneratePageBlocks (_cga );};
 
-// SetBorderRadius sets the radius of the rectangle corners.
-func (_fccf *Rectangle )SetBorderRadius (topLeft ,topRight ,bottomLeft ,bottomRight float64 ){_fccf ._bdcg =topLeft ;_fccf ._eged =topRight ;_fccf ._dbfc =bottomLeft ;_fccf ._abca =bottomRight ;};
+// Draw draws the drawable d on the block.
+// Note that the drawable must not wrap, i.e. only return one block. Otherwise an error is returned.
+func (_bfe *Block )Draw (d Drawable )error {_fac :=DrawContext {};_fac .Width =_bfe ._bab ;_fac .Height =_bfe ._egb ;_fac .PageWidth =_bfe ._bab ;_fac .PageHeight =_bfe ._egb ;_fac .X =0;_fac .Y =0;_dfd ,_ ,_feb :=d .GeneratePageBlocks (_fac );if _feb !=nil {return _feb ;
+};if len (_dfd )!=1{return _d .New ("\u0074\u006f\u006f\u0020ma\u006e\u0079\u0020\u006f\u0075\u0074\u0070\u0075\u0074\u0020\u0062\u006c\u006f\u0063k\u0073");};for _ ,_cdf :=range _dfd {if _ag :=_bfe .mergeBlocks (_cdf );_ag !=nil {return _ag ;};};return nil ;
+};
 
-// Color returns the color of the line.
-func (_dfbaa *Line )Color ()Color {return _dfbaa ._ebce };
+// SetStyleTop sets border style for top side.
+func (_gbg *border )SetStyleTop (style CellBorderStyle ){_gbg ._cffc =style };func _cbgdfe (_ccbd *templateProcessor ,_bffb *templateNode )(interface{},error ){return _ccbd .parseTextChunk (_bffb ,nil );};
 
-// Append adds a new text chunk to the paragraph.
-func (_ffbbf *StyledParagraph )Append (text string )*TextChunk {_aafc :=NewTextChunk (text ,_ffbbf ._cadaf );return _ffbbf .appendChunk (_aafc );};
+// SetColorLeft sets border color for left.
+func (_dbea *border )SetColorLeft (col Color ){_dbea ._ege =col };
 
-// Width returns the current page width.
-func (_gedc *Creator )Width ()float64 {return _gedc ._bfda };const (TextRenderingModeFill TextRenderingMode =iota ;TextRenderingModeStroke ;TextRenderingModeFillStroke ;TextRenderingModeInvisible ;TextRenderingModeFillClip ;TextRenderingModeStrokeClip ;
-TextRenderingModeFillStrokeClip ;TextRenderingModeClip ;);func _edfb (_deec *Table ,_dcda DrawContext )([]*Block ,DrawContext ,error ){var _dbbdgg []*Block ;_deddc :=NewBlock (_dcda .PageWidth ,_dcda .PageHeight );_deec .updateRowHeights (_dcda .Width -_deec ._bbfa .Left -_deec ._bbfa .Right );
-_eeag :=_deec ._bbfa .Top ;if _deec ._fcca .IsRelative ()&&!_deec ._cfdga {_ddedb :=_deec .Height ();if _ddedb > _dcda .Height -_deec ._bbfa .Top &&_ddedb <=_dcda .PageHeight -_dcda .Margins .Top -_dcda .Margins .Bottom {_dbbdgg =[]*Block {NewBlock (_dcda .PageWidth ,_dcda .PageHeight -_dcda .Y )};
-var _cefdb error ;if _ ,_dcda ,_cefdb =_aeea ().GeneratePageBlocks (_dcda );_cefdb !=nil {return nil ,_dcda ,_cefdb ;};_eeag =0;};};_dece :=_dcda ;if _deec ._fcca .IsAbsolute (){_dcda .X =_deec ._beacg ;_dcda .Y =_deec ._bdae ;}else {_dcda .X +=_deec ._bbfa .Left ;
-_dcda .Y +=_eeag ;_dcda .Width -=_deec ._bbfa .Left +_deec ._bbfa .Right ;_dcda .Height -=_eeag ;};_afaa :=_dcda .Width ;_gaded :=_dcda .X ;_ffeb :=_dcda .Y ;_fcda :=_dcda .Height ;_dedgc :=0;_eeage ,_cdcf :=-1,-1;if _deec ._eabace {for _bagbb ,_cfac :=range _deec ._fdde {if _cfac ._gaddf < _deec ._gfagg {continue ;
-};if _cfac ._gaddf > _deec ._cedbc {break ;};if _eeage < 0{_eeage =_bagbb ;};_cdcf =_bagbb ;};};if _aegd :=_deec .wrapContent (_dcda );_aegd !=nil {return nil ,_dcda ,_aegd ;};_deec .updateRowHeights (_dcda .Width -_deec ._bbfa .Left -_deec ._bbfa .Right );
-var (_bcedc bool ;_abead int ;_gbeab int ;_adacaa bool ;_adbed int ;_gbcga error ;);for _cggff :=0;_cggff < len (_deec ._fdde );_cggff ++{_dadea :=_deec ._fdde [_cggff ];_gfagc :=_dadea .width (_deec ._cdgf ,_afaa );_cgea :=float64 (0.0);for _bcgd :=0;
-_bcgd < _dadea ._bgege -1;_bcgd ++{_cgea +=_deec ._cdgf [_bcgd ]*_afaa ;};_bfag :=float64 (0.0);for _fffadc :=_dedgc ;_fffadc < _dadea ._gaddf -1;_fffadc ++{_bfag +=_deec ._gdgf [_fffadc ];};_dcda .Height =_fcda -_bfag ;_dgbf :=float64 (0.0);for _bbcf :=0;
-_bbcf < _dadea ._adfef ;_bbcf ++{_dgbf +=_deec ._gdgf [_dadea ._gaddf +_bbcf -1];};_bfdac :=_adacaa &&_dadea ._gaddf !=_adbed ;_adbed =_dadea ._gaddf ;if _bfdac ||_dgbf > _dcda .Height {if _deec ._bfbf &&!_adacaa {_adacaa ,_gbcga =_deec .wrapRow (_cggff ,_dcda ,_afaa );
-if _gbcga !=nil {return nil ,_dcda ,_gbcga ;};if _adacaa {_cggff --;continue ;};_bfdac =true ;};_dbbdgg =append (_dbbdgg ,_deddc );_deddc =NewBlock (_dcda .PageWidth ,_dcda .PageHeight );_gaded =_dcda .Margins .Left +_deec ._bbfa .Left ;_ffeb =_dcda .Margins .Top ;
-_dcda .Height =_dcda .PageHeight -_dcda .Margins .Top -_dcda .Margins .Bottom ;_dcda .Page ++;_fcda =_dcda .Height ;_dedgc =_dadea ._gaddf -1;_bfag =0;_adacaa =false ;if _deec ._eabace &&_eeage >=0{_abead =_cggff ;_cggff =_eeage -1;_gbeab =_dedgc ;_dedgc =_deec ._gfagg -1;
-_bcedc =true ;if _dadea ._adfef > (_deec ._bacg -_adbed )||(_dadea ._adfef > 1&&_cggff < 0){_cf .Log .Debug ("\u0054a\u0062\u006ce\u0020\u0068\u0065a\u0064\u0065\u0072\u0020\u0072\u006f\u0077s\u0070\u0061\u006e\u0020\u0065\u0078c\u0065\u0065\u0064\u0073\u0020\u0061\u0076\u0061\u0069\u006c\u0061b\u006c\u0065\u0020\u0073\u0070\u0061\u0063\u0065\u002e");
-_bcedc =false ;_eeage ,_cdcf =-1,-1;};continue ;};if _bfdac {_cggff --;continue ;};};_dcda .Width =_gfagc ;_dcda .X =_gaded +_cgea ;_dcda .Y =_ffeb +_bfag ;_bdfa :=_afcf (_dcda .X ,_dcda .Y ,_gfagc ,_dgbf );if _dadea ._gbge !=nil {_bdfa .SetFillColor (_dadea ._gbge );
-};_bdfa .LineStyle =_dadea ._bdbd ;_bdfa ._ggd =_dadea ._cgafa ;_bdfa ._bceb =_dadea ._febbf ;_bdfa ._cedf =_dadea ._cadag ;_bdfa ._fbb =_dadea ._gfcgd ;if _dadea ._effe !=nil {_bdfa .SetColorLeft (_dadea ._effe );};if _dadea ._feeb !=nil {_bdfa .SetColorBottom (_dadea ._feeb );
-};if _dadea ._afgf !=nil {_bdfa .SetColorRight (_dadea ._afgf );};if _dadea ._dffad !=nil {_bdfa .SetColorTop (_dadea ._dffad );};_bdfa .SetWidthBottom (_dadea ._ggbc );_bdfa .SetWidthLeft (_dadea ._cefdc );_bdfa .SetWidthRight (_dadea ._dadga );_bdfa .SetWidthTop (_dadea ._ebbbd );
-_gebcb :=_deddc .Draw (_bdfa );if _gebcb !=nil {_cf .Log .Debug ("\u0045R\u0052\u004f\u0052\u003a\u0020\u0025v",_gebcb );};if _dadea ._afgda !=nil {_abade :=_dadea ._afgda .Width ();_aacbg :=_dadea ._afgda .Height ();_gbad :=0.0;switch _adde :=_dadea ._afgda .(type ){case *Paragraph :if _adde ._bedd {_abade =_adde .getMaxLineWidth ()/1000.0;
-};_abade +=_adde ._eddc .Left +_adde ._eddc .Right ;_aacbg +=_adde ._eddc .Top +_adde ._eddc .Bottom ;case *StyledParagraph :if _adde ._fbbcc {_abade =_adde .getMaxLineWidth ()/1000.0;};_ddbfad ,_fcbg ,_gfbe :=_adde .getLineMetrics (0);_gacd ,_geedb :=_ddbfad *_adde ._edccf ,_fcbg *_adde ._edccf ;
-if _adde ._ccceb ==TextVerticalAlignmentCenter {_gbad =_geedb -(_fcbg +(_ddbfad +_gfbe -_fcbg )/2+(_geedb -_fcbg )/2);};if len (_adde ._cgfdg )==1{_aacbg =_gacd ;}else {_aacbg =_aacbg -_geedb +_gacd ;};_gbad +=_gacd -_geedb ;switch _dadea ._gaff {case CellVerticalAlignmentTop :_gbad +=_gacd *0.5;
-case CellVerticalAlignmentBottom :_gbad -=_gacd *0.5;};_abade +=_adde ._gdfc .Left +_adde ._gdfc .Right ;_aacbg +=_adde ._gdfc .Top +_adde ._gdfc .Bottom ;case *Table :_abade =_gfagc ;case *List :_abade =_gfagc ;case *Division :_abade =_gfagc ;case *Chart :_abade =_gfagc ;
-case *Line :_aacbg +=_adde ._eadb .Top +_adde ._eadb .Bottom ;_gbad -=_adde .Height ()/2;};switch _dadea ._efed {case CellHorizontalAlignmentLeft :_dcda .X +=_dadea ._bcgf ;_dcda .Width -=_dadea ._bcgf ;case CellHorizontalAlignmentCenter :if _acaf :=_gfagc -_abade ;
-_acaf > 0{_dcda .X +=_acaf /2;_dcda .Width -=_acaf /2;};case CellHorizontalAlignmentRight :if _gfagc > _abade {_dcda .X =_dcda .X +_gfagc -_abade -_dadea ._bcgf ;_dcda .Width -=_dadea ._bcgf ;};};_afdf :=_dcda .Y ;_eage :=_dcda .Height ;_dcda .Y +=_gbad ;
-switch _dadea ._gaff {case CellVerticalAlignmentTop :case CellVerticalAlignmentMiddle :if _bbce :=_dgbf -_aacbg ;_bbce > 0{_dcda .Y +=_bbce /2;_dcda .Height -=_bbce /2;};case CellVerticalAlignmentBottom :if _dgbf > _aacbg {_dcda .Y =_dcda .Y +_dgbf -_aacbg ;
-_dcda .Height =_dgbf ;};};_gdcbb :=_deddc .DrawWithContext (_dadea ._afgda ,_dcda );if _gdcbb !=nil {_cf .Log .Debug ("\u0045R\u0052\u004f\u0052\u003a\u0020\u0025v",_gdcbb );};_dcda .Y =_afdf ;_dcda .Height =_eage ;};_dcda .Y +=_dgbf ;_dcda .Height -=_dgbf ;
-if _bcedc &&_cggff +1> _cdcf {_ffeb +=_bfag +_dgbf ;_fcda -=_dgbf +_bfag ;_dedgc =_gbeab ;_cggff =_abead -1;_bcedc =false ;};};_dbbdgg =append (_dbbdgg ,_deddc );if _deec ._fcca .IsAbsolute (){return _dbbdgg ,_dece ,nil ;};_dcda .X =_dece .X ;_dcda .Width =_dece .Width ;
-_dcda .Y +=_deec ._bbfa .Bottom ;_dcda .Height -=_deec ._bbfa .Bottom ;return _dbbdgg ,_dcda ,nil ;};
+// NewPageBreak create a new page break.
+func (_cebb *Creator )NewPageBreak ()*PageBreak {return _gaffdg ()};func (_dgdae *templateProcessor )parseBorderRadiusAttr (_ecab ,_bfbec string )(_dbdgd ,_dedg ,_ebge ,_bfgdc float64 ){_da .Log .Debug ("\u0050a\u0072\u0073i\u006e\u0067\u0020\u0062o\u0072\u0064\u0065r\u0020\u0072\u0061\u0064\u0069\u0075\u0073\u0020\u0061tt\u0072\u0069\u0062u\u0074\u0065:\u0020\u0028\u0060\u0025\u0073\u0060,\u0020\u0025s\u0029\u002e",_ecab ,_bfbec );
+switch _fcdc :=_cf .Fields (_bfbec );len (_fcdc ){case 1:_dbdgd ,_ =_fe .ParseFloat (_fcdc [0],64);_dedg =_dbdgd ;_ebge =_dbdgd ;_bfgdc =_dbdgd ;case 2:_dbdgd ,_ =_fe .ParseFloat (_fcdc [0],64);_ebge =_dbdgd ;_dedg ,_ =_fe .ParseFloat (_fcdc [1],64);_bfgdc =_dedg ;
+case 3:_dbdgd ,_ =_fe .ParseFloat (_fcdc [0],64);_dedg ,_ =_fe .ParseFloat (_fcdc [1],64);_bfgdc =_dedg ;_ebge ,_ =_fe .ParseFloat (_fcdc [2],64);case 4:_dbdgd ,_ =_fe .ParseFloat (_fcdc [0],64);_dedg ,_ =_fe .ParseFloat (_fcdc [1],64);_ebge ,_ =_fe .ParseFloat (_fcdc [2],64);
+_bfgdc ,_ =_fe .ParseFloat (_fcdc [3],64);};return _dbdgd ,_dedg ,_ebge ,_bfgdc ;};func _gfcee (_gcced float64 ,_fcdg float64 )float64 {return _fa .Round (_gcced /_fcdg )*_fcdg };func _aaefc (_adacc [][]_bg .Point )*Polygon {return &Polygon {_ebdcd :&_bg .Polygon {Points :_adacc },_aacf :1.0,_ecbgf :1.0};
+};
 
-// Paragraph represents text drawn with a specified font and can wrap across lines and pages.
-// By default it occupies the available width in the drawing context.
-type Paragraph struct{_ccaac string ;_befba *_gf .PdfFont ;_dgfa float64 ;_dbdc float64 ;_efefb Color ;_ebdd TextAlignment ;_bedd bool ;_bdcb float64 ;_dgfc int ;_fecaa bool ;_cegag float64 ;_eddc Margins ;_dced Positioning ;_fgfe float64 ;_cfcdd float64 ;
-_abfcg ,_gcbc float64 ;_edcc []string ;};
+// SetBorderWidth sets the border width of the rectangle.
+func (_decc *Rectangle )SetBorderWidth (bw float64 ){_decc ._egde =bw };
 
-// MoveX moves the drawing context to absolute position x.
-func (_gfad *Creator )MoveX (x float64 ){_gfad ._fagd .X =x };
+// SetStyleBottom sets border style for bottom side.
+func (_eccf *border )SetStyleBottom (style CellBorderStyle ){_eccf ._beb =style };func (_fgag *templateProcessor )parseAttrPropList (_cfgfd string )map[string ]string {_gfgcf :=_cf .Fields (_cfgfd );if len (_gfgcf )==0{return nil ;};_cggbe :=map[string ]string {};
+for _ ,_efcaf :=range _gfgcf {_fbaf :=_ggdbc .FindStringSubmatch (_efcaf );if len (_fbaf )< 3{continue ;};_ebcf ,_dgdb :=_cf .TrimSpace (_fbaf [1]),_fbaf [2];if _ebcf ==""{continue ;};_cggbe [_ebcf ]=_dgdb ;};return _cggbe ;};
 
-// DrawWithContext draws the Block using the specified drawing context.
-func (_edg *Block )DrawWithContext (d Drawable ,ctx DrawContext )error {_dag ,_ ,_ab :=d .GeneratePageBlocks (ctx );if _ab !=nil {return _ab ;};if len (_dag )!=1{return _d .New ("\u0074\u006f\u006f\u0020ma\u006e\u0079\u0020\u006f\u0075\u0074\u0070\u0075\u0074\u0020\u0062\u006c\u006f\u0063k\u0073");
-};for _ ,_edbd :=range _dag {if _aba :=_edg .mergeBlocks (_edbd );_aba !=nil {return _aba ;};};return nil ;};
+// Height returns the height of the chart.
+func (_beea *Chart )Height ()float64 {return float64 (_beea ._edbg .Height ())};
 
-// SetShowLinks sets visibility of links for the TOC lines.
-func (_bdcgd *TOC )SetShowLinks (showLinks bool ){_bdcgd ._afaba =showLinks };func _eagca (_daae *templateProcessor ,_eaebc *templateNode )(interface{},error ){return _daae .parseRectangle (_eaebc );};
+// ScaleToHeight scales the rectangle to the specified height. The width of
+// the rectangle is scaled so that the aspect ratio is maintained.
+func (_fccf *Rectangle )ScaleToHeight (h float64 ){_ggbf :=_fccf ._bfddd /_fccf ._abfd ;_fccf ._abfd =h ;_fccf ._bfddd =h *_ggbf ;};
 
-// TextAlignment options for paragraph.
-type TextAlignment int ;type rgbColor struct{_bef ,_gdcb ,_dbf float64 };func (_dcfgb *StyledParagraph )getTextWidth ()float64 {var _aefbc float64 ;_fcedc :=len (_dcfgb ._gdae );for _gabb ,_cggc :=range _dcfgb ._gdae {_ccbde :=&_cggc .Style ;_dgcbf :=len (_cggc .Text );
-for _dgag ,_bagb :=range _cggc .Text {if _bagb =='\u000A'{continue ;};_affg ,_daee :=_ccbde .Font .GetRuneMetrics (_bagb );if !_daee {_cf .Log .Debug ("\u0052\u0075\u006e\u0065\u0020\u0063\u0068\u0061\u0072\u0020\u006d\u0065\u0074\u0072\u0069c\u0073 \u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064\u0021\u0020\u0025\u0076\u000a",_bagb );
-return -1;};_aefbc +=_ccbde .FontSize *_affg .Wx *_ccbde .horizontalScale ();if _bagb !=' '&&(_gabb !=_fcedc -1||_dgag !=_dgcbf -1){_aefbc +=_ccbde .CharSpacing *1000.0;};};};return _aefbc ;};func _afcfg (_cbacf int )*Table {_fdaede :=&Table {_eeecb :_cbacf ,_ddee :10.0,_cdgf :[]float64 {},_gdgf :[]float64 {},_fdde :[]*TableCell {},_ebad :make ([]int ,_cbacf ),_cfdga :true };
-_fdaede .resetColumnWidths ();return _fdaede ;};
+// SetNoteStyle sets the style properties used to render the content of the
+// invoice note sections.
+func (_begc *Invoice )SetNoteStyle (style TextStyle ){_begc ._dabeb =style };func (_gdbg *templateProcessor )parseInt64Array (_degdg ,_cbcg string )[]int64 {_da .Log .Debug ("\u0050\u0061\u0072s\u0069\u006e\u0067\u0020\u0069\u006e\u0074\u0036\u0034\u0020\u0061\u0072\u0072\u0061\u0079\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0028\u0060%\u0073\u0060\u002c\u0020\u0025\u0073\u0029\u002e",_degdg ,_cbcg );
+_fggb :=_cf .Fields (_cbcg );_eggc :=make ([]int64 ,0,len (_fggb ));for _ ,_abdea :=range _fggb {_feae ,_ :=_fe .ParseInt (_abdea ,10,64);_eggc =append (_eggc ,_feae );};return _eggc ;};
+
+// AppendCurve appends a Bezier curve to the filled curve.
+func (_egdc *FilledCurve )AppendCurve (curve _bg .CubicBezierCurve )*FilledCurve {_egdc ._ddfce =append (_egdc ._ddfce ,curve );return _egdc ;};
+
+// SetTOC sets the table of content component of the creator.
+// This method should be used when building a custom table of contents.
+func (_eaed *Creator )SetTOC (toc *TOC ){if toc ==nil {return ;};_eaed ._fgde =toc ;};func (_aecff *templateProcessor )parseCellVerticalAlignmentAttr (_edced ,_eccbc string )CellVerticalAlignment {_da .Log .Debug ("\u0050\u0061\u0072\u0073\u0069\u006e\u0067\u0020\u0063\u0065\u006c\u006c\u0020\u0076\u0065r\u0074\u0069\u0063\u0061\u006c\u0020\u0061\u006c\u0069\u0067\u006e\u006d\u0065n\u0074\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a (\u0060\u0025\u0073\u0060\u002c\u0020\u0025\u0073\u0029\u002e",_edced ,_eccbc );
+_baafb :=map[string ]CellVerticalAlignment {"\u0074\u006f\u0070":CellVerticalAlignmentTop ,"\u006d\u0069\u0064\u0064\u006c\u0065":CellVerticalAlignmentMiddle ,"\u0062\u006f\u0074\u0074\u006f\u006d":CellVerticalAlignmentBottom }[_eccbc ];return _baafb ;
+};
+
+// Height returns the total height of all rows.
+func (_beecd *Table )Height ()float64 {_aaeaa :=float64 (0.0);for _ ,_fbdge :=range _beecd ._agda {_aaeaa +=_fbdge ;};return _aaeaa ;};
+
+// NoteStyle returns the style properties used to render the content of the
+// invoice note sections.
+func (_efcg *Invoice )NoteStyle ()TextStyle {return _efcg ._dabeb };func (_gbba *TemplateOptions )init (){if _gbba .SubtemplateMap ==nil {_gbba .SubtemplateMap =map[string ]_fg .Reader {};};if _gbba .FontMap ==nil {_gbba .FontMap =map[string ]*_fee .PdfFont {};
+};if _gbba .ImageMap ==nil {_gbba .ImageMap =map[string ]*_fee .Image {};};if _gbba .ColorMap ==nil {_gbba .ColorMap =map[string ]Color {};};if _gbba .ChartMap ==nil {_gbba .ChartMap =map[string ]_ef .ChartRenderable {};};};
+
+// Margins returns the margins of the list: left, right, top, bottom.
+func (_gbafa *List )Margins ()(float64 ,float64 ,float64 ,float64 ){return _gbafa ._bffg .Left ,_gbafa ._bffg .Right ,_gbafa ._bffg .Top ,_gbafa ._bffg .Bottom ;};func (_aegb *TOCLine )getLineLink ()*_fee .PdfAnnotation {if _aegb ._edbf <=0{return nil ;
+};return _gabgca (_aegb ._edbf -1,_aegb ._becg ,_aegb ._gfcef ,0);};func _geed (_cecd *_fee .PdfFont )TextStyle {return TextStyle {Color :ColorRGBFrom8bit (0,0,238),Font :_cecd ,FontSize :10,OutlineSize :1,HorizontalScaling :DefaultHorizontalScaling ,UnderlineStyle :TextDecorationLineStyle {Offset :1,Thickness :1}};
+};func (_dgcdg *templateProcessor )parseInt64Attr (_befc ,_abgg string )int64 {_da .Log .Debug ("\u0050\u0061rs\u0069\u006e\u0067 \u0069\u006e\u0074\u00364 a\u0074tr\u0069\u0062\u0075\u0074\u0065\u003a\u0020(`\u0025\u0073\u0060\u002c\u0020\u0025\u0073)\u002e",_befc ,_abgg );
+_gbgbd ,_ :=_fe .ParseInt (_abgg ,10,64);return _gbgbd ;};
+
+// Rectangle defines a rectangle with upper left corner at (x,y) and a specified width and height.  The rectangle
+// can have a colored fill and/or border with a specified width.
+// Implements the Drawable interface and can be drawn on PDF using the Creator.
+type Rectangle struct{_cfbab float64 ;_cffbf float64 ;_bfddd float64 ;_abfd float64 ;_fgaa Positioning ;_cdgf Color ;_ffdfg float64 ;_eggbc Color ;_egde float64 ;_cgbf float64 ;_egdce float64 ;_edac float64 ;_cdfge float64 ;_cfef float64 ;_gcag Margins ;
+_fefc FitMode ;};func (_fbfg *Table )clone ()*Table {_dfacc :=*_fbfg ;_dfacc ._agda =make ([]float64 ,len (_fbfg ._agda ));copy (_dfacc ._agda ,_fbfg ._agda );_dfacc ._fadgg =make ([]float64 ,len (_fbfg ._fadgg ));copy (_dfacc ._fadgg ,_fbfg ._fadgg );
+_dfacc ._afbaa =make ([]*TableCell ,0,len (_fbfg ._afbaa ));for _ ,_egfac :=range _fbfg ._afbaa {_bbcga :=*_egfac ;_bbcga ._fagfd =&_dfacc ;_dfacc ._afbaa =append (_dfacc ._afbaa ,&_bbcga );};return &_dfacc ;};
+
+// GetIndent get the cell's left indent.
+func (_dafbd *TableCell )GetIndent ()float64 {return _dafbd ._bdff };
+
+// ColorPoint is a pair of Color and a relative point where the color
+// would be rendered.
+type ColorPoint struct{_abfba Color ;_gfeg float64 ;};
+
+// SetBorderLineStyle sets border style (currently dashed or plain).
+func (_aacgbc *TableCell )SetBorderLineStyle (style _bg .LineStyle ){_aacgbc ._gaeaa =style };
+
+// Lines returns all the rows of the invoice line items table.
+func (_cbag *Invoice )Lines ()[][]*InvoiceCell {return _cbag ._ccbed };
+
+// NewCurvePolygon creates a new curve polygon.
+func (_fgbb *Creator )NewCurvePolygon (rings [][]_bg .CubicBezierCurve )*CurvePolygon {return _gdfbf (rings );};
+
+// Link returns link information for this line.
+func (_gbgfc *TOCLine )Link ()(_cfgcf int64 ,_ccfec ,_fdadd float64 ){return _gbgfc ._edbf ,_gbgfc ._becg ,_gbgfc ._gfcef ;};
 
 // NewPolyline creates a new polyline.
-func (_fdbdb *Creator )NewPolyline (points []_g .Point )*Polyline {return _bbgfe (points )};func (_aaada *templateProcessor )addNodeText (_bfge *templateNode ,_deafe string )error {_gaafe :=_bfge ._aeeaa ;if _gaafe ==nil {return nil ;};switch _ccac :=_gaafe .(type ){case *TextChunk :_ccac .Text =_deafe ;
-case *Paragraph :switch _bfge ._feaff .Name .Local {case "\u0063h\u0061p\u0074\u0065\u0072\u002d\u0068\u0065\u0061\u0064\u0069\u006e\u0067":if _bfge ._edcee !=nil {if _cgaef ,_cgdbe :=_bfge ._edcee ._aeeaa .(*Chapter );_cgdbe {_cgaef ._gfbfc =_deafe ;_ccac .SetText (_cgaef .headingText ());
-};};default:_ccac .SetText (_deafe );};};return nil ;};
+func (_affc *Creator )NewPolyline (points []_bg .Point )*Polyline {return _ceab (points )};
 
-// SetBackgroundColor sets the cell's background color.
-func (_afab *TableCell )SetBackgroundColor (col Color ){_afab ._gbge =col };
+// GeneratePageBlocks generate the Page blocks. Draws the Image on a block, implementing the Drawable interface.
+func (_adbga *Image )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){if _adbga ._aaae ==nil {if _feeda :=_adbga .makeXObject ();_feeda !=nil {return nil ,ctx ,_feeda ;};};var _bfbaa []*Block ;_gegf :=ctx ;_bdec :=NewBlock (ctx .PageWidth ,ctx .PageHeight );
+if _adbga ._agagd .IsRelative (){_adbga .applyFitMode (ctx .Width );ctx .X +=_adbga ._dgb .Left ;ctx .Y +=_adbga ._dgb .Top ;ctx .Width -=_adbga ._dgb .Left +_adbga ._dgb .Right ;ctx .Height -=_adbga ._dgb .Top +_adbga ._dgb .Bottom ;if _adbga ._eega > ctx .Height {_bfbaa =append (_bfbaa ,_bdec );
+_bdec =NewBlock (ctx .PageWidth ,ctx .PageHeight );ctx .Page ++;_edcb :=ctx ;_edcb .Y =ctx .Margins .Top +_adbga ._dgb .Top ;_edcb .X =ctx .Margins .Left +_adbga ._dgb .Left ;_edcb .Height =ctx .PageHeight -ctx .Margins .Top -ctx .Margins .Bottom -_adbga ._dgb .Top -_adbga ._dgb .Bottom ;
+_edcb .Width =ctx .PageWidth -ctx .Margins .Left -ctx .Margins .Right -_adbga ._dgb .Left -_adbga ._dgb .Right ;ctx =_edcb ;};}else {ctx .X =_adbga ._gbcdd ;ctx .Y =_adbga ._egbgf ;};ctx ,_eafa :=_ceaf (_bdec ,_adbga ,ctx );if _eafa !=nil {return nil ,ctx ,_eafa ;
+};_bfbaa =append (_bfbaa ,_bdec );if _adbga ._agagd .IsAbsolute (){ctx =_gegf ;}else {ctx .X =_gegf .X ;ctx .Width =_gegf .Width ;ctx .Y +=_adbga ._dgb .Bottom ;};return _bfbaa ,ctx ,nil ;};
 
-// CellHorizontalAlignment defines the table cell's horizontal alignment.
-type CellHorizontalAlignment int ;
+// SetTextAlignment sets the horizontal alignment of the text within the space provided.
+func (_afdab *StyledParagraph )SetTextAlignment (align TextAlignment ){_afdab ._fdge =align };
 
-// NewDivision returns a new Division container component.
-func (_aacad *Creator )NewDivision ()*Division {return _cbb ()};
+// SetBackgroundColor set background color of the shading area.
+//
+// By default the background color is set to white.
+func (_fgdd *shading )SetBackgroundColor (backgroundColor Color ){_fgdd ._bbcfd =backgroundColor };
 
-// Width returns the width of the chart. In relative positioning mode,
-// all the available context width is used at render time.
-func (_cga *Chart )Width ()float64 {return float64 (_cga ._dde .Width ())};
+// SetOpacity sets opacity for Image.
+func (_fefe *Image )SetOpacity (opacity float64 ){_fefe ._edcd =opacity };
 
-// NewPage adds a new Page to the Creator and sets as the active Page.
-func (_bgbc *Creator )NewPage ()*_gf .PdfPage {_aaea :=_bgbc .newPage ();_bgbc ._geac =append (_bgbc ._geac ,_aaea );_bgbc ._fagd .Page ++;return _aaea ;};
+// GetMargins returns the Chapter's margin: left, right, top, bottom.
+func (_ceeb *Chapter )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _ceeb ._bcbb .Left ,_ceeb ._bcbb .Right ,_ceeb ._bcbb .Top ,_ceeb ._bcbb .Bottom ;};
 
-// SetWidthLeft sets border width for left.
-func (_bff *border )SetWidthLeft (bw float64 ){_bff ._bac =bw };
+// GeneratePageBlocks draws the line on a new block representing the page.
+// Implements the Drawable interface.
+func (_adfbb *Line )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){var (_beaf []*Block ;_cbeg =NewBlock (ctx .PageWidth ,ctx .PageHeight );_becf =ctx ;_fgeca ,_bcfd =_adfbb ._bcgf ,ctx .PageHeight -_adfbb ._fgba ;_dafg ,_acad =_adfbb ._ecec ,ctx .PageHeight -_adfbb ._daac ;
+);_bfafd :=_adfbb ._aede .IsRelative ();if _bfafd {ctx .X +=_adfbb ._cfdcg .Left ;ctx .Y +=_adfbb ._cfdcg .Top ;ctx .Width -=_adfbb ._cfdcg .Left +_adfbb ._cfdcg .Right ;ctx .Height -=_adfbb ._cfdcg .Top +_adfbb ._cfdcg .Bottom ;_fgeca ,_bcfd ,_dafg ,_acad =_adfbb .computeCoords (ctx );
+if _adfbb .Height ()> ctx .Height {_beaf =append (_beaf ,_cbeg );_cbeg =NewBlock (ctx .PageWidth ,ctx .PageHeight );ctx .Page ++;_baec :=ctx ;_baec .Y =ctx .Margins .Top +_adfbb ._cfdcg .Top ;_baec .X =ctx .Margins .Left +_adfbb ._cfdcg .Left ;_baec .Height =ctx .PageHeight -ctx .Margins .Top -ctx .Margins .Bottom -_adfbb ._cfdcg .Top -_adfbb ._cfdcg .Bottom ;
+_baec .Width =ctx .PageWidth -ctx .Margins .Left -ctx .Margins .Right -_adfbb ._cfdcg .Left -_adfbb ._cfdcg .Right ;ctx =_baec ;_fgeca ,_bcfd ,_dafg ,_acad =_adfbb .computeCoords (ctx );};};_aega :=_bg .BasicLine {X1 :_fgeca ,Y1 :_bcfd ,X2 :_dafg ,Y2 :_acad ,LineColor :_cfd (_adfbb ._bec ),Opacity :_adfbb ._dcfe ,LineWidth :_adfbb ._bdfc ,LineStyle :_adfbb ._gffb ,DashArray :_adfbb ._fafa ,DashPhase :_adfbb ._ccgd };
+_dcfa ,_ggcb :=_cbeg .setOpacity (1.0,_adfbb ._dcfe );if _ggcb !=nil {return nil ,ctx ,_ggcb ;};_bcbe ,_ ,_ggcb :=_aega .Draw (_dcfa );if _ggcb !=nil {return nil ,ctx ,_ggcb ;};if _ggcb =_cbeg .addContentsByString (string (_bcbe ));_ggcb !=nil {return nil ,ctx ,_ggcb ;
+};if _bfafd {ctx .X =_becf .X ;ctx .Width =_becf .Width ;_bbba :=_adfbb .Height ();ctx .Y +=_bbba +_adfbb ._cfdcg .Bottom ;ctx .Height -=_bbba ;}else {ctx =_becf ;};_beaf =append (_beaf ,_cbeg );return _beaf ,ctx ,nil ;};func (_gbecc *templateProcessor )parseCellAlignmentAttr (_beca ,_effcb string )CellHorizontalAlignment {_da .Log .Debug ("\u0050a\u0072\u0073i\u006e\u0067\u0020c\u0065\u006c\u006c\u0020\u0061\u006c\u0069g\u006e\u006d\u0065\u006e\u0074\u0020a\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0028`\u0025\u0073\u0060\u002c\u0020\u0025\u0073\u0029\u002e",_beca ,_effcb );
+_cegadb :=map[string ]CellHorizontalAlignment {"\u006c\u0065\u0066\u0074":CellHorizontalAlignmentLeft ,"\u0063\u0065\u006e\u0074\u0065\u0072":CellHorizontalAlignmentCenter ,"\u0072\u0069\u0067h\u0074":CellHorizontalAlignmentRight }[_effcb ];return _cegadb ;
+};func (_dcdc *templateProcessor )parseParagraph (_gbcbg *templateNode ,_cbfc *Paragraph )(interface{},error ){if _cbfc ==nil {_cbfc =_dcdc .creator .NewParagraph ("");};for _ ,_gegd :=range _gbcbg ._bdbga .Attr {_dedb :=_gegd .Value ;switch _efaa :=_gegd .Name .Local ;
+_efaa {case "\u0066\u006f\u006e\u0074":_cbfc .SetFont (_dcdc .parseFontAttr (_efaa ,_dedb ));case "\u0066o\u006e\u0074\u002d\u0073\u0069\u007ae":_cbfc .SetFontSize (_dcdc .parseFloatAttr (_efaa ,_dedb ));case "\u0074\u0065\u0078\u0074\u002d\u0061\u006c\u0069\u0067\u006e":_cbfc .SetTextAlignment (_dcdc .parseTextAlignmentAttr (_efaa ,_dedb ));
+case "l\u0069\u006e\u0065\u002d\u0068\u0065\u0069\u0067\u0068\u0074":_cbfc .SetLineHeight (_dcdc .parseFloatAttr (_efaa ,_dedb ));case "e\u006e\u0061\u0062\u006c\u0065\u002d\u0077\u0072\u0061\u0070":_cbfc .SetEnableWrap (_dcdc .parseBoolAttr (_efaa ,_dedb ));
+case "\u0063\u006f\u006co\u0072":_cbfc .SetColor (_dcdc .parseColorAttr (_efaa ,_dedb ));case "\u0078":_cbfc .SetPos (_dcdc .parseFloatAttr (_efaa ,_dedb ),_cbfc ._bfcd );case "\u0079":_cbfc .SetPos (_cbfc ._gbfc ,_dcdc .parseFloatAttr (_efaa ,_dedb ));
+case "\u0061\u006e\u0067l\u0065":_cbfc .SetAngle (_dcdc .parseFloatAttr (_efaa ,_dedb ));case "\u006d\u0061\u0072\u0067\u0069\u006e":_gbab :=_dcdc .parseMarginAttr (_efaa ,_dedb );_cbfc .SetMargins (_gbab .Left ,_gbab .Right ,_gbab .Top ,_gbab .Bottom );
+case "\u006da\u0078\u002d\u006c\u0069\u006e\u0065s":_cbfc .SetMaxLines (int (_dcdc .parseInt64Attr (_efaa ,_dedb )));default:_da .Log .Debug ("\u0055\u006e\u0073\u0075\u0070\u0070\u006f\u0072t\u0065\u0064\u0020pa\u0072\u0061\u0067\u0072\u0061\u0070h\u0020\u0061\u0074\u0074\u0072\u0069\u0062\u0075\u0074\u0065\u003a\u0020\u0060\u0025\u0073`\u002e\u0020\u0053\u006b\u0069\u0070\u0070\u0069n\u0067\u002e",_efaa );
+};};return _cbfc ,nil ;};
 
-// Width returns the width of the ellipse.
-func (_ceag *Ellipse )Width ()float64 {return _ceag ._bcce };
+// SetNumber sets the number of the invoice.
+func (_bcdbf *Invoice )SetNumber (number string )(*InvoiceCell ,*InvoiceCell ){_bcdbf ._agebg [1].Value =number ;return _bcdbf ._agebg [0],_bcdbf ._agebg [1];};
+
+// SetBuyerAddress sets the buyer address of the invoice.
+func (_bfddf *Invoice )SetBuyerAddress (address *InvoiceAddress ){_bfddf ._aedg =address };
+
+// LinearShading holds data for rendering a linear shading gradient.
+type LinearShading struct{_adece *shading ;_ecbd *_fee .PdfRectangle ;_fcfba float64 ;};
+
+// SetMargins sets the margins of the component. The margins are applied
+// around the division.
+func (_afcg *Division )SetMargins (left ,right ,top ,bottom float64 ){_afcg ._ceeba .Left =left ;_afcg ._ceeba .Right =right ;_afcg ._ceeba .Top =top ;_afcg ._ceeba .Bottom =bottom ;};
+
+// SetAngle sets the rotation angle of the text.
+func (_dgfe *Paragraph )SetAngle (angle float64 ){_dgfe ._abgcb =angle };func (_cafde *listItem )ctxHeight (_adda float64 )float64 {var _feeb float64 ;switch _ebeb :=_cafde ._eaca .(type ){case *Paragraph :if _ebeb ._ccee {_ebeb .SetWidth (_adda -_ebeb ._efbg .Horizontal ());
+};_feeb =_ebeb .Height ()+_ebeb ._efbg .Vertical ();_feeb +=0.5*_ebeb ._bgef *_ebeb ._adgg ;case *StyledParagraph :if _ebeb ._egge {_ebeb .SetWidth (_adda -_ebeb ._eebag .Horizontal ());};_feeb =_ebeb .Height ()+_ebeb ._eebag .Vertical ();_feeb +=0.5*_ebeb .getTextHeight ();
+case *List :_ddce :=_adda -_cafde ._aeaf .Width ()-_ebeb ._bffg .Horizontal ()-_ebeb ._cfffc ;_feeb =_ebeb .ctxHeight (_ddce )+_ebeb ._bffg .Vertical ();case *Image :_feeb =_ebeb .Height ()+_ebeb ._dgb .Vertical ();case *Division :_gcgcd :=_adda -_cafde ._aeaf .Width ()-_ebeb ._ceeba .Horizontal ();
+_feeb =_ebeb .ctxHeight (_gcgcd )+_ebeb ._ceeba .Vertical ();case *Table :_ecdga :=_adda -_cafde ._aeaf .Width ()-_ebeb ._dceg .Horizontal ();_ebeb .updateRowHeights (_ecdga );_feeb =_ebeb .Height ()+_ebeb ._dceg .Vertical ();default:_feeb =_cafde ._eaca .Height ();
+};return _feeb ;};
+
+// SkipRows skips over a specified number of rows in the table.
+func (_abccg *Table )SkipRows (num int ){_dbaaa :=num *_abccg ._fcfd -1;if _dbaaa < 0{_da .Log .Debug ("\u0054\u0061\u0062\u006c\u0065:\u0020\u0063\u0061\u006e\u006e\u006f\u0074\u0020\u0073\u006b\u0069\u0070\u0020b\u0061\u0063\u006b\u0020\u0074\u006f\u0020\u0070\u0072\u0065\u0076\u0069\u006f\u0075\u0073\u0020\u0063\u0065\u006c\u006c\u0073");
+return ;};_abccg ._gacbf +=_dbaaa ;};
+
+// NewRadialGradientColor creates a radial gradient color that could act as a color in other componenents.
+// Note: The innerRadius must be smaller than outerRadius for the circle to render properly.
+func (_dafd *Creator )NewRadialGradientColor (x float64 ,y float64 ,innerRadius float64 ,outerRadius float64 ,colorPoints []*ColorPoint )*RadialShading {return _bafd (x ,y ,innerRadius ,outerRadius ,colorPoints );};
+
+// SetBorder sets the cell's border style.
+func (_gabgc *TableCell )SetBorder (side CellBorderSide ,style CellBorderStyle ,width float64 ){if style ==CellBorderStyleSingle &&side ==CellBorderSideAll {_gabgc ._fgfda =CellBorderStyleSingle ;_gabgc ._bcdfe =width ;_gabgc ._gefeba =CellBorderStyleSingle ;
+_gabgc ._fabe =width ;_gabgc ._egea =CellBorderStyleSingle ;_gabgc ._bdga =width ;_gabgc ._acdfc =CellBorderStyleSingle ;_gabgc ._cbcbcg =width ;}else if style ==CellBorderStyleDouble &&side ==CellBorderSideAll {_gabgc ._fgfda =CellBorderStyleDouble ;_gabgc ._bcdfe =width ;
+_gabgc ._gefeba =CellBorderStyleDouble ;_gabgc ._fabe =width ;_gabgc ._egea =CellBorderStyleDouble ;_gabgc ._bdga =width ;_gabgc ._acdfc =CellBorderStyleDouble ;_gabgc ._cbcbcg =width ;}else if (style ==CellBorderStyleSingle ||style ==CellBorderStyleDouble )&&side ==CellBorderSideLeft {_gabgc ._fgfda =style ;
+_gabgc ._bcdfe =width ;}else if (style ==CellBorderStyleSingle ||style ==CellBorderStyleDouble )&&side ==CellBorderSideBottom {_gabgc ._gefeba =style ;_gabgc ._fabe =width ;}else if (style ==CellBorderStyleSingle ||style ==CellBorderStyleDouble )&&side ==CellBorderSideRight {_gabgc ._egea =style ;
+_gabgc ._bdga =width ;}else if (style ==CellBorderStyleSingle ||style ==CellBorderStyleDouble )&&side ==CellBorderSideTop {_gabgc ._acdfc =style ;_gabgc ._cbcbcg =width ;};};
+
+// TextDecorationLineStyle represents the style of lines used to decorate
+// a text chunk (e.g. underline).
+type TextDecorationLineStyle struct{
+
+// Color represents the color of the line (default: the color of the text).
+Color Color ;
+
+// Offset represents the vertical offset of the line (default: 1).
+Offset float64 ;
+
+// Thickness represents the thickness of the line (default: 1).
+Thickness float64 ;};
+
+// MoveDown moves the drawing context down by relative displacement dy (negative goes up).
+func (_bebe *Creator )MoveDown (dy float64 ){_bebe ._ddd .Y +=dy };
+
+// Line defines a line between point 1 (X1, Y1) and point 2 (X2, Y2).
+// The line width, color, style (solid or dashed) and opacity can be
+// configured. Implements the Drawable interface.
+type Line struct{_bcgf float64 ;_fgba float64 ;_ecec float64 ;_daac float64 ;_bec Color ;_gffb _bg .LineStyle ;_dcfe float64 ;_fafa []int64 ;_ccgd int64 ;_bdfc float64 ;_aede Positioning ;_fgcc FitMode ;_cfdcg Margins ;};
+
+// Flip flips the active page on the specified axes.
+// If `flipH` is true, the page is flipped horizontally. Similarly, if `flipV`
+// is true, the page is flipped vertically. If both are true, the page is
+// flipped both horizontally and vertically.
+// NOTE: the flip transformations are applied when the creator is finalized,
+// which is at write time in most cases.
+func (_aeebe *Creator )Flip (flipH ,flipV bool )error {_efff :=_aeebe .getActivePage ();if _efff ==nil {return _d .New ("\u006e\u006f\u0020\u0070\u0061\u0067\u0065\u0020\u0061c\u0074\u0069\u0076\u0065");};_gbge ,_dbcc :=_aeebe ._ecbb [_efff ];if !_dbcc {_gbge =&pageTransformations {};
+_aeebe ._ecbb [_efff ]=_gbge ;};_gbge ._ceeg =flipH ;_gbge ._agc =flipV ;return nil ;};
+
+// SetBoundingBox set gradient color bounding box where the gradient would be rendered.
+func (_dede *LinearShading )SetBoundingBox (x ,y ,width ,height float64 ){_dede ._ecbd =&_fee .PdfRectangle {Llx :x ,Lly :y ,Urx :x +width ,Ury :y +height };};
 
 // Fit fits the chunk into the specified bounding box, cropping off the
 // remainder in a new chunk, if it exceeds the specified dimensions.
 // NOTE: The method assumes a line height of 1.0. In order to account for other
 // line height values, the passed in height must be divided by the line height:
 // height = height / lineHeight
-func (_dafec *TextChunk )Fit (width ,height float64 )(*TextChunk ,error ){_afaae ,_cbbf :=_dafec .Wrap (width );if _cbbf !=nil {return nil ,_cbbf ;};_gageg :=int (height /_dafec .Style .FontSize );if _gageg >=len (_afaae ){return nil ,nil ;};_accec :="\u000a";
-_dafec .Text =_eg .Replace (_eg .Join (_afaae [:_gageg ],"\u0020"),_accec +"\u0020",_accec ,-1);_gffg :=_eg .Replace (_eg .Join (_afaae [_gageg :],"\u0020"),_accec +"\u0020",_accec ,-1);return NewTextChunk (_gffg ,_dafec .Style ),nil ;};func (_ecad *Chapter )headingNumber ()string {var _bcgc string ;
-if _ecad ._agbcd {if _ecad ._fagg !=0{_bcgc =_egd .Itoa (_ecad ._fagg )+"\u002e";};if _ecad ._bcgb !=nil {_gdcg :=_ecad ._bcgb .headingNumber ();if _gdcg !=""{_bcgc =_gdcg +_bcgc ;};};};return _bcgc ;};
+func (_edada *TextChunk )Fit (width ,height float64 )(*TextChunk ,error ){_acab ,_bacd :=_edada .Wrap (width );if _bacd !=nil {return nil ,_bacd ;};_bdad :=int (height /_edada .Style .FontSize );if _bdad >=len (_acab ){return nil ,nil ;};_beeda :="\u000a";
+_edada .Text =_cf .Replace (_cf .Join (_acab [:_bdad ],"\u0020"),_beeda +"\u0020",_beeda ,-1);_ecfc :=_cf .Replace (_cf .Join (_acab [_bdad :],"\u0020"),_beeda +"\u0020",_beeda ,-1);return NewTextChunk (_ecfc ,_edada .Style ),nil ;};
 
-// Height returns the height of the Paragraph. The height is calculated based on the input text and
-// how it is wrapped within the container. Does not include Margins.
-func (_dcgd *Paragraph )Height ()float64 {_dcgd .wrapText ();return float64 (len (_dcgd ._edcc ))*_dcgd ._dbdc *_dcgd ._dgfa ;};func _aafa (_egdba *templateProcessor ,_bcff *templateNode )(interface{},error ){return _egdba .parseChapterHeading (_bcff );
-};
+// CurvePolygon represents a curve polygon shape.
+// Implements the Drawable interface and can be drawn on PDF using the Creator.
+type CurvePolygon struct{_aaee *_bg .CurvePolygon ;_febb float64 ;_efeb float64 ;_agf Color ;};
 
-// PageFinalizeFunctionArgs holds the input arguments provided to the page
-// finalize callback function which can be set using Creator.PageFinalize.
-type PageFinalizeFunctionArgs struct{PageNum int ;PageWidth float64 ;PageHeight float64 ;TOCPages int ;TotalPages int ;};
+// BorderWidth returns the border width of the rectangle.
+func (_bddf *Rectangle )BorderWidth ()float64 {return _bddf ._egde };
+
+// Write output of creator to io.Writer interface.
+func (_cecg *Creator )Write (ws _fg .Writer )error {if _gdgg :=_cecg .Finalize ();_gdgg !=nil {return _gdgg ;};_efcf :=_fee .NewPdfWriter ();_efcf .SetOptimizer (_cecg ._cecf );if _cecg ._ebgd !=nil {_bacc :=_efcf .SetForms (_cecg ._ebgd );if _bacc !=nil {_da .Log .Debug ("F\u0061\u0069\u006c\u0075\u0072\u0065\u003a\u0020\u0025\u0076",_bacc );
+return _bacc ;};};if _cecg ._eaa !=nil {_efcf .AddOutlineTree (_cecg ._eaa );}else if _cecg ._aeff !=nil &&_cecg .AddOutlines {_efcf .AddOutlineTree (&_cecg ._aeff .ToPdfOutline ().PdfOutlineTreeNode );};if _cecg ._dce !=nil {if _addf :=_efcf .SetPageLabels (_cecg ._dce );
+_addf !=nil {_da .Log .Debug ("\u0045\u0052RO\u0052\u003a\u0020C\u006f\u0075\u006c\u0064 no\u0074 s\u0065\u0074\u0020\u0070\u0061\u0067\u0065 l\u0061\u0062\u0065\u006c\u0073\u003a\u0020%\u0076",_addf );return _addf ;};};if _cecg ._gbc !=nil {for _ ,_gdgb :=range _cecg ._gbc {_cca :=_gdgb .SubsetRegistered ();
+if _cca !=nil {_da .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0043\u006f\u0075\u006c\u0064\u0020\u006e\u006ft\u0020s\u0075\u0062\u0073\u0065\u0074\u0020\u0066\u006f\u006e\u0074\u003a\u0020\u0025\u0076",_cca );return _cca ;};};};if _cecg ._bcaa !=nil {_afbc :=_cecg ._bcaa (&_efcf );
+if _afbc !=nil {_da .Log .Debug ("F\u0061\u0069\u006c\u0075\u0072\u0065\u003a\u0020\u0025\u0076",_afbc );return _afbc ;};};for _ ,_fcdf :=range _cecg ._adbg {_bdge :=_efcf .AddPage (_fcdf );if _bdge !=nil {_da .Log .Error ("\u0046\u0061\u0069\u006ced\u0020\u0074\u006f\u0020\u0061\u0064\u0064\u0020\u0050\u0061\u0067\u0065\u003a\u0020%\u0076",_bdge );
+return _bdge ;};};_efb :=_efcf .Write (ws );if _efb !=nil {return _efb ;};return nil ;};type templateNode struct{_bdced interface{};_bdbga _e .StartElement ;_bdgb *templateNode ;};func (_fge *Block )transform (_gbe _bc .Matrix ){_bed :=_ebc .NewContentCreator ().Add_cm (_gbe [0],_gbe [1],_gbe [3],_gbe [4],_gbe [6],_gbe [7]).Operations ();
+*_fge ._db =append (*_bed ,*_fge ._db ...);_fge ._db .WrapIfNeeded ();};
+
+// TOC returns the table of contents component of the creator.
+func (_ccf *Creator )TOC ()*TOC {return _ccf ._fgde };
+
+// Scale scales Image by a constant factor, both width and height.
+func (_ada *Image )Scale (xFactor ,yFactor float64 ){_ada ._edda =xFactor *_ada ._edda ;_ada ._eega =yFactor *_ada ._eega ;};
+
+// Rows returns the total number of rows the table has.
+func (_dgeeb *Table )Rows ()int {return _dgeeb ._edde };func (_debaa *templateProcessor )parseTextOverflowAttr (_gfbec ,_cdfec string )TextOverflow {_da .Log .Debug ("\u0050a\u0072\u0073i\u006e\u0067\u0020\u0074e\u0078\u0074\u0020o\u0076\u0065\u0072\u0066\u006c\u006f\u0077\u0020\u0061tt\u0072\u0069\u0062u\u0074\u0065:\u0020\u0028\u0060\u0025\u0073\u0060,\u0020\u0025s\u0029\u002e",_gfbec ,_cdfec );
+_bfdfa :=map[string ]TextOverflow {"\u0076i\u0073\u0069\u0062\u006c\u0065":TextOverflowVisible ,"\u0068\u0069\u0064\u0064\u0065\u006e":TextOverflowHidden }[_cdfec ];return _bfdfa ;};
+
+// FillColor returns the fill color of the ellipse.
+func (_ddea *Ellipse )FillColor ()Color {return _ddea ._dbeaf };
+
+// SetBorderColor sets border color of the rectangle.
+func (_fcca *Rectangle )SetBorderColor (col Color ){_fcca ._eggbc =col };
+
+// NewParagraph creates a new text paragraph.
+// Default attributes:
+// Font: Helvetica,
+// Font size: 10
+// Encoding: WinAnsiEncoding
+// Wrap: enabled
+// Text color: black
+func (_fef *Creator )NewParagraph (text string )*Paragraph {return _beeg (text ,_fef .NewTextStyle ())};
+
+// GetOptimizer returns current PDF optimizer.
+func (_abdg *Creator )GetOptimizer ()_fee .Optimizer {return _abdg ._cecf };
+
+// Height returns the current page height.
+func (_fbacg *Creator )Height ()float64 {return _fbacg ._cec };
+
+// GeneratePageBlocks draws the composite curve polygon on a new block
+// representing the page. Implements the Drawable interface.
+func (_gcgf *CurvePolygon )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){_abge :=NewBlock (ctx .PageWidth ,ctx .PageHeight );_bccb ,_ebgg :=_abge .setOpacity (_gcgf ._febb ,_gcgf ._efeb );if _ebgg !=nil {return nil ,ctx ,_ebgg ;};
+_caaf :=_gcgf ._aaee ;_caaf .FillEnabled =_caaf .FillColor !=nil ;_caaf .BorderEnabled =_caaf .BorderColor !=nil &&_caaf .BorderWidth > 0;var (_fecd =ctx .PageHeight ;_deba =_caaf .Rings ;_cdcgg =make ([][]_bg .CubicBezierCurve ,0,len (_caaf .Rings ));
+);_bbbc :=_fee .PdfRectangle {};if len (_deba )> 0&&len (_deba [0])> 0{_adff :=_deba [0][0];_adff .P0 .Y =_fecd -_adff .P0 .Y ;_adff .P1 .Y =_fecd -_adff .P1 .Y ;_adff .P2 .Y =_fecd -_adff .P2 .Y ;_adff .P3 .Y =_fecd -_adff .P3 .Y ;_bbbc =_adff .GetBounds ();
+};for _ ,_cdce :=range _deba {_decb :=make ([]_bg .CubicBezierCurve ,0,len (_cdce ));for _ ,_bbbcf :=range _cdce {_gdfe :=_bbbcf ;_gdfe .P0 .Y =_fecd -_gdfe .P0 .Y ;_gdfe .P1 .Y =_fecd -_gdfe .P1 .Y ;_gdfe .P2 .Y =_fecd -_gdfe .P2 .Y ;_gdfe .P3 .Y =_fecd -_gdfe .P3 .Y ;
+_decb =append (_decb ,_gdfe );_ceag :=_gdfe .GetBounds ();_bbbc .Llx =_fa .Min (_bbbc .Llx ,_ceag .Llx );_bbbc .Lly =_fa .Min (_bbbc .Lly ,_ceag .Lly );_bbbc .Urx =_fa .Max (_bbbc .Urx ,_ceag .Urx );_bbbc .Ury =_fa .Max (_bbbc .Ury ,_ceag .Ury );};_cdcgg =append (_cdcgg ,_decb );
+};_caaf .Rings =_cdcgg ;defer func (){_caaf .Rings =_deba }();if _caaf .FillEnabled {_fdga :=_aacgba (_abge ,_gcgf ._aaee .FillColor ,_gcgf ._agf ,func ()Rectangle {return Rectangle {_cfbab :_bbbc .Llx ,_cffbf :_bbbc .Lly ,_bfddd :_bbbc .Width (),_abfd :_bbbc .Height ()};
+});if _fdga !=nil {return nil ,ctx ,_fdga ;};};_feg ,_ ,_ebgg :=_caaf .Draw (_bccb );if _ebgg !=nil {return nil ,ctx ,_ebgg ;};if _ebgg =_abge .addContentsByString (string (_feg ));_ebgg !=nil {return nil ,ctx ,_ebgg ;};return []*Block {_abge },ctx ,nil ;
+};func _bdcgb (_efbfe *templateProcessor ,_bdfa *templateNode )(interface{},error ){return _efbfe .parsePageBreak (_bdfa );};
+
+// NewPage adds a new Page to the Creator and sets as the active Page.
+func (_cfgc *Creator )NewPage ()*_fee .PdfPage {_bafa :=_cfgc .newPage ();_cfgc ._adbg =append (_cfgc ._adbg ,_bafa );_cfgc ._ddd .Page ++;return _bafa ;};
+
+// SetColumns overwrites any columns in the line items table. This should be
+// called before AddLine.
+func (_gacde *Invoice )SetColumns (cols []*InvoiceCell ){_gacde ._eaafb =cols };
+
+// GetMargins returns the margins of the line: left, right, top, bottom.
+func (_fcegg *Line )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _fcegg ._cfdcg .Left ,_fcegg ._cfdcg .Right ,_fcegg ._cfdcg .Top ,_fcegg ._cfdcg .Bottom ;};
+
+// Paragraph represents text drawn with a specified font and can wrap across lines and pages.
+// By default it occupies the available width in the drawing context.
+type Paragraph struct{_fagf string ;_gbdaa *_fee .PdfFont ;_bgef float64 ;_adgg float64 ;_cfae Color ;_afcfe TextAlignment ;_ccee bool ;_bgdg float64 ;_afaa int ;_ecfa bool ;_abgcb float64 ;_efbg Margins ;_fgecf Positioning ;_gbfc float64 ;_bfcd float64 ;
+_fbaa ,_egag float64 ;_fcda []string ;};
+
+// NewChapter creates a new chapter with the specified title as the heading.
+func (_bcfb *Creator )NewChapter (title string )*Chapter {_bcfb ._afba ++;_bcag :=_bcfb .NewTextStyle ();_bcag .FontSize =16;return _eca (nil ,_bcfb ._fgde ,_bcfb ._aeff ,title ,_bcfb ._afba ,_bcag );};
+
+// SetLineOpacity sets the line opacity.
+func (_aacd *Polyline )SetLineOpacity (opacity float64 ){_aacd ._eadf =opacity };
 
 // MoveRight moves the drawing context right by relative displacement dx (negative goes left).
-func (_ddbf *Creator )MoveRight (dx float64 ){_ddbf ._fagd .X +=dx };
+func (_baa *Creator )MoveRight (dx float64 ){_baa ._ddd .X +=dx };
 
-// AddressHeadingStyle returns the style properties used to render the
-// heading of the invoice address sections.
-func (_cgd *Invoice )AddressHeadingStyle ()TextStyle {return _cgd ._geea };type fontMetrics struct{_eegac float64 ;_aeae float64 ;_acggec float64 ;_gbfbe float64 ;};func _cecag (_geca string ,_dbad ,_adae TextStyle )*TOC {_fedaf :=_adae ;_fedaf .FontSize =14;
-_daaf :=_ebab (_fedaf );_daaf .SetEnableWrap (true );_daaf .SetTextAlignment (TextAlignmentLeft );_daaf .SetMargins (0,0,0,5);_ffga :=_daaf .Append (_geca );_ffga .Style =_fedaf ;return &TOC {_faef :_daaf ,_baabb :[]*TOCLine {},_gbda :_dbad ,_cgddd :_dbad ,_fadbf :_dbad ,_daadg :_dbad ,_edddb :"\u002e",_bgece :10,_eegf :Margins {0,0,2,2},_gecb :PositionRelative ,_eeeeb :_dbad ,_afaba :true };
+// SetBorderOpacity sets the border opacity of the rectangle.
+func (_fecb *Rectangle )SetBorderOpacity (opacity float64 ){_fecb ._cgbf =opacity };
+
+// Polyline represents a slice of points that are connected as straight lines.
+// Implements the Drawable interface and can be rendered using the Creator.
+type Polyline struct{_dadfd *_bg .Polyline ;_eadf float64 ;};
+
+// SetStyle sets the style for all the line components: number, title,
+// separator, page.
+func (_decgb *TOCLine )SetStyle (style TextStyle ){_decgb .Number .Style =style ;_decgb .Title .Style =style ;_decgb .Separator .Style =style ;_decgb .Page .Style =style ;};func _agae (_bfb _ef .ChartRenderable )*Chart {return &Chart {_edbg :_bfb ,_gge :PositionRelative ,_cgc :Margins {Top :10,Bottom :10}};
 };
 
-// Inline returns whether the inline mode of the division is active.
-func (_gedbe *Division )Inline ()bool {return _gedbe ._bgbcc };func _fgeee (_aefde string )([]string ,error ){var (_cbace []string ;_dcfcg []rune ;);for _ ,_debcb :=range _aefde {if _debcb =='\u000A'{if len (_dcfcg )> 0{_cbace =append (_cbace ,string (_dcfcg ));
-};_cbace =append (_cbace ,string (_debcb ));_dcfcg =nil ;continue ;};_dcfcg =append (_dcfcg ,_debcb );};if len (_dcfcg )> 0{_cbace =append (_cbace ,string (_dcfcg ));};var _gabgb []string ;for _ ,_efeef :=range _cbace {_dbfeg :=[]rune (_efeef );_afeg :=_bc .NewScanner (_dbfeg );
-var _bcdda []rune ;for _dbae :=0;_dbae < len (_dbfeg );_dbae ++{_ ,_aacc ,_bccgb :=_afeg .Next ();if _bccgb !=nil {return nil ,_bccgb ;};if _aacc ==_bc .BreakProhibited ||_dc .IsSpace (_dbfeg [_dbae ]){_bcdda =append (_bcdda ,_dbfeg [_dbae ]);if _dc .IsSpace (_dbfeg [_dbae ]){_gabgb =append (_gabgb ,string (_bcdda ));
-_bcdda =[]rune {};};continue ;}else {if len (_bcdda )> 0{_gabgb =append (_gabgb ,string (_bcdda ));};_bcdda =[]rune {_dbfeg [_dbae ]};};};if len (_bcdda )> 0{_gabgb =append (_gabgb ,string (_bcdda ));};};return _gabgb ,nil ;};func (_dfceb *StyledParagraph )split (_cece DrawContext )(_effae ,_bffa *StyledParagraph ,_bdaae error ){if _bdaae =_dfceb .wrapChunks (false );
-_bdaae !=nil {return nil ,nil ,_bdaae ;};if len (_dfceb ._cgfdg )==1&&_dfceb ._edccf > _cece .Height {return _dfceb ,nil ,nil ;};_gfffc :=func (_affgb []*TextChunk ,_fafe []*TextChunk )[]*TextChunk {if len (_fafe )==0{return _affgb ;};_gcgec :=len (_affgb );
-if _gcgec ==0{return append (_affgb ,_fafe ...);};if _affgb [_gcgec -1].Style ==_fafe [0].Style {_affgb [_gcgec -1].Text +=_fafe [0].Text ;}else {_affgb =append (_affgb ,_fafe [0]);};return append (_affgb ,_fafe [1:]...);};_ebacf :=func (_ecada *StyledParagraph ,_bege []*TextChunk )*StyledParagraph {if len (_bege )==0{return nil ;
-};_ecba :=*_ecada ;_ecba ._gdae =_bege ;return &_ecba ;};var (_fadd float64 ;_daac []*TextChunk ;_dbcc []*TextChunk ;);for _ ,_bcae :=range _dfceb ._cgfdg {var _faee float64 ;_acedd :=make ([]*TextChunk ,0,len (_bcae ));for _ ,_ffdbf :=range _bcae {if _afbgd :=_ffdbf .Style .FontSize ;
-_afbgd > _faee {_faee =_afbgd ;};_acedd =append (_acedd ,_ffdbf .clone ());};_faee *=_dfceb ._edccf ;if _dfceb ._cdcdd .IsRelative (){if _fadd +_faee > _cece .Height {_dbcc =_gfffc (_dbcc ,_acedd );}else {_daac =_gfffc (_daac ,_acedd );};};_fadd +=_faee ;
-};_dfceb ._cgfdg =nil ;if len (_dbcc )==0{return _dfceb ,nil ,nil ;};return _ebacf (_dfceb ,_daac ),_ebacf (_dfceb ,_dbcc ),nil ;};
+// SetVerticalAlignment set the cell's vertical alignment of content.
+// Can be one of:
+// - CellHorizontalAlignmentTop
+// - CellHorizontalAlignmentMiddle
+// - CellHorizontalAlignmentBottom
+func (_aegfd *TableCell )SetVerticalAlignment (valign CellVerticalAlignment ){_aegfd ._egfeb =valign };
+
+// LevelOffset returns the amount of space an indentation level occupies.
+func (_geade *TOCLine )LevelOffset ()float64 {return _geade ._eedde };
+
+// SetForms adds an Acroform to a PDF file.  Sets the specified form for writing.
+func (_dfde *Creator )SetForms (form *_fee .PdfAcroForm )error {_dfde ._ebgd =form ;return nil };
+
+// SetBorderWidth sets the border width of the ellipse.
+func (_eccc *Ellipse )SetBorderWidth (bw float64 ){_eccc ._bedef =bw };func (_cgbg *Image )applyFitMode (_afg float64 ){_afg -=_cgbg ._dgb .Left +_cgbg ._dgb .Right ;switch _cgbg ._eged {case FitModeFillWidth :_cgbg .ScaleToWidth (_afg );};};
+
+// SetMargins sets the Table's left, right, top, bottom margins.
+func (_gafg *Table )SetMargins (left ,right ,top ,bottom float64 ){_gafg ._dceg .Left =left ;_gafg ._dceg .Right =right ;_gafg ._dceg .Top =top ;_gafg ._dceg .Bottom =bottom ;};func _gffde (_faaaa *templateProcessor ,_badgb *templateNode )(interface{},error ){return _faaaa .parseTable (_badgb );
+};
+
+// SetSideBorderStyle sets the cell's side border style.
+func (_eccba *TableCell )SetSideBorderStyle (side CellBorderSide ,style CellBorderStyle ){switch side {case CellBorderSideAll :_eccba ._acdfc =style ;_eccba ._gefeba =style ;_eccba ._fgfda =style ;_eccba ._egea =style ;case CellBorderSideTop :_eccba ._acdfc =style ;
+case CellBorderSideBottom :_eccba ._gefeba =style ;case CellBorderSideLeft :_eccba ._fgfda =style ;case CellBorderSideRight :_eccba ._egea =style ;};};
+
+// NewImageFromGoImage creates an Image from a go image.Image data structure.
+func (_dfe *Creator )NewImageFromGoImage (goimg _a .Image )(*Image ,error ){return _afbgg (goimg )};
+
+// InvoiceCellProps holds all style properties for an invoice cell.
+type InvoiceCellProps struct{TextStyle TextStyle ;Alignment CellHorizontalAlignment ;BackgroundColor Color ;BorderColor Color ;BorderWidth float64 ;BorderSides []CellBorderSide ;};
+
+// SetBorderOpacity sets the border opacity.
+func (_cddf *PolyBezierCurve )SetBorderOpacity (opacity float64 ){_cddf ._ebef =opacity };
+
+// FrontpageFunctionArgs holds the input arguments to a front page drawing function.
+// It is designed as a struct, so additional parameters can be added in the future with backwards
+// compatibility.
+type FrontpageFunctionArgs struct{PageNum int ;TotalPages int ;};
+
+// Width returns the width of the line.
+// NOTE: Depending on the fit mode the line is set to use, its width may be
+// calculated at runtime (e.g. when using FitModeFillWidth).
+func (_dfea *Line )Width ()float64 {return _fa .Abs (_dfea ._ecec -_dfea ._bcgf )};func _fgee ()*Division {return &Division {_fgg :true }};
+
+// FilledCurve represents a closed path of Bezier curves with a border and fill.
+type FilledCurve struct{_ddfce []_bg .CubicBezierCurve ;FillEnabled bool ;_efgf Color ;BorderEnabled bool ;BorderWidth float64 ;_afdae Color ;};type templateProcessor struct{creator *Creator ;_ffcd []byte ;_deag *TemplateOptions ;_cgcaa componentRenderer ;
+};func (_bggdf cmykColor )ToRGB ()(float64 ,float64 ,float64 ){_afc :=_bggdf ._dgdaf ;return 1-(_bggdf ._bcc *(1-_afc )+_afc ),1-(_bggdf ._gdg *(1-_afc )+_afc ),1-(_bggdf ._fbba *(1-_afc )+_afc );};
+
+// NewTOCLine creates a new table of contents line with the default style.
+func (_cggb *Creator )NewTOCLine (number ,title ,page string ,level uint )*TOCLine {return _eddac (number ,title ,page ,level ,_cggb .NewTextStyle ());};
+
+// SetEncoder sets the encoding/compression mechanism for the image.
+func (_daee *Image )SetEncoder (encoder _dd .StreamEncoder ){_daee ._fcgd =encoder };
+
+// SetBorderWidth sets the border width.
+func (_dcfcg *Polygon )SetBorderWidth (borderWidth float64 ){_dcfcg ._ebdcd .BorderWidth =borderWidth };
+
+// AddExternalLink adds a new external link to the paragraph.
+// The text parameter represents the text that is displayed and the url
+// parameter sets the destionation of the link.
+func (_cfbad *StyledParagraph )AddExternalLink (text ,url string )*TextChunk {_beeb :=NewTextChunk (text ,_cfbad ._fecf );_beeb ._beebgd =_gfgag (url );return _cfbad .appendChunk (_beeb );};func (_cdeagd *TextStyle )horizontalScale ()float64 {return _cdeagd .HorizontalScaling /100};
+
+
+// SetFillOpacity sets the fill opacity.
+func (_cecgf *PolyBezierCurve )SetFillOpacity (opacity float64 ){_cecgf ._aabg =opacity };
+
+// FitMode returns the fit mode of the ellipse.
+func (_ebdc *Ellipse )FitMode ()FitMode {return _ebdc ._ffgf };func _eddac (_befg ,_bbeea ,_becfg string ,_cccf uint ,_ecafa TextStyle )*TOCLine {return _bege (TextChunk {Text :_befg ,Style :_ecafa },TextChunk {Text :_bbeea ,Style :_ecafa },TextChunk {Text :_becfg ,Style :_ecafa },_cccf ,_ecafa );
+};func (_bcfbg *List )split (_aafb DrawContext )(_fdgg ,_fede *List ){var (_feggg float64 ;_afcb ,_gdeba []*listItem ;);_bdebc :=_aafb .Width -_bcfbg ._bffg .Horizontal ()-_bcfbg ._cfffc -_bcfbg .markerWidth ();_fbdc :=_bcfbg .markerWidth ();for _cbbe ,_fgcb :=range _bcfbg ._fegg {_cgcd :=_fgcb .ctxHeight (_bdebc );
+_feggg +=_cgcd ;if _feggg <=_aafb .Height {_afcb =append (_afcb ,_fgcb );}else {switch _fcaag :=_fgcb ._eaca .(type ){case *List :_facd :=_aafb ;_facd .Height =_fa .Floor (_cgcd -(_feggg -_aafb .Height ));_baab ,_bcgd :=_fcaag .split (_facd );if _baab !=nil {_fefg :=_fagg ();
+_fefg ._aeaf =_fgcb ._aeaf ;_fefg ._eaca =_baab ;_afcb =append (_afcb ,_fefg );};if _bcgd !=nil {_dffa :=_fcaag ._dabcb .Style .FontSize ;_abcad ,_fdcaf :=_fcaag ._dabcb .Style .Font .GetRuneMetrics (' ');if _fdcaf {_dffa =_fcaag ._dabcb .Style .FontSize *_abcad .Wx *_fcaag ._dabcb .Style .horizontalScale ()/1000.0;
+};_deecf :=_cf .Repeat ("\u0020",int (_fbdc /_dffa ));_cgag :=_fagg ();_cgag ._aeaf =*NewTextChunk (_deecf ,_fcaag ._dabcb .Style );_cgag ._eaca =_bcgd ;_gdeba =append (_gdeba ,_cgag );_gdeba =append (_gdeba ,_bcfbg ._fegg [_cbbe +1:]...);};default:_gdeba =_bcfbg ._fegg [_cbbe :];
+};if len (_gdeba )> 0{break ;};};};if len (_afcb )> 0{_fdgg =_egcf (_bcfbg ._bdbe );*_fdgg =*_bcfbg ;_fdgg ._fegg =_afcb ;};if len (_gdeba )> 0{_fede =_egcf (_bcfbg ._bdbe );*_fede =*_bcfbg ;_fede ._fegg =_gdeba ;};return _fdgg ,_fede ;};
+
+// SetColorRight sets border color for right.
+func (_dba *border )SetColorRight (col Color ){_dba ._ecba =col };
+
+// GeneratePageBlocks generates the page blocks for the Division component.
+// Multiple blocks are generated if the contents wrap over multiple pages.
+func (_egad *Division )GeneratePageBlocks (ctx DrawContext )([]*Block ,DrawContext ,error ){var (_bcce []*Block ;_daefg bool ;_fegc error ;_fgab =_egad ._dgcag .IsRelative ();_fffa =_egad ._ceeba .Top ;);if _fgab &&!_egad ._fgg &&!_egad ._agag {_gfdg :=_egad .ctxHeight (ctx .Width );
+if _gfdg > ctx .Height -_egad ._ceeba .Top &&_gfdg <=ctx .PageHeight -ctx .Margins .Top -ctx .Margins .Bottom {if _bcce ,ctx ,_fegc =_gaffdg ().GeneratePageBlocks (ctx );_fegc !=nil {return nil ,ctx ,_fegc ;};_daefg =true ;_fffa =0;};};_dcca :=ctx ;_egdd :=ctx ;
+if _fgab {ctx .X +=_egad ._ceeba .Left ;ctx .Y +=_fffa ;ctx .Width -=_egad ._ceeba .Left +_egad ._ceeba .Right ;ctx .Height -=_fffa ;_egdd =ctx ;ctx .X +=_egad ._deca .Left ;ctx .Y +=_egad ._deca .Top ;ctx .Width -=_egad ._deca .Left +_egad ._deca .Right ;
+ctx .Height -=_egad ._deca .Top ;ctx .Margins .Top +=_egad ._deca .Top ;ctx .Margins .Bottom +=_egad ._deca .Bottom ;ctx .Margins .Left +=_egad ._ceeba .Left +_egad ._deca .Left ;ctx .Margins .Right +=_egad ._ceeba .Right +_egad ._deca .Right ;};ctx .Inline =_egad ._agag ;
+_deeb :=ctx ;_badcb :=ctx ;var _gabgf float64 ;for _ ,_cegcb :=range _egad ._aegg {if ctx .Inline {if (ctx .X -_deeb .X )+_cegcb .Width ()<=ctx .Width {ctx .Y =_badcb .Y ;ctx .Height =_badcb .Height ;}else {ctx .X =_deeb .X ;ctx .Width =_deeb .Width ;_badcb .Y +=_gabgf ;
+_badcb .Height -=_gabgf ;_gabgf =0;};};_dcg ,_cegef ,_fceag :=_cegcb .GeneratePageBlocks (ctx );if _fceag !=nil {_da .Log .Debug ("\u0045\u0072\u0072\u006f\u0072\u0020\u0067\u0065\u006e\u0065\u0072\u0061\u0074\u0069\u006eg\u0020p\u0061\u0067\u0065\u0020\u0062\u006c\u006f\u0063\u006b\u0073\u003a\u0020\u0025\u0076",_fceag );
+return nil ,ctx ,_fceag ;};if len (_dcg )< 1{continue ;};if len (_bcce )> 0{_bcce [len (_bcce )-1].mergeBlocks (_dcg [0]);_bcce =append (_bcce ,_dcg [1:]...);}else {if _fbgabf :=_dcg [0]._db ;_fbgabf ==nil ||len (*_fbgabf )==0{_daefg =true ;};_bcce =append (_bcce ,_dcg [0:]...);
+};if ctx .Inline {if ctx .Page !=_cegef .Page {_deeb .Y =ctx .Margins .Top ;_deeb .Height =ctx .PageHeight -ctx .Margins .Top ;_badcb .Y =_deeb .Y ;_badcb .Height =_deeb .Height ;_gabgf =_cegef .Height -_deeb .Height ;}else {if _efbb :=ctx .Height -_cegef .Height ;
+_efbb > _gabgf {_gabgf =_efbb ;};};}else {_cegef .X =ctx .X ;};ctx =_cegef ;};ctx .Inline =_dcca .Inline ;ctx .Margins =_dcca .Margins ;if _fgab {ctx .X =_dcca .X ;ctx .Width =_dcca .Width ;ctx .Y +=_egad ._deca .Bottom ;ctx .Height -=_egad ._deca .Bottom ;
+};if _egad ._dgce !=nil {_bcce ,_fegc =_egad .drawBackground (_bcce ,_egdd ,ctx ,_daefg );if _fegc !=nil {return nil ,ctx ,_fegc ;};};if _egad ._dgcag .IsAbsolute (){return _bcce ,_dcca ,nil ;};ctx .Y +=_egad ._ceeba .Bottom ;ctx .Height -=_egad ._ceeba .Bottom ;
+return _bcce ,ctx ,nil ;};
+
+// NewColorPoint creates a new color and point object for use in the gradient rendering process.
+func NewColorPoint (color Color ,point float64 )*ColorPoint {return _fafb (color ,point )};
+
+// SetBorderWidth sets the border width.
+func (_cbfb *PolyBezierCurve )SetBorderWidth (borderWidth float64 ){_cbfb ._cceb .BorderWidth =borderWidth ;};func _gabgca (_gbcf int64 ,_dbdbd ,_baggd ,_aaad float64 )*_fee .PdfAnnotation {_adfae :=_fee .NewPdfAnnotationLink ();_ccdd :=_fee .NewBorderStyle ();
+_ccdd .SetBorderWidth (0);_adfae .BS =_ccdd .ToPdfObject ();if _gbcf < 0{_gbcf =0;};_adfae .Dest =_dd .MakeArray (_dd .MakeInteger (_gbcf ),_dd .MakeName ("\u0058\u0059\u005a"),_dd .MakeFloat (_dbdbd ),_dd .MakeFloat (_baggd ),_dd .MakeFloat (_aaad ));
+return _adfae .PdfAnnotation ;};type cmykColor struct{_bcc ,_gdg ,_fbba ,_dgdaf float64 };
+
+// BorderColor returns the border color of the ellipse.
+func (_fbce *Ellipse )BorderColor ()Color {return _fbce ._fdfd };
+
+// SetLevel sets the indentation level of the TOC line.
+func (_degcg *TOCLine )SetLevel (level uint ){_degcg ._bbec =level ;_degcg ._dabee ._eebag .Left =_degcg ._gfgb +float64 (_degcg ._bbec -1)*_degcg ._eedde ;};
+
+// SetFillColor sets the fill color of the ellipse.
+func (_bdb *Ellipse )SetFillColor (col Color ){_bdb ._dbeaf =col };
+
+// HorizontalAlignment represents the horizontal alignment of components
+// within a page.
+type HorizontalAlignment int ;func _acac (_eaea ,_ebf ,_fabc ,_ebeg ,_ddcf ,_cgec float64 )*Curve {_cdcb :=&Curve {};_cdcb ._dggg =_eaea ;_cdcb ._cea =_ebf ;_cdcb ._beg =_fabc ;_cdcb ._febag =_ebeg ;_cdcb ._bda =_ddcf ;_cdcb ._ccbc =_cgec ;_cdcb ._gabg =ColorBlack ;
+_cdcb ._cgfc =1.0;return _cdcb ;};
+
+// Marker returns the marker used for the list items.
+// The marker instance can be used the change the text and the style
+// of newly added list items.
+func (_eace *List )Marker ()*TextChunk {return &_eace ._dabcb };
+
+// MoveX moves the drawing context to absolute position x.
+func (_caca *Creator )MoveX (x float64 ){_caca ._ddd .X =x };func (_dfdf *TextChunk )clone ()*TextChunk {_ggggf :=*_dfdf ;_ggggf ._beebgd =_gfbde (_dfdf ._beebgd );return &_ggggf ;};
+
+// SetFont sets the Paragraph's font.
+func (_bdebg *Paragraph )SetFont (font *_fee .PdfFont ){_bdebg ._gbdaa =font };func _eeea (_ddef *templateProcessor ,_efgd *templateNode )(interface{},error ){return _ddef .parseLine (_efgd );};
+
+// SetWidthLeft sets border width for left.
+func (_ceef *border )SetWidthLeft (bw float64 ){_ceef ._bbd =bw };
+
+// TotalLines returns all the rows in the invoice totals table as
+// description-value cell pairs.
+func (_bedg *Invoice )TotalLines ()[][2]*InvoiceCell {_cabc :=[][2]*InvoiceCell {_bedg ._decgf };_cabc =append (_cabc ,_bedg ._gcffc ...);return append (_cabc ,_bedg ._abb );};
+
+// Width returns the current page width.
+func (_ccce *Creator )Width ()float64 {return _ccce ._aef };func _gcg (_gd *_ebc .ContentStreamOperations ,_dde *_fee .PdfPageResources ,_abf *_ebc .ContentStreamOperations ,_ddec *_fee .PdfPageResources )error {_edb :=map[_dd .PdfObjectName ]_dd .PdfObjectName {};
+_cbb :=map[_dd .PdfObjectName ]_dd .PdfObjectName {};_abg :=map[_dd .PdfObjectName ]_dd .PdfObjectName {};_efef :=map[_dd .PdfObjectName ]_dd .PdfObjectName {};_dgg :=map[_dd .PdfObjectName ]_dd .PdfObjectName {};_add :=map[_dd .PdfObjectName ]_dd .PdfObjectName {};
+for _ ,_cc :=range *_abf {switch _cc .Operand {case "\u0044\u006f":if len (_cc .Params )==1{if _gdf ,_bbc :=_cc .Params [0].(*_dd .PdfObjectName );_bbc {if _ ,_fde :=_edb [*_gdf ];!_fde {var _dgd _dd .PdfObjectName ;_ce ,_ :=_ddec .GetXObjectByName (*_gdf );
+if _ce !=nil {_dgd =*_gdf ;for {_fdeg ,_ :=_dde .GetXObjectByName (_dgd );if _fdeg ==nil ||_fdeg ==_ce {break ;};_dgd =*_dd .MakeName (_ggb (_dgd .String ()));};};_dde .SetXObjectByName (_dgd ,_ce );_edb [*_gdf ]=_dgd ;};_ggg :=_edb [*_gdf ];_cc .Params [0]=&_ggg ;
+};};case "\u0054\u0066":if len (_cc .Params )==2{if _gda ,_ecb :=_cc .Params [0].(*_dd .PdfObjectName );_ecb {if _ ,_gfcc :=_cbb [*_gda ];!_gfcc {_adf ,_fbc :=_ddec .GetFontByName (*_gda );_adb :=*_gda ;if _fbc &&_adf !=nil {_adb =_eeg (_gda .String (),_adf ,_dde );
+};_dde .SetFontByName (_adb ,_adf );_cbb [*_gda ]=_adb ;};_fda :=_cbb [*_gda ];_cc .Params [0]=&_fda ;};};case "\u0043\u0053","\u0063\u0073":if len (_cc .Params )==1{if _age ,_egc :=_cc .Params [0].(*_dd .PdfObjectName );_egc {if _ ,_eagb :=_abg [*_age ];
+!_eagb {var _efa _dd .PdfObjectName ;_dabd ,_acb :=_ddec .GetColorspaceByName (*_age );if _acb {_efa =*_age ;for {_fca ,_cgd :=_dde .GetColorspaceByName (_efa );if !_cgd ||_dabd ==_fca {break ;};_efa =*_dd .MakeName (_ggb (_efa .String ()));};_dde .SetColorspaceByName (_efa ,_dabd );
+_abg [*_age ]=_efa ;}else {_da .Log .Debug ("C\u006fl\u006f\u0072\u0073\u0070\u0061\u0063\u0065\u0020n\u006f\u0074\u0020\u0066ou\u006e\u0064");};};if _eda ,_abfb :=_abg [*_age ];_abfb {_cc .Params [0]=&_eda ;}else {_da .Log .Debug ("\u0045\u0072\u0072\u006f\u0072\u003a\u0020\u0043\u006f\u006co\u0072\u0073\u0070\u0061\u0063\u0065\u0020%\u0073\u0020\u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064",*_age );
+};};};case "\u0053\u0043\u004e","\u0073\u0063\u006e":if len (_cc .Params )==1{if _abd ,_ffg :=_cc .Params [0].(*_dd .PdfObjectName );_ffg {if _ ,_fga :=_efef [*_abd ];!_fga {var _fcg _dd .PdfObjectName ;_ecbg ,_cda :=_ddec .GetPatternByName (*_abd );if _cda {_fcg =*_abd ;
+for {_aga ,_bbcd :=_dde .GetPatternByName (_fcg );if !_bbcd ||_aga ==_ecbg {break ;};_fcg =*_dd .MakeName (_ggb (_fcg .String ()));};_fag :=_dde .SetPatternByName (_fcg ,_ecbg .ToPdfObject ());if _fag !=nil {return _fag ;};_efef [*_abd ]=_fcg ;};};if _cab ,_ccc :=_efef [*_abd ];
+_ccc {_cc .Params [0]=&_cab ;};};};case "\u0073\u0068":if len (_cc .Params )==1{if _gea ,_gaa :=_cc .Params [0].(*_dd .PdfObjectName );_gaa {if _ ,_gfe :=_dgg [*_gea ];!_gfe {var _adg _dd .PdfObjectName ;_dfg ,_gce :=_ddec .GetShadingByName (*_gea );if _gce {_adg =*_gea ;
+for {_deg ,_faf :=_dde .GetShadingByName (_adg );if !_faf ||_dfg ==_deg {break ;};_adg =*_dd .MakeName (_ggb (_adg .String ()));};_dcb :=_dde .SetShadingByName (_adg ,_dfg .ToPdfObject ());if _dcb !=nil {_da .Log .Debug ("E\u0052\u0052\u004f\u0052 S\u0065t\u0020\u0073\u0068\u0061\u0064i\u006e\u0067\u003a\u0020\u0025\u0076",_dcb );
+return _dcb ;};_dgg [*_gea ]=_adg ;}else {_da .Log .Debug ("\u0053\u0068\u0061\u0064\u0069\u006e\u0067\u0020\u006e\u006f\u0074\u0020f\u006f\u0075\u006e\u0064");};};if _cdfc ,_bcd :=_dgg [*_gea ];_bcd {_cc .Params [0]=&_cdfc ;}else {_da .Log .Debug ("E\u0072\u0072\u006f\u0072\u003a\u0020S\u0068\u0061\u0064\u0069\u006e\u0067\u0020\u0025\u0073 \u006e\u006f\u0074 \u0066o\u0075\u006e\u0064",*_gea );
+};};};case "\u0067\u0073":if len (_cc .Params )==1{if _dgeg ,_cdc :=_cc .Params [0].(*_dd .PdfObjectName );_cdc {if _ ,_ggf :=_add [*_dgeg ];!_ggf {var _ebcc _dd .PdfObjectName ;_gcce ,_bcfc :=_ddec .GetExtGState (*_dgeg );if _bcfc {_ebcc =*_dgeg ;for {_edab ,_acc :=_dde .GetExtGState (_ebcc );
+if !_acc ||_gcce ==_edab {break ;};_ebcc =*_dd .MakeName (_ggb (_ebcc .String ()));};};_dde .AddExtGState (_ebcc ,_gcce );_add [*_dgeg ]=_ebcc ;};_fdad :=_add [*_dgeg ];_cc .Params [0]=&_fdad ;};};};*_gd =append (*_gd ,_cc );};return nil ;};
+
+// SetFillColor sets background color for border.
+func (_ebb *border )SetFillColor (col Color ){_ebb ._aeea =col };
+
+// NewPolyBezierCurve creates a new composite Bezier (polybezier) curve.
+func (_ggd *Creator )NewPolyBezierCurve (curves []_bg .CubicBezierCurve )*PolyBezierCurve {return _fabcd (curves );};const (AnchorBottomLeft AnchorPoint =iota ;AnchorBottomRight ;AnchorTopLeft ;AnchorTopRight ;AnchorCenter ;AnchorLeft ;AnchorRight ;AnchorTop ;
+AnchorBottom ;);const (CellVerticalAlignmentTop CellVerticalAlignment =iota ;CellVerticalAlignmentMiddle ;CellVerticalAlignmentBottom ;);func _bgfac (_eccbb ...interface{})(map[string ]interface{},error ){_dbbgg :=len (_eccbb );if _dbbgg %2!=0{_da .Log .Error ("\u0049\u006e\u0076\u0061\u006c\u0069\u0064\u0020\u006e\u0075\u006d\u0062\u0065\u0072\u0020\u006f\u0066\u0020p\u0061\u0072\u0061\u006d\u0065\u0074\u0065r\u0073\u0020\u0066\u006f\u0072\u0020\u0063\u0072\u0065\u0061\u0074i\u006e\u0067\u0020\u006d\u0061\u0070\u003a\u0020\u0025\u0064\u002e",_dbbgg );
+return nil ,_dd .ErrRangeError ;};_dadfa :=map[string ]interface{}{};for _efgb :=0;_efgb < _dbbgg ;_efgb +=2{_fdaa ,_fbeg :=_eccbb [_efgb ].(string );if !_fbeg {_da .Log .Error ("\u0049\u006e\u0076\u0061\u006c\u0069\u0064 \u006d\u0061\u0070 \u006b\u0065\u0079\u0020t\u0079\u0070\u0065\u0020\u0028\u0025\u0054\u0029\u002e\u0020\u0045\u0078\u0070\u0065\u0063\u0074\u0065\u0064\u0020\u0073\u0074\u0072\u0069\u006e\u0067\u002e",_eccbb [_efgb ]);
+return nil ,_dd .ErrTypeError ;};_dadfa [_fdaa ]=_eccbb [_efgb +1];};return _dadfa ,nil ;};
+
+// SetShowNumbering sets a flag to indicate whether or not to show chapter numbers as part of title.
+func (_bde *Chapter )SetShowNumbering (show bool ){_bde ._dadd =show ;_bde ._ddc .SetText (_bde .headingText ());};
+
+// GetHorizontalAlignment returns the horizontal alignment of the image.
+func (_ffa *Image )GetHorizontalAlignment ()HorizontalAlignment {return _ffa ._eeef };
+
+// SetMaxLines sets the maximum number of lines before the paragraph
+// text is truncated.
+func (_bcabb *Paragraph )SetMaxLines (maxLines int ){_bcabb ._afaa =maxLines ;_bcabb .wrapText ()};func (_bdcb *Invoice )drawSection (_eegd ,_gbgb string )[]*StyledParagraph {var _adba []*StyledParagraph ;if _eegd !=""{_gacb :=_dccc (_bdcb ._fadg );_gacb .SetMargins (0,0,0,5);
+_gacb .Append (_eegd );_adba =append (_adba ,_gacb );};if _gbgb !=""{_ffeg :=_dccc (_bdcb ._dabeb );_ffeg .Append (_gbgb );_adba =append (_adba ,_ffeg );};return _adba ;};
+
+// InfoLines returns all the rows in the invoice information table as
+// description-value cell pairs.
+func (_adea *Invoice )InfoLines ()[][2]*InvoiceCell {_afca :=[][2]*InvoiceCell {_adea ._agebg ,_adea ._gfbd ,_adea ._edgf };return append (_afca ,_adea ._dbbdg ...);};func (_egcc *templateProcessor )parseRadialGradientAttr (creator *Creator ,_gagdc string )Color {_ceeed :=ColorBlack ;
+if _gagdc ==""{return _ceeed ;};var (_ebegc error ;_ceffg =0.0;_bcgfa =0.0;_acfa =-1.0;_edeg =_cf .Split (_gagdc [16:len (_gagdc )-1],"\u002c"););_gfgge :=_cf .Fields (_edeg [0]);if len (_gfgge )==2&&_cf .TrimSpace (_gfgge [0])[0]!='#'{_ceffg ,_ebegc =_fe .ParseFloat (_gfgge [0],64);
+if _ebegc !=nil {_da .Log .Debug ("\u0046a\u0069\u006ce\u0064\u0020\u0070a\u0072\u0073\u0069\u006e\u0067\u0020\u0072a\u0064\u0069\u0061\u006c\u0020\u0067r\u0061\u0064\u0069\u0065\u006e\u0074\u0020\u0058\u0020\u0070\u006fs\u0069\u0074\u0069\u006f\u006e\u003a\u0020\u0025\u0076",_ebegc );
+};_bcgfa ,_ebegc =_fe .ParseFloat (_gfgge [1],64);if _ebegc !=nil {_da .Log .Debug ("\u0046a\u0069\u006ce\u0064\u0020\u0070a\u0072\u0073\u0069\u006e\u0067\u0020\u0072a\u0064\u0069\u0061\u006c\u0020\u0067r\u0061\u0064\u0069\u0065\u006e\u0074\u0020\u0059\u0020\u0070\u006fs\u0069\u0074\u0069\u006f\u006e\u003a\u0020\u0025\u0076",_ebegc );
+};_edeg =_edeg [1:];};_afcfd :=_cf .TrimSpace (_edeg [0]);if _afcfd [0]!='#'{_acfa ,_ebegc =_fe .ParseFloat (_afcfd ,64);if _ebegc !=nil {_da .Log .Debug ("\u0046\u0061\u0069\u006c\u0065\u0064\u0020\u0070\u0061\u0072\u0073\u0069\u006eg\u0020\u0072\u0061\u0064\u0069\u0061l\u0020\u0067\u0072\u0061\u0064\u0069\u0065\u006e\u0074\u0020\u0073\u0069\u007ae\u003a\u0020\u0025\u0076",_ebegc );
+};_edeg =_edeg [1:];};_aeebd ,_beafc :=_egcc .processGradientColorPair (_edeg );if _aeebd ==nil ||_beafc ==nil {return _ceeed ;};_fccae :=creator .NewRadialGradientColor (_ceffg ,_bcgfa ,0,_acfa ,[]*ColorPoint {});for _bdfgc :=0;_bdfgc < len (_aeebd );
+_bdfgc ++{_fccae .AddColorStop (_aeebd [_bdfgc ],_beafc [_bdfgc ]);};return _fccae ;};func _cfcbf (_abdaf string )bool {_bdbgca :=func (_ddde rune )bool {return _ddde =='\u000A'};_baecg :=_cf .TrimFunc (_abdaf ,_bdbgca );_dafbbd :=_aa .Paragraph {};_ ,_fgbba :=_dafbbd .SetString (_baecg );
+if _fgbba !=nil {return true ;};_bcecd ,_fgbba :=_dafbbd .Order ();if _fgbba !=nil {return true ;};if _bcecd .NumRuns ()< 1{return true ;};return _dafbbd .IsLeftToRight ();};
+
+// NewLinearGradientColor creates a linear gradient color that could act as a color in other components.
+func (_bfba *Creator )NewLinearGradientColor (colorPoints []*ColorPoint )*LinearShading {return _gddgf (colorPoints );};type fontMetrics struct{_fdae float64 ;_ffedb float64 ;_aaefg float64 ;_ebggb float64 ;};
+
+// SetLineWidth sets the line width.
+func (_aedga *Line )SetLineWidth (width float64 ){_aedga ._bdfc =width };
+
+// SetColorTop sets border color for top.
+func (_caag *border )SetColorTop (col Color ){_caag ._bfgc =col };func (_ddgdf *TableCell )cloneProps (_bdgdae VectorDrawable )*TableCell {_afgd :=*_ddgdf ;_afgd ._cfdd =_bdgdae ;return &_afgd ;};
+
+// ColorCMYKFromArithmetic creates a Color from arithmetic color values (0-1).
+// Example:
+//   green := ColorCMYKFromArithmetic(1.0, 0.0, 1.0, 0.0)
+func ColorCMYKFromArithmetic (c ,m ,y ,k float64 )Color {return cmykColor {_bcc :_fa .Max (_fa .Min (c ,1.0),0.0),_gdg :_fa .Max (_fa .Min (m ,1.0),0.0),_fbba :_fa .Max (_fa .Min (y ,1.0),0.0),_dgdaf :_fa .Max (_fa .Min (k ,1.0),0.0)};};
+
+// Block contains a portion of PDF Page contents. It has a width and a position and can
+// be placed anywhere on a Page.  It can even contain a whole Page, and is used in the creator
+// where each Drawable object can output one or more blocks, each representing content for separate pages
+// (typically needed when Page breaks occur).
+type Block struct{_db *_ebc .ContentStreamOperations ;_gf *_fee .PdfPageResources ;_eg Positioning ;_ba ,_cd float64 ;_bab float64 ;_egb float64 ;_gc float64 ;_gb Margins ;_aee []*_fee .PdfAnnotation ;};
+
+// GetMargins returns the margins of the chart (left, right, top, bottom).
+func (_gbee *Chart )GetMargins ()(float64 ,float64 ,float64 ,float64 ){return _gbee ._cgc .Left ,_gbee ._cgc .Right ,_gbee ._cgc .Top ,_gbee ._cgc .Bottom ;};
+
+// CreateFrontPage sets a function to generate a front Page.
+func (_gfgg *Creator )CreateFrontPage (genFrontPageFunc func (_dddd FrontpageFunctionArgs )){_gfgg ._badc =genFrontPageFunc ;};func _caac (_gaab *_aeb .GraphicSVG )(*GraphicSVG ,error ){return &GraphicSVG {_cfff :_gaab ,_ebgcc :PositionRelative ,_dadde :Margins {Top :10,Bottom :10}},nil ;
+};
