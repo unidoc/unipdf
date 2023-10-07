@@ -32,8 +32,8 @@ github.com/stretchr/testify v1.7.1 h1:5TQK59W5E3v0r2duFAb7P95B6hEeOyEnHRa8MjYSMT
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/trimmer-io/go-xmp v1.0.0 h1:zY8bolSga5kOjBAaHS6hrdxLgEoYuT875xTy0QDwZWs=
 github.com/trimmer-io/go-xmp v1.0.0/go.mod h1:Aaptr9sp1lLv7UnCAdQ+gSHZyY2miYaKmcNVj7HRBwA=
-github.com/unidoc/freetype v0.0.0-20220130190903-3efbeefd0c90 h1:Rk4easgDQslR3DK7vwtl6jYMZTF3JqZ3ceUdyT6a3UM=
-github.com/unidoc/freetype v0.0.0-20220130190903-3efbeefd0c90/go.mod h1:mJ/Q7JnqEoWtajJVrV6S1InbRv0K/fJerPB5SQs32KI=
+github.com/unidoc/freetype v0.1.0 h1:/1L6F/or31rsBhi2/nlhkQTSWBJl+iPD6Z7UPON+dZQ=
+github.com/unidoc/freetype v0.1.0/go.mod h1:mJ/Q7JnqEoWtajJVrV6S1InbRv0K/fJerPB5SQs32KI=
 github.com/unidoc/garabic v0.0.0-20220702200334-8c7cb25baa11 h1:kExUKrbi429KdVVuAc85z4P+W/Rk4bjGWB5KzZLl/l8=
 github.com/unidoc/garabic v0.0.0-20220702200334-8c7cb25baa11/go.mod h1:SX63w9Ww4+Z7E96B01OuG59SleQUb+m+dmapZ8o1Jac=
 github.com/unidoc/pkcs7 v0.0.0-20200411230602-d883fd70d1df/go.mod h1:UEzOZUEpJfDpywVJMUT8QiugqEZC29pDq7kdIZhWCr8=
@@ -92,5 +92,6 @@ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 h1:qIbj1fsPNlZgppZ+VLlY7N33q108Sa+fhmuc+sWQYwY=
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
-gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c h1:dUUwHk2QECo/6vqA44rthZ8ie2QXMNeKRTHCNY2nXvo=
 gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+gopkg.in/yaml.v3 v3.0.0 h1:hjy8E9ON/egN1tAYqKb61G10WtihqetD4sz2H+8nIeA=
+gopkg.in/yaml.v3 v3.0.0/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
