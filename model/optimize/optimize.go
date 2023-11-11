@@ -9,231 +9,232 @@
 // Use of this source code is governed by the UniDoc End User License Agreement
 // terms that can be accessed at https://unidoc.io/eula/
 
-package optimize ;import (_dg "bytes";_b "crypto/md5";_d "errors";_ac "fmt";_g "github.com/unidoc/unipdf/v3/common";_fe "github.com/unidoc/unipdf/v3/contentstream";_fg "github.com/unidoc/unipdf/v3/core";_e "github.com/unidoc/unipdf/v3/extractor";_ag "github.com/unidoc/unipdf/v3/internal/imageutil";
-_gf "github.com/unidoc/unipdf/v3/internal/textencoding";_cac "github.com/unidoc/unipdf/v3/model";_ca "github.com/unidoc/unitype";_c "golang.org/x/image/draw";_f "math";_cd "strings";);func _feb (_ga *_fg .PdfObjectStream )error {_de ,_af :=_fg .DecodeStream (_ga );
-if _af !=nil {return _af ;};_fec :=_fe .NewContentStreamParser (string (_de ));_acg ,_af :=_fec .Parse ();if _af !=nil {return _af ;};_acg =_eb (_acg );_bag :=_acg .Bytes ();if len (_bag )>=len (_de ){return nil ;};_gc ,_af :=_fg .MakeStream (_acg .Bytes (),_fg .NewFlateEncoder ());
-if _af !=nil {return _af ;};_ga .Stream =_gc .Stream ;_ga .Merge (_gc .PdfObjectDictionary );return nil ;};func _adf (_cfbc []_fg .PdfObject )[]*imageInfo {_bfg :=_fg .PdfObjectName ("\u0053u\u0062\u0074\u0079\u0070\u0065");_dfga :=make (map[*_fg .PdfObjectStream ]struct{});
-var _cdeb []*imageInfo ;for _ ,_cfedg :=range _cfbc {_gde ,_fdg :=_fg .GetStream (_cfedg );if !_fdg {continue ;};if _ ,_gffc :=_dfga [_gde ];_gffc {continue ;};_dfga [_gde ]=struct{}{};_fbcd :=_gde .PdfObjectDictionary .Get (_bfg );_fde ,_fdg :=_fg .GetName (_fbcd );
-if !_fdg ||string (*_fde )!="\u0049\u006d\u0061g\u0065"{continue ;};_fcbe :=&imageInfo {Stream :_gde ,BitsPerComponent :8};if _eece ,_dba :=_fg .GetIntVal (_gde .Get ("\u0042\u0069t\u0073\u0050\u0065r\u0043\u006f\u006d\u0070\u006f\u006e\u0065\u006e\u0074"));
-_dba {_fcbe .BitsPerComponent =_eece ;};if _gdc ,_agac :=_fg .GetIntVal (_gde .Get ("\u0057\u0069\u0064t\u0068"));_agac {_fcbe .Width =_gdc ;};if _dbec ,_fgb :=_fg .GetIntVal (_gde .Get ("\u0048\u0065\u0069\u0067\u0068\u0074"));_fgb {_fcbe .Height =_dbec ;
-};_ccf ,_gcb :=_cac .NewPdfColorspaceFromPdfObject (_gde .Get ("\u0043\u006f\u006c\u006f\u0072\u0053\u0070\u0061\u0063\u0065"));if _gcb !=nil {_g .Log .Debug ("\u0045R\u0052\u004f\u0052\u003a\u0020\u0025v",_gcb );continue ;};if _ccf ==nil {_baed ,_adeb :=_fg .GetName (_gde .Get ("\u0046\u0069\u006c\u0074\u0065\u0072"));
-if _adeb {switch _baed .String (){case "\u0043\u0043\u0049\u0054\u0054\u0046\u0061\u0078\u0044e\u0063\u006f\u0064\u0065","J\u0042\u0049\u0047\u0032\u0044\u0065\u0063\u006f\u0064\u0065":_ccf =_cac .NewPdfColorspaceDeviceGray ();_fcbe .BitsPerComponent =1;
-};};};switch _agfe :=_ccf .(type ){case *_cac .PdfColorspaceDeviceRGB :_fcbe .ColorComponents =3;case *_cac .PdfColorspaceDeviceGray :_fcbe .ColorComponents =1;default:_g .Log .Debug ("\u004f\u0070\u0074\u0069\u006d\u0069\u007aa\u0074\u0069\u006fn\u0020\u0069\u0073 \u006e\u006ft\u0020\u0073\u0075\u0070\u0070\u006fr\u0074ed\u0020\u0066\u006f\u0072\u0020\u0063\u006f\u006c\u006f\u0072\u0020\u0073\u0070\u0061\u0063\u0065\u0020\u0025\u0054\u0020\u002d\u0020\u0073\u006b\u0069\u0070",_agfe );
-continue ;};_cdeb =append (_cdeb ,_fcbe );};return _cdeb ;};func _bcc (_gge []*_fg .PdfIndirectObject )map[string ][]string {_acb :=map[string ][]string {};for _ ,_dgbb :=range _gge {_gbab ,_fbga :=_fg .GetDict (_dgbb .PdfObject );if !_fbga {continue ;
-};_aaa :=_gbab .Get ("\u0043\u006f\u006e\u0074\u0065\u006e\u0074\u0073");_agfa :=_fg .TraceToDirectObject (_aaa );var _cbc []string ;if _dca ,_dcaa :=_agfa .(*_fg .PdfObjectArray );_dcaa {for _ ,_egfc :=range _dca .Elements (){_edec ,_fad :=_fdf (_egfc );
-if _fad !=nil {continue ;};_cbc =append (_cbc ,_edec );};};_acfc :=_cd .Join (_cbc ,"\u0020");_bacd :=_fe .NewContentStreamParser (_acfc );_eeb ,_dce :=_bacd .Parse ();if _dce !=nil {continue ;};for _ ,_ecdf :=range *_eeb {_fbc :=_ecdf .Operand ;_fba :=_ecdf .Params ;
-switch _fbc {case "\u0044\u006f":_bccd :=_fba [0].String ();if _ ,_fbb :=_acb ["\u0058O\u0062\u006a\u0065\u0063\u0074"];!_fbb {_acb ["\u0058O\u0062\u006a\u0065\u0063\u0074"]=[]string {_bccd };}else {_acb ["\u0058O\u0062\u006a\u0065\u0063\u0074"]=append (_acb ["\u0058O\u0062\u006a\u0065\u0063\u0074"],_bccd );
-};case "\u0054\u0066":_cgf :=_fba [0].String ();if _ ,_dffe :=_acb ["\u0046\u006f\u006e\u0074"];!_dffe {_acb ["\u0046\u006f\u006e\u0074"]=[]string {_cgf };}else {_acb ["\u0046\u006f\u006e\u0074"]=append (_acb ["\u0046\u006f\u006e\u0074"],_cgf );};case "\u0067\u0073":_acgb :=_fba [0].String ();
-if _ ,_abb :=_acb ["\u0045x\u0074\u0047\u0053\u0074\u0061\u0074e"];!_abb {_acb ["\u0045x\u0074\u0047\u0053\u0074\u0061\u0074e"]=[]string {_acgb };}else {_acb ["\u0045x\u0074\u0047\u0053\u0074\u0061\u0074e"]=append (_acb ["\u0045x\u0074\u0047\u0053\u0074\u0061\u0074e"],_acgb );
-};};};};return _acb ;};
-
-// ObjectStreams groups PDF objects to object streams.
-// It implements interface model.Optimizer.
-type ObjectStreams struct{};
-
-// Append appends optimizers to the chain.
-func (_ba *Chain )Append (optimizers ..._cac .Optimizer ){_ba ._cb =append (_ba ._cb ,optimizers ...)};
-
-// Chain allows to use sequence of optimizers.
-// It implements interface model.Optimizer.
-type Chain struct{_cb []_cac .Optimizer };
+package optimize ;import (_ff "bytes";_ee "crypto/md5";_bb "errors";_a "fmt";_f "github.com/unidoc/unipdf/v3/common";_cg "github.com/unidoc/unipdf/v3/contentstream";_fbb "github.com/unidoc/unipdf/v3/core";_b "github.com/unidoc/unipdf/v3/extractor";_ag "github.com/unidoc/unipdf/v3/internal/imageutil";
+_g "github.com/unidoc/unipdf/v3/internal/textencoding";_eg "github.com/unidoc/unipdf/v3/model";_ac "github.com/unidoc/unitype";_ed "golang.org/x/image/draw";_c "math";_fb "strings";);
 
 // Optimize optimizes PDF objects to decrease PDF size.
-func (_bgfca *CompressStreams )Optimize (objects []_fg .PdfObject )(_ggc []_fg .PdfObject ,_eead error ){_ggc =make ([]_fg .PdfObject ,len (objects ));copy (_ggc ,objects );for _ ,_eec :=range objects {_bgd ,_bbgf :=_fg .GetStream (_eec );if !_bbgf {continue ;
-};if _dcf :=_bgd .Get ("\u0046\u0069\u006c\u0074\u0065\u0072");_dcf !=nil {if _ ,_cbe :=_fg .GetName (_dcf );_cbe {continue ;};if _bbd ,_ffde :=_fg .GetArray (_dcf );_ffde &&_bbd .Len ()> 0{continue ;};};_egdd :=_fg .NewFlateEncoder ();var _ecfg []byte ;
-_ecfg ,_eead =_egdd .EncodeBytes (_bgd .Stream );if _eead !=nil {return _ggc ,_eead ;};_accd :=_egdd .MakeStreamDict ();if len (_ecfg )+len (_accd .WriteString ())< len (_bgd .Stream ){_bgd .Stream =_ecfg ;_bgd .PdfObjectDictionary .Merge (_accd );_bgd .PdfObjectDictionary .Set ("\u004c\u0065\u006e\u0067\u0074\u0068",_fg .MakeInteger (int64 (len (_bgd .Stream ))));
-};};return _ggc ,nil ;};type objectStructure struct{_faadg *_fg .PdfObjectDictionary ;_fge *_fg .PdfObjectDictionary ;_ddcd []*_fg .PdfIndirectObject ;};
-
-// Optimize optimizes PDF objects to decrease PDF size.
-func (_be *Chain )Optimize (objects []_fg .PdfObject )(_acc []_fg .PdfObject ,_cc error ){_fc :=objects ;for _ ,_ab :=range _be ._cb {_abf ,_dc :=_ab .Optimize (_fc );if _dc !=nil {_g .Log .Debug ("\u0045\u0052\u0052OR\u0020\u004f\u0070\u0074\u0069\u006d\u0069\u007a\u0061\u0074\u0069\u006f\u006e\u003a\u0020\u0025\u002b\u0076",_dc );
-continue ;};_fc =_abf ;};return _fc ,nil ;};func _bgge (_bge []_fg .PdfObject )objectStructure {_cfc :=objectStructure {};_ecdda :=false ;for _ ,_aggc :=range _bge {switch _eedb :=_aggc .(type ){case *_fg .PdfIndirectObject :_cgde ,_agde :=_fg .GetDict (_eedb );
-if !_agde {continue ;};_cdc ,_agde :=_fg .GetName (_cgde .Get ("\u0054\u0079\u0070\u0065"));if !_agde {continue ;};switch _cdc .String (){case "\u0043a\u0074\u0061\u006c\u006f\u0067":_cfc ._faadg =_cgde ;_ecdda =true ;};};if _ecdda {break ;};};if !_ecdda {return _cfc ;
-};_dgcb ,_fbbe :=_fg .GetDict (_cfc ._faadg .Get ("\u0050\u0061\u0067e\u0073"));if !_fbbe {return _cfc ;};_cfc ._fge =_dgcb ;_ebgg ,_fbbe :=_fg .GetArray (_dgcb .Get ("\u004b\u0069\u0064\u0073"));if !_fbbe {return _cfc ;};for _ ,_dacec :=range _ebgg .Elements (){_bddd ,_eaa :=_fg .GetIndirect (_dacec );
-if !_eaa {break ;};_cfc ._ddcd =append (_cfc ._ddcd ,_bddd );};return _cfc ;};
-
-// CompressStreams compresses uncompressed streams.
-// It implements interface model.Optimizer.
-type CompressStreams struct{};func _ff (_ce []_fg .PdfObject )(_afdg map[*_fg .PdfObjectStream ]struct{},_ee error ){_afdg =map[*_fg .PdfObjectStream ]struct{}{};_eca :=map[*_cac .PdfFont ]struct{}{};_deb :=_bgge (_ce );for _ ,_efe :=range _deb ._ddcd {_cea ,_bda :=_fg .GetDict (_efe .PdfObject );
-if !_bda {continue ;};_bcd ,_bda :=_fg .GetDict (_cea .Get ("\u0052e\u0073\u006f\u0075\u0072\u0063\u0065s"));if !_bda {continue ;};_da ,_ :=_fdbd (_cea .Get ("\u0043\u006f\u006e\u0074\u0065\u006e\u0074\u0073"));_efga ,_fae :=_cac .NewPdfPageResourcesFromDict (_bcd );
-if _fae !=nil {return nil ,_fae ;};_bdc :=[]content {{_ede :_da ,_cag :_efga }};_db :=_eff (_cea .Get ("\u0041\u006e\u006e\u006f\u0074\u0073"));if _db !=nil {_bdc =append (_bdc ,_db ...);};for _ ,_ded :=range _bdc {_efeb ,_dbg :=_e .NewFromContents (_ded ._ede ,_ded ._cag );
-if _dbg !=nil {return nil ,_dbg ;};_eee ,_ ,_ ,_dbg :=_efeb .ExtractPageText ();if _dbg !=nil {return nil ,_dbg ;};for _ ,_bef :=range _eee .Marks ().Elements (){if _bef .Font ==nil {continue ;};if _ ,_fced :=_eca [_bef .Font ];!_fced {_eca [_bef .Font ]=struct{}{};
-};};};};_ddc :=map[*_fg .PdfObjectStream ][]*_cac .PdfFont {};for _bac :=range _eca {_dagb :=_bac .FontDescriptor ();if _dagb ==nil ||_dagb .FontFile2 ==nil {continue ;};_cg ,_gae :=_fg .GetStream (_dagb .FontFile2 );if !_gae {continue ;};_ddc [_cg ]=append (_ddc [_cg ],_bac );
-};for _ecb :=range _ddc {var _befa []rune ;var _ddg []_ca .GlyphIndex ;for _ ,_dde :=range _ddc [_ecb ]{switch _gff :=_dde .Encoder ().(type ){case *_gf .IdentityEncoder :_eef :=_gff .RegisteredRunes ();_ceb :=make ([]_ca .GlyphIndex ,len (_eef ));for _cf ,_bagb :=range _eef {_ceb [_cf ]=_ca .GlyphIndex (_bagb );
-};_ddg =append (_ddg ,_ceb ...);case *_gf .TrueTypeFontEncoder :_befd :=_gff .RegisteredRunes ();_befa =append (_befa ,_befd ...);case _gf .SimpleEncoder :_fcf :=_gff .Charcodes ();for _ ,_ae :=range _fcf {_ed ,_edf :=_gff .CharcodeToRune (_ae );if !_edf {_g .Log .Debug ("\u0043\u0068a\u0072\u0063\u006f\u0064\u0065\u003c\u002d\u003e\u0072\u0075\u006e\u0065\u0020\u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064: \u0025\u0064",_ae );
-continue ;};_befa =append (_befa ,_ed );};};};_ee =_fd (_ecb ,_befa ,_ddg );if _ee !=nil {_g .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u0020\u0073\u0075\u0062\u0073\u0065\u0074\u0074\u0069\u006eg\u0020f\u006f\u006e\u0074\u0020\u0073\u0074\u0072\u0065\u0061\u006d\u003a\u0020\u0025\u0076",_ee );
-return nil ,_ee ;};_afdg [_ecb ]=struct{}{};};return _afdg ,nil ;};type imageInfo struct{BitsPerComponent int ;ColorComponents int ;Width int ;Height int ;Stream *_fg .PdfObjectStream ;PPI float64 ;};
-
-// Options describes PDF optimization parameters.
-type Options struct{CombineDuplicateStreams bool ;CombineDuplicateDirectObjects bool ;ImageUpperPPI float64 ;ImageQuality int ;UseObjectStreams bool ;CombineIdenticalIndirectObjects bool ;CompressStreams bool ;CleanFonts bool ;SubsetFonts bool ;CleanContentstream bool ;
-CleanUnusedResources bool ;};func _fd (_ddf *_fg .PdfObjectStream ,_abg []rune ,_ddd []_ca .GlyphIndex )error {_ddf ,_def :=_fg .GetStream (_ddf );if !_def {_g .Log .Debug ("\u0045\u006d\u0062\u0065\u0064\u0064\u0065\u0064\u0020\u0066\u006f\u006e\u0074\u0020\u006f\u0062\u006a\u0065c\u0074\u0020\u006e\u006f\u0074\u0020\u0066o\u0075\u006e\u0064\u0020\u002d\u002d\u0020\u0041\u0042\u004f\u0052T\u0020\u0073\u0075\u0062\u0073\u0065\u0074\u0074\u0069\u006e\u0067");
-return _d .New ("\u0066\u006f\u006e\u0074fi\u006c\u0065\u0032\u0020\u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064");};_badc ,_adc :=_fg .DecodeStream (_ddf );if _adc !=nil {_g .Log .Debug ("\u0044\u0065c\u006f\u0064\u0065 \u0065\u0072\u0072\u006f\u0072\u003a\u0020\u0025\u0076",_adc );
-return _adc ;};_cba ,_adc :=_ca .Parse (_dg .NewReader (_badc ));if _adc !=nil {_g .Log .Debug ("\u0045\u0072\u0072\u006f\u0072\u0020\u0070\u0061\u0072\u0073\u0069n\u0067\u0020\u0025\u0064\u0020\u0062\u0079\u0074\u0065\u0020f\u006f\u006e\u0074",len (_ddf .Stream ));
-return _adc ;};_gd :=_ddd ;if len (_abg )> 0{_fceb :=_cba .LookupRunes (_abg );_gd =append (_gd ,_fceb ...);};_cba ,_adc =_cba .SubsetKeepIndices (_gd );if _adc !=nil {_g .Log .Debug ("\u0045R\u0052\u004f\u0052\u0020s\u0075\u0062\u0073\u0065\u0074t\u0069n\u0067 \u0066\u006f\u006e\u0074\u003a\u0020\u0025v",_adc );
-return _adc ;};var _daa _dg .Buffer ;_adc =_cba .Write (&_daa );if _adc !=nil {_g .Log .Debug ("\u0045\u0052\u0052\u004fR \u0057\u0072\u0069\u0074\u0069\u006e\u0067\u0020\u0066\u006f\u006e\u0074\u003a\u0020%\u0076",_adc );return _adc ;};if _daa .Len ()> len (_badc ){_g .Log .Debug ("\u0052\u0065-\u0077\u0072\u0069\u0074\u0074\u0065\u006e\u0020\u0066\u006f\u006e\u0074\u0020\u0069\u0073\u0020\u006c\u0061\u0072\u0067\u0065\u0072\u0020\u0074\u0068\u0061\u006e\u0020\u006f\u0072\u0069\u0067\u0069\u006e\u0061\u006c\u0020\u002d\u0020\u0073\u006b\u0069\u0070");
-return nil ;};_abe ,_adc :=_fg .MakeStream (_daa .Bytes (),_fg .NewFlateEncoder ());if _adc !=nil {_g .Log .Debug ("\u0045\u0052\u0052\u004fR \u0057\u0072\u0069\u0074\u0069\u006e\u0067\u0020\u0066\u006f\u006e\u0074\u003a\u0020%\u0076",_adc );return _adc ;
-};*_ddf =*_abe ;_ddf .Set ("\u004ce\u006e\u0067\u0074\u0068\u0031",_fg .MakeInteger (int64 (_daa .Len ())));return nil ;};
-
-// Optimize optimizes PDF objects to decrease PDF size.
-func (_gcd *Image )Optimize (objects []_fg .PdfObject )(_ebbc []_fg .PdfObject ,_deea error ){if _gcd .ImageQuality <=0{return objects ,nil ;};_cgfg :=_adf (objects );if len (_cgfg )==0{return objects ,nil ;};_begf :=make (map[_fg .PdfObject ]_fg .PdfObject );
-_dae :=make (map[_fg .PdfObject ]struct{});for _ ,_fdd :=range _cgfg {_cdd :=_fdd .Stream .Get ("\u0053\u004d\u0061s\u006b");_dae [_cdd ]=struct{}{};};for _fgae ,_cfa :=range _cgfg {_bcae :=_cfa .Stream ;if _ ,_fdgc :=_dae [_bcae ];_fdgc {continue ;};_deaf ,_feca :=_cac .NewXObjectImageFromStream (_bcae );
-if _feca !=nil {_g .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0025\u002b\u0076",_feca );continue ;};switch _deaf .Filter .(type ){case *_fg .JBIG2Encoder :continue ;case *_fg .CCITTFaxEncoder :continue ;};_eeadc ,_feca :=_deaf .ToImage ();
-if _feca !=nil {_g .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0025\u002b\u0076",_feca );continue ;};_eeg :=_fg .NewDCTEncoder ();_eeg .ColorComponents =_eeadc .ColorComponents ;_eeg .Quality =_gcd .ImageQuality ;_eeg .BitsPerComponent =_cfa .BitsPerComponent ;
-_eeg .Width =_cfa .Width ;_eeg .Height =_cfa .Height ;_gggg ,_feca :=_eeg .EncodeBytes (_eeadc .Data );if _feca !=nil {_g .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0025\u002b\u0076",_feca );continue ;};var _bddg _fg .StreamEncoder ;_bddg =_eeg ;
-{_dabc :=_fg .NewFlateEncoder ();_cffe :=_fg .NewMultiEncoder ();_cffe .AddEncoder (_dabc );_cffe .AddEncoder (_eeg );_efa ,_cfaa :=_cffe .EncodeBytes (_eeadc .Data );if _cfaa !=nil {_g .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0025\u002b\u0076",_cfaa );
-continue ;};if len (_efa )< len (_gggg ){_g .Log .Trace ("\u004d\u0075\u006c\u0074\u0069\u0020\u0065\u006e\u0063\u0020\u0069\u006d\u0070\u0072\u006f\u0076\u0065\u0073\u003a\u0020\u0025\u0064\u0020\u0074o\u0020\u0025\u0064\u0020\u0028o\u0072\u0069g\u0020\u0025\u0064\u0029",len (_gggg ),len (_efa ),len (_bcae .Stream ));
-_gggg =_efa ;_bddg =_cffe ;};};_afa :=len (_bcae .Stream );if _afa < len (_gggg ){continue ;};_fab :=&_fg .PdfObjectStream {Stream :_gggg };_fab .PdfObjectReference =_bcae .PdfObjectReference ;_fab .PdfObjectDictionary =_fg .MakeDict ();_fab .Merge (_bcae .PdfObjectDictionary );
-_fab .Merge (_bddg .MakeStreamDict ());_fab .Set ("\u004c\u0065\u006e\u0067\u0074\u0068",_fg .MakeInteger (int64 (len (_gggg ))));_begf [_bcae ]=_fab ;_cgfg [_fgae ].Stream =_fab ;};_ebbc =make ([]_fg .PdfObject ,len (objects ));copy (_ebbc ,objects );
-_gef (_ebbc ,_begf );return _ebbc ,nil ;};func _fdbd (_gaac _fg .PdfObject )(_bfc string ,_cbeg []_fg .PdfObject ){var _geb _dg .Buffer ;switch _babf :=_gaac .(type ){case *_fg .PdfIndirectObject :_cbeg =append (_cbeg ,_babf );_gaac =_babf .PdfObject ;
-};switch _acag :=_gaac .(type ){case *_fg .PdfObjectStream :if _ccce ,_dadb :=_fg .DecodeStream (_acag );_dadb ==nil {_geb .Write (_ccce );_cbeg =append (_cbeg ,_acag );};case *_fg .PdfObjectArray :for _ ,_gafa :=range _acag .Elements (){switch _ccgdg :=_gafa .(type ){case *_fg .PdfObjectStream :if _gfef ,_affe :=_fg .DecodeStream (_ccgdg );
-_affe ==nil {_geb .Write (_gfef );_cbeg =append (_cbeg ,_ccgdg );};};};};return _geb .String (),_cbeg ;};
+func (_bcb *ObjectStreams )Optimize (objects []_fbb .PdfObject )(_ddc []_fbb .PdfObject ,_edg error ){_fecaa :=&_fbb .PdfObjectStreams {};_bdcg :=make ([]_fbb .PdfObject ,0,len (objects ));for _ ,_ddce :=range objects {if _bcd ,_gac :=_ddce .(*_fbb .PdfIndirectObject );
+_gac &&_bcd .GenerationNumber ==0{_fecaa .Append (_ddce );}else {_bdcg =append (_bdcg ,_ddce );};};if _fecaa .Len ()==0{return _bdcg ,nil ;};_ddc =make ([]_fbb .PdfObject ,0,len (_bdcg )+_fecaa .Len ()+1);if _fecaa .Len ()> 1{_ddc =append (_ddc ,_fecaa );
+};_ddc =append (_ddc ,_fecaa .Elements ()...);_ddc =append (_ddc ,_bdcg ...);return _ddc ,nil ;};
 
 // CombineIdenticalIndirectObjects combines identical indirect objects.
 // It implements interface model.Optimizer.
-type CombineIdenticalIndirectObjects struct{};func _aab (_dagd string ,_eag []string )bool {for _ ,_decd :=range _eag {if _dagd ==_decd {return true ;};};return false ;};
-
-// Optimize optimizes PDF objects to decrease PDF size.
-func (_aggf *CombineDuplicateDirectObjects )Optimize (objects []_fg .PdfObject )(_deca []_fg .PdfObject ,_bbgd error ){_cfdf (objects );_gea :=make (map[string ][]*_fg .PdfObjectDictionary );var _agcd func (_dgd *_fg .PdfObjectDictionary );_agcd =func (_edba *_fg .PdfObjectDictionary ){for _ ,_ddba :=range _edba .Keys (){_ddbe :=_edba .Get (_ddba );
-if _ade ,_dede :=_ddbe .(*_fg .PdfObjectDictionary );_dede {_ddcg :=_b .New ();_ddcg .Write ([]byte (_ade .WriteString ()));_dgdg :=string (_ddcg .Sum (nil ));_gea [_dgdg ]=append (_gea [_dgdg ],_ade );_agcd (_ade );};};};for _ ,_bbag :=range objects {_bfa ,_cge :=_bbag .(*_fg .PdfIndirectObject );
-if !_cge {continue ;};if _eaff ,_fcdc :=_bfa .PdfObject .(*_fg .PdfObjectDictionary );_fcdc {_agcd (_eaff );};};_dda :=make ([]_fg .PdfObject ,0,len (_gea ));_bed :=make (map[_fg .PdfObject ]_fg .PdfObject );for _ ,_eefc :=range _gea {if len (_eefc )< 2{continue ;
-};_egdgb :=_fg .MakeDict ();_egdgb .Merge (_eefc [0]);_cage :=_fg .MakeIndirectObject (_egdgb );_dda =append (_dda ,_cage );for _debd :=0;_debd < len (_eefc );_debd ++{_dgge :=_eefc [_debd ];_bed [_dgge ]=_cage ;};};_deca =make ([]_fg .PdfObject ,len (objects ));
-copy (_deca ,objects );_deca =append (_dda ,_deca ...);_gef (_deca ,_bed );return _deca ,nil ;};
-
-// CleanUnusedResources represents an optimizer used to clean unused resources.
-type CleanUnusedResources struct{};func _cfdf (_dfc []_fg .PdfObject ){for _dbgeb ,_fgc :=range _dfc {switch _dcdc :=_fgc .(type ){case *_fg .PdfIndirectObject :_dcdc .ObjectNumber =int64 (_dbgeb +1);_dcdc .GenerationNumber =0;case *_fg .PdfObjectStream :_dcdc .ObjectNumber =int64 (_dbgeb +1);
-_dcdc .GenerationNumber =0;case *_fg .PdfObjectStreams :_dcdc .ObjectNumber =int64 (_dbgeb +1);_dcdc .GenerationNumber =0;};};};func _eb (_ea *_fe .ContentStreamOperations )*_fe .ContentStreamOperations {if _ea ==nil {return nil ;};_eg :=_fe .ContentStreamOperations {};
-for _ ,_bf :=range *_ea {switch _bf .Operand {case "\u0042\u0044\u0043","\u0042\u004d\u0043","\u0045\u004d\u0043":continue ;case "\u0054\u006d":if len (_bf .Params )==6{if _caf ,_gb :=_fg .GetNumbersAsFloat (_bf .Params );_gb ==nil {if _caf [0]==1&&_caf [1]==0&&_caf [2]==0&&_caf [3]==1{_bf =&_fe .ContentStreamOperation {Params :[]_fg .PdfObject {_bf .Params [4],_bf .Params [5]},Operand :"\u0054\u0064"};
-};};};};_eg =append (_eg ,_bf );};return &_eg ;};
-
-// Image optimizes images by rewrite images into JPEG format with quality equals to ImageQuality.
-// TODO(a5i): Add support for inline images.
-// It implements interface model.Optimizer.
-type Image struct{ImageQuality int ;};func _dgec (_facg []_fg .PdfObject )(map[_fg .PdfObject ]struct{},error ){_cce :=_bgge (_facg );_dgc :=_cce ._ddcd ;_abef :=make (map[_fg .PdfObject ]struct{});_bdbd :=_bcc (_dgc );for _ ,_egdg :=range _dgc {_egcg ,_bdd :=_fg .GetDict (_egdg .PdfObject );
-if !_bdd {continue ;};_ecfe ,_bdd :=_fg .GetDict (_egcg .Get ("\u0052e\u0073\u006f\u0075\u0072\u0063\u0065s"));if !_bdd {continue ;};_ebg :=_bdbd ["\u0058O\u0062\u006a\u0065\u0063\u0074"];_fecd ,_bdd :=_fg .GetDict (_ecfe .Get ("\u0058O\u0062\u006a\u0065\u0063\u0074"));
-if _bdd {_ddee :=_ece (_fecd );for _ ,_eaf :=range _ddee {if _aab (_eaf ,_ebg ){continue ;};_bdde :=*_fg .MakeName (_eaf );_ggf :=_fecd .Get (_bdde );_abef [_ggf ]=struct{}{};_fecd .Remove (_bdde );_eea :=_gdg (_ggf ,_abef );if _eea !=nil {_g .Log .Debug ("\u0066\u0061\u0069\u006ce\u0064\u0020\u0074\u006f\u0020\u0074\u0072\u0061\u0076\u0065r\u0073e\u0020\u006f\u0062\u006a\u0065\u0063\u0074 \u0025\u0076",_ggf );
-};};};_bbff ,_bdd :=_fg .GetDict (_ecfe .Get ("\u0046\u006f\u006e\u0074"));_dab :=_bdbd ["\u0046\u006f\u006e\u0074"];if _bdd {_fcbf :=_ece (_bbff );for _ ,_cdb :=range _fcbf {if _aab (_cdb ,_dab ){continue ;};_efgb :=*_fg .MakeName (_cdb );_fed :=_bbff .Get (_efgb );
-_abef [_fed ]=struct{}{};_bbff .Remove (_efgb );_dacg :=_gdg (_fed ,_abef );if _dacg !=nil {_g .Log .Debug ("\u0046\u0061i\u006c\u0065\u0064\u0020\u0074\u006f\u0020\u0074\u0072\u0061\u0076\u0065\u0072\u0073\u0065\u0020\u006f\u0062\u006a\u0065\u0063\u0074 %\u0076\u000a",_fed );
-};};};_dgfd ,_bdd :=_fg .GetDict (_ecfe .Get ("\u0045x\u0074\u0047\u0053\u0074\u0061\u0074e"));if _bdd {_gce :=_ece (_dgfd );_bfd :=_bdbd ["\u0045x\u0074\u0047\u0053\u0074\u0061\u0074e"];for _ ,_cafg :=range _gce {if _aab (_cafg ,_bfd ){continue ;};_fee :=*_fg .MakeName (_cafg );
-_bae :=_dgfd .Get (_fee );_abef [_bae ]=struct{}{};_dgfd .Remove (_fee );_acf :=_gdg (_bae ,_abef );if _acf !=nil {_g .Log .Debug ("\u0066\u0061i\u006c\u0065\u0064\u0020\u0074\u006f\u0020\u0074\u0072\u0061\u0076\u0065\u0072\u0073\u0065\u0020\u006f\u0062\u006a\u0065\u0063\u0074 %\u0076\u000a",_bae );
-};};};};return _abef ,nil ;};
-
-// Optimize optimizes PDF objects to decrease PDF size.
-func (_bedf *CombineDuplicateStreams )Optimize (objects []_fg .PdfObject )(_bee []_fg .PdfObject ,_cff error ){_badd :=make (map[_fg .PdfObject ]_fg .PdfObject );_efbb :=make (map[_fg .PdfObject ]struct{});_edecc :=make (map[string ][]*_fg .PdfObjectStream );
-for _ ,_cda :=range objects {if _gcf ,_fff :=_cda .(*_fg .PdfObjectStream );_fff {_cdea :=_b .New ();_cdea .Write (_gcf .Stream );_cdea .Write ([]byte (_gcf .PdfObjectDictionary .WriteString ()));_ebb :=string (_cdea .Sum (nil ));_edecc [_ebb ]=append (_edecc [_ebb ],_gcf );
-};};for _ ,_beg :=range _edecc {if len (_beg )< 2{continue ;};_abfb :=_beg [0];for _baa :=1;_baa < len (_beg );_baa ++{_bacg :=_beg [_baa ];_badd [_bacg ]=_abfb ;_efbb [_bacg ]=struct{}{};};};_bee =make ([]_fg .PdfObject ,0,len (objects )-len (_efbb ));
-for _ ,_ged :=range objects {if _ ,_cdeg :=_efbb [_ged ];_cdeg {continue ;};_bee =append (_bee ,_ged );};_gef (_bee ,_badd );return _bee ,nil ;};
-
-// CleanContentstream cleans up redundant operands in content streams, including Page and XObject Form
-// contents. This process includes:
-// 1. Marked content operators are removed.
-// 2. Some operands are simplified (shorter form).
-// TODO: Add more reduction methods and improving the methods for identifying unnecessary operands.
-type CleanContentstream struct{};
-
-// New creates a optimizers chain from options.
-func New (options Options )*Chain {_feaa :=new (Chain );if options .CleanFonts ||options .SubsetFonts {_feaa .Append (&CleanFonts {Subset :options .SubsetFonts });};if options .CleanContentstream {_feaa .Append (new (CleanContentstream ));};if options .ImageUpperPPI > 0{_edee :=new (ImagePPI );
-_edee .ImageUpperPPI =options .ImageUpperPPI ;_feaa .Append (_edee );};if options .ImageQuality > 0{_ccef :=new (Image );_ccef .ImageQuality =options .ImageQuality ;_feaa .Append (_ccef );};if options .CombineDuplicateDirectObjects {_feaa .Append (new (CombineDuplicateDirectObjects ));
-};if options .CombineDuplicateStreams {_feaa .Append (new (CombineDuplicateStreams ));};if options .CombineIdenticalIndirectObjects {_feaa .Append (new (CombineIdenticalIndirectObjects ));};if options .UseObjectStreams {_feaa .Append (new (ObjectStreams ));
-};if options .CompressStreams {_feaa .Append (new (CompressStreams ));};if options .CleanUnusedResources {_feaa .Append (new (CleanUnusedResources ));};return _feaa ;};
-
-// Optimize optimizes PDF objects to decrease PDF size.
-func (_aa *CleanFonts )Optimize (objects []_fg .PdfObject )(_gbe []_fg .PdfObject ,_dea error ){var _gg map[*_fg .PdfObjectStream ]struct{};if _aa .Subset {var _aff error ;_gg ,_aff =_ff (objects );if _aff !=nil {_g .Log .Debug ("\u0045\u0052\u0052\u004fR\u003a\u0020\u0046\u0061\u0069\u006c\u0065\u0064\u0020\u0073u\u0062s\u0065\u0074\u0074\u0069\u006e\u0067\u003a \u0025\u0076",_aff );
-return nil ,_aff ;};};for _ ,_daf :=range objects {_bba ,_edfa :=_fg .GetStream (_daf );if !_edfa {continue ;};if _ ,_cfb :=_gg [_bba ];_cfb {continue ;};_ccd ,_fca :=_fg .NewEncoderFromStream (_bba );if _fca !=nil {_g .Log .Debug ("\u0045\u0052RO\u0052\u0020\u0067e\u0074\u0074\u0069\u006eg e\u006eco\u0064\u0065\u0072\u003a\u0020\u0025\u0076 -\u0020\u0069\u0067\u006e\u006f\u0072\u0069n\u0067",_fca );
-continue ;};_gba ,_fca :=_ccd .DecodeStream (_bba );if _fca !=nil {_g .Log .Debug ("\u0044\u0065\u0063\u006f\u0064\u0069\u006e\u0067\u0020\u0065r\u0072\u006f\u0072\u0020\u003a\u0020\u0025v\u0020\u002d\u0020\u0069\u0067\u006e\u006f\u0072\u0069\u006e\u0067",_fca );
-continue ;};if len (_gba )< 4{continue ;};_gbed :=string (_gba [:4]);if _gbed =="\u004f\u0054\u0054\u004f"{continue ;};if _gbed !="\u0000\u0001\u0000\u0000"&&_gbed !="\u0074\u0072\u0075\u0065"{continue ;};_ffg ,_fca :=_ca .Parse (_dg .NewReader (_gba ));
-if _fca !=nil {_g .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u0020P\u0061\u0072\u0073\u0069\u006e\u0067\u0020\u0066\u006f\u006e\u0074\u003a\u0020%\u0076\u0020\u002d\u0020\u0069\u0067\u006eo\u0072\u0069\u006e\u0067",_fca );continue ;};_fca =_ffg .Optimize ();
-if _fca !=nil {_g .Log .Debug ("\u0045\u0052RO\u0052\u0020\u004fp\u0074\u0069\u006d\u0069zin\u0067 f\u006f\u006e\u0074\u003a\u0020\u0025\u0076 -\u0020\u0073\u006b\u0069\u0070\u0070\u0069n\u0067",_fca );continue ;};var _fac _dg .Buffer ;_fca =_ffg .Write (&_fac );
-if _fca !=nil {_g .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u0020W\u0072\u0069\u0074\u0069\u006e\u0067\u0020\u0066\u006f\u006e\u0074\u003a\u0020%\u0076\u0020\u002d\u0020\u0069\u0067\u006eo\u0072\u0069\u006e\u0067",_fca );continue ;};if _fac .Len ()> len (_gba ){_g .Log .Debug ("\u0052\u0065-\u0077\u0072\u0069\u0074\u0074\u0065\u006e\u0020\u0066\u006f\u006e\u0074\u0020\u0069\u0073\u0020\u006c\u0061\u0072\u0067\u0065\u0072\u0020\u0074\u0068\u0061\u006e\u0020\u006f\u0072\u0069\u0067\u0069\u006e\u0061\u006c\u0020\u002d\u0020\u0073\u006b\u0069\u0070");
-continue ;};_dec ,_fca :=_fg .MakeStream (_fac .Bytes (),_fg .NewFlateEncoder ());if _fca !=nil {continue ;};*_bba =*_dec ;_bba .Set ("\u004ce\u006e\u0067\u0074\u0068\u0031",_fg .MakeInteger (int64 (_fac .Len ())));};return objects ,nil ;};
-
-// ImagePPI optimizes images by scaling images such that the PPI (pixels per inch) is never higher than ImageUpperPPI.
-// TODO(a5i): Add support for inline images.
-// It implements interface model.Optimizer.
-type ImagePPI struct{ImageUpperPPI float64 ;};type imageModifications struct{Scale float64 ;Encoding _fg .StreamEncoder ;};func _aee (_gfd *_cac .Image ,_cgc float64 )(*_cac .Image ,error ){_cbg ,_bbe :=_gfd .ToGoImage ();if _bbe !=nil {return nil ,_bbe ;
-};var _fddd _ag .Image ;_dbaf ,_agaa :=_cbg .(*_ag .Monochrome );if _agaa {if _bbe =_dbaf .ResolveDecode ();_bbe !=nil {return nil ,_bbe ;};_fddd ,_bbe =_dbaf .Scale (_cgc );if _bbe !=nil {return nil ,_bbe ;};}else {_cbaa :=int (_f .RoundToEven (float64 (_gfd .Width )*_cgc ));
-_cfd :=int (_f .RoundToEven (float64 (_gfd .Height )*_cgc ));_fddd ,_bbe =_ag .NewImage (_cbaa ,_cfd ,int (_gfd .BitsPerComponent ),_gfd .ColorComponents ,nil ,nil ,nil );if _bbe !=nil {return nil ,_bbe ;};_c .CatmullRom .Scale (_fddd ,_fddd .Bounds (),_cbg ,_cbg .Bounds (),_c .Over ,&_c .Options {});
-};_bdbdc :=_fddd .Base ();_ddbc :=&_cac .Image {Width :int64 (_bdbdc .Width ),Height :int64 (_bdbdc .Height ),BitsPerComponent :int64 (_bdbdc .BitsPerComponent ),ColorComponents :_bdbdc .ColorComponents ,Data :_bdbdc .Data };_ddbc .SetDecode (_bdbdc .Decode );
-_ddbc .SetAlpha (_bdbdc .Alpha );return _ddbc ,nil ;};func _ece (_daba *_fg .PdfObjectDictionary )[]string {_gecd :=[]string {};for _ ,_bgg :=range _daba .Keys (){_gecd =append (_gecd ,_bgg .String ());};return _gecd ;};
-
-// CombineDuplicateStreams combines duplicated streams by its data hash.
-// It implements interface model.Optimizer.
-type CombineDuplicateStreams struct{};func _gef (_gbad []_fg .PdfObject ,_gcgb map[_fg .PdfObject ]_fg .PdfObject ){if len (_gcgb )==0{return ;};for _ggfb ,_afcc :=range _gbad {if _gadg ,_gdd :=_gcgb [_afcc ];_gdd {_gbad [_ggfb ]=_gadg ;continue ;};_gcgb [_afcc ]=_afcc ;
-switch _ffa :=_afcc .(type ){case *_fg .PdfObjectArray :_fcbbf :=make ([]_fg .PdfObject ,_ffa .Len ());copy (_fcbbf ,_ffa .Elements ());_gef (_fcbbf ,_gcgb );for _aabe ,_bgba :=range _fcbbf {_ffa .Set (_aabe ,_bgba );};case *_fg .PdfObjectStreams :_gef (_ffa .Elements (),_gcgb );
-case *_fg .PdfObjectStream :_gdb :=[]_fg .PdfObject {_ffa .PdfObjectDictionary };_gef (_gdb ,_gcgb );_ffa .PdfObjectDictionary =_gdb [0].(*_fg .PdfObjectDictionary );case *_fg .PdfObjectDictionary :_adcd :=_ffa .Keys ();_bbdf :=make ([]_fg .PdfObject ,len (_adcd ));
-for _cbce ,_cbf :=range _adcd {_bbdf [_cbce ]=_ffa .Get (_cbf );};_gef (_bbdf ,_gcgb );for _gdee ,_gefa :=range _adcd {_ffa .Set (_gefa ,_bbdf [_gdee ]);};case *_fg .PdfIndirectObject :_beac :=[]_fg .PdfObject {_ffa .PdfObject };_gef (_beac ,_gcgb );_ffa .PdfObject =_beac [0];
-};};};
-
-// Optimize optimizes PDF objects to decrease PDF size.
-func (_defc *ObjectStreams )Optimize (objects []_fg .PdfObject )(_adfb []_fg .PdfObject ,_agaf error ){_ecgd :=&_fg .PdfObjectStreams {};_ecbf :=make ([]_fg .PdfObject ,0,len (objects ));for _ ,_fbae :=range objects {if _edgbd ,_abbeb :=_fbae .(*_fg .PdfIndirectObject );
-_abbeb &&_edgbd .GenerationNumber ==0{_ecgd .Append (_fbae );}else {_ecbf =append (_ecbf ,_fbae );};};if _ecgd .Len ()==0{return _ecbf ,nil ;};_adfb =make ([]_fg .PdfObject ,0,len (_ecbf )+_ecgd .Len ()+1);if _ecgd .Len ()> 1{_adfb =append (_adfb ,_ecgd );
-};_adfb =append (_adfb ,_ecgd .Elements ()...);_adfb =append (_adfb ,_ecbf ...);return _adfb ,nil ;};func _fdf (_gcgd _fg .PdfObject )(string ,error ){_feff :=_fg .TraceToDirectObject (_gcgd );switch _abbe :=_feff .(type ){case *_fg .PdfObjectString :return _abbe .Str (),nil ;
-case *_fg .PdfObjectStream :_cde ,_cgb :=_fg .DecodeStream (_abbe );if _cgb !=nil {return "",_cgb ;};return string (_cde ),nil ;};return "",_ac .Errorf ("\u0069\u006e\u0076\u0061\u006ci\u0064\u0020\u0063\u006f\u006e\u0074\u0065\u006e\u0074\u0020\u0073\u0074\u0072e\u0061\u006d\u0020\u006f\u0062\u006a\u0065\u0063\u0074\u0020\u0068\u006f\u006c\u0064\u0065\u0072\u0020\u0028\u0025\u0054\u0029",_feff );
-};
-
-// CombineDuplicateDirectObjects combines duplicated direct objects by its data hash.
-// It implements interface model.Optimizer.
-type CombineDuplicateDirectObjects struct{};
-
-// GetOptimizers gets the list of optimizers in chain `c`.
-func (_ef *Chain )GetOptimizers ()[]_cac .Optimizer {return _ef ._cb };
-
-// Optimize optimizes PDF objects to decrease PDF size.
-func (_bg *CleanContentstream )Optimize (objects []_fg .PdfObject )(_bb []_fg .PdfObject ,_baf error ){_fb :=map[*_fg .PdfObjectStream ]struct{}{};var _dcc []*_fg .PdfObjectStream ;_agg :=func (_efg *_fg .PdfObjectStream ){if _ ,_ad :=_fb [_efg ];!_ad {_fb [_efg ]=struct{}{};
-_dcc =append (_dcc ,_efg );};};_bdb :=map[_fg .PdfObject ]bool {};_bdg :=map[_fg .PdfObject ]bool {};for _ ,_bbf :=range objects {switch _fcd :=_bbf .(type ){case *_fg .PdfIndirectObject :switch _ec :=_fcd .PdfObject .(type ){case *_fg .PdfObjectDictionary :if _afd ,_fgd :=_fg .GetName (_ec .Get ("\u0054\u0079\u0070\u0065"));
-!_fgd ||_afd .String ()!="\u0050\u0061\u0067\u0065"{continue ;};if _ge ,_egg :=_fg .GetStream (_ec .Get ("\u0043\u006f\u006e\u0074\u0065\u006e\u0074\u0073"));_egg {_agg (_ge );}else if _fgf ,_dd :=_fg .GetArray (_ec .Get ("\u0043\u006f\u006e\u0074\u0065\u006e\u0074\u0073"));
-_dd {var _bdf []*_fg .PdfObjectStream ;for _ ,_agd :=range _fgf .Elements (){if _fgg ,_df :=_fg .GetStream (_agd );_df {_bdf =append (_bdf ,_fgg );};};if len (_bdf )> 0{var _bbg _dg .Buffer ;for _ ,_egf :=range _bdf {if _gbc ,_gee :=_fg .DecodeStream (_egf );
-_gee ==nil {_bbg .Write (_gbc );};_bdb [_egf ]=true ;};_dfg ,_agf :=_fg .MakeStream (_bbg .Bytes (),_fg .NewFlateEncoder ());if _agf !=nil {return nil ,_agf ;};_bdg [_dfg ]=true ;_ec .Set ("\u0043\u006f\u006e\u0074\u0065\u006e\u0074\u0073",_dfg );_agg (_dfg );
-};};};case *_fg .PdfObjectStream :if _gfe ,_dga :=_fg .GetName (_fcd .Get ("\u0054\u0079\u0070\u0065"));!_dga ||_gfe .String ()!="\u0058O\u0062\u006a\u0065\u0063\u0074"{continue ;};if _aga ,_fce :=_fg .GetName (_fcd .Get ("\u0053u\u0062\u0074\u0079\u0070\u0065"));
-!_fce ||_aga .String ()!="\u0046\u006f\u0072\u006d"{continue ;};_agg (_fcd );};};for _ ,_bad :=range _dcc {_baf =_feb (_bad );if _baf !=nil {return nil ,_baf ;};};_bb =nil ;for _ ,_ddb :=range objects {if _bdb [_ddb ]{continue ;};_bb =append (_bb ,_ddb );
-};for _dge :=range _bdg {_bb =append (_bb ,_dge );};return _bb ,nil ;};
-
-// Optimize optimizes PDF objects to decrease PDF size.
-func (_dggg *ImagePPI )Optimize (objects []_fg .PdfObject )(_cbab []_fg .PdfObject ,_afc error ){if _dggg .ImageUpperPPI <=0{return objects ,nil ;};_ccc :=_adf (objects );if len (_ccc )==0{return objects ,nil ;};_aabb :=make (map[_fg .PdfObject ]struct{});
-for _ ,_dace :=range _ccc {_ffb :=_dace .Stream .PdfObjectDictionary .Get ("\u0053\u004d\u0061s\u006b");_aabb [_ffb ]=struct{}{};};_eed :=make (map[*_fg .PdfObjectStream ]*imageInfo );for _ ,_ccg :=range _ccc {_eed [_ccg .Stream ]=_ccg ;};var _cgca *_fg .PdfObjectDictionary ;
-for _ ,_bcad :=range objects {if _abgb ,_faae :=_fg .GetDict (_bcad );_cgca ==nil &&_faae {if _bdag ,_gcbd :=_fg .GetName (_abgb .Get ("\u0054\u0079\u0070\u0065"));_gcbd &&*_bdag =="\u0043a\u0074\u0061\u006c\u006f\u0067"{_cgca =_abgb ;};};};if _cgca ==nil {return objects ,nil ;
-};_edgb ,_beae :=_fg .GetDict (_cgca .Get ("\u0050\u0061\u0067e\u0073"));if !_beae {return objects ,nil ;};_cgd ,_deee :=_fg .GetArray (_edgb .Get ("\u004b\u0069\u0064\u0073"));if !_deee {return objects ,nil ;};for _ ,_dbecc :=range _cgd .Elements (){_ccb :=make (map[string ]*imageInfo );
-_edfg ,_eega :=_fg .GetDict (_dbecc );if !_eega {continue ;};_efc ,_ :=_fdbd (_edfg .Get ("\u0043\u006f\u006e\u0074\u0065\u006e\u0074\u0073"));if len (_efc )==0{continue ;};_fgba ,_gafg :=_fg .GetDict (_edfg .Get ("\u0052e\u0073\u006f\u0075\u0072\u0063\u0065s"));
-if !_gafg {continue ;};_bfe ,_bgde :=_cac .NewPdfPageResourcesFromDict (_fgba );if _bgde !=nil {_g .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u0020\u0070\u0061\u0072\u0073\u0069\u006e\u0067\u0020\u0072\u0065\u0073\u006f\u0075\u0072\u0063\u0065\u0073\u0020-\u0020\u0069\u0067\u006e\u006fr\u0069\u006eg\u003a\u0020\u0025\u0076",_bgde );
-continue ;};_gad ,_aecb :=_fg .GetDict (_fgba .Get ("\u0058O\u0062\u006a\u0065\u0063\u0074"));if !_aecb {continue ;};_afb :=_gad .Keys ();for _ ,_gfdd :=range _afb {if _dcd ,_dbf :=_fg .GetStream (_gad .Get (_gfdd ));_dbf {if _ecbc ,_ccgd :=_eed [_dcd ];
-_ccgd {_ccb [string (_gfdd )]=_ecbc ;};};};_aaf :=_fe .NewContentStreamParser (_efc );_fgfg ,_bgde :=_aaf .Parse ();if _bgde !=nil {_g .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0025\u002b\u0076",_bgde );continue ;};_fddg :=_fe .NewContentStreamProcessor (*_fgfg );
-_fddg .AddHandler (_fe .HandlerConditionEnumAllOperands ,"",func (_dgfc *_fe .ContentStreamOperation ,_dgfe _fe .GraphicsState ,_ffee *_cac .PdfPageResources )error {switch _dgfc .Operand {case "\u0044\u006f":if len (_dgfc .Params )!=1{_g .Log .Debug ("E\u0052\u0052\u004f\u0052\u003a\u0020\u0049\u0067\u006e\u006f\u0072\u0069\u006e\u0067\u0020\u0044\u006f\u0020w\u0069\u0074\u0068\u0020\u006c\u0065\u006e\u0028\u0070\u0061ra\u006d\u0073\u0029 \u0021=\u0020\u0031");
-return nil ;};_bga ,_dgbba :=_fg .GetName (_dgfc .Params [0]);if !_dgbba {_g .Log .Debug ("\u0045\u0052\u0052O\u0052\u003a\u0020\u0049\u0067\u006e\u006f\u0072\u0069\u006e\u0067\u0020\u0044\u006f\u0020\u0077\u0069\u0074\u0068\u0020\u006e\u006f\u006e\u0020\u004e\u0061\u006d\u0065\u0020p\u0061\u0072\u0061\u006d\u0065\u0074\u0065\u0072");
-return nil ;};if _baad ,_ecaf :=_ccb [string (*_bga )];_ecaf {_adec :=_dgfe .CTM .ScalingFactorX ();_bgda :=_dgfe .CTM .ScalingFactorY ();_ege ,_bab :=_adec /72.0,_bgda /72.0;_bgcg ,_fea :=float64 (_baad .Width )/_ege ,float64 (_baad .Height )/_bab ;if _ege ==0||_bab ==0{_bgcg =72.0;
-_fea =72.0;};_baad .PPI =_f .Max (_baad .PPI ,_bgcg );_baad .PPI =_f .Max (_baad .PPI ,_fea );};};return nil ;});_bgde =_fddg .Process (_bfe );if _bgde !=nil {_g .Log .Debug ("E\u0052\u0052\u004f\u0052 p\u0072o\u0063\u0065\u0073\u0073\u0069n\u0067\u003a\u0020\u0025\u002b\u0076",_bgde );
-continue ;};};for _ ,_ebf :=range _ccc {if _ ,_egef :=_aabb [_ebf .Stream ];_egef {continue ;};if _ebf .PPI <=_dggg .ImageUpperPPI {continue ;};_bdfgg ,_egfe :=_cac .NewXObjectImageFromStream (_ebf .Stream );if _egfe !=nil {_g .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0025\u002b\u0076",_egfe );
-continue ;};var _caa imageModifications ;_caa .Scale =_dggg .ImageUpperPPI /_ebf .PPI ;if _ebf .BitsPerComponent ==1&&_ebf .ColorComponents ==1{_egcea :=_f .Round (_ebf .PPI /_dggg .ImageUpperPPI );_abgg :=_ag .NextPowerOf2 (uint (_egcea ));if _ag .InDelta (float64 (_abgg ),1/_caa .Scale ,0.3){_caa .Scale =float64 (1)/float64 (_abgg );
-};if _ ,_dgbbfg :=_bdfgg .Filter .(*_fg .JBIG2Encoder );!_dgbbfg {_caa .Encoding =_fg .NewJBIG2Encoder ();};};if _egfe =_fafg (_bdfgg ,_caa );_egfe !=nil {_g .Log .Debug ("\u0045\u0072\u0072\u006f\u0072 \u0073\u0063\u0061\u006c\u0065\u0020\u0069\u006d\u0061\u0067\u0065\u0020\u006be\u0065\u0070\u0020\u006f\u0072\u0069\u0067\u0069\u006e\u0061\u006c\u0020\u0069\u006d\u0061\u0067\u0065\u003a\u0020\u0025\u0073",_egfe );
-continue ;};_caa .Encoding =nil ;if _bbgb ,_dabe :=_fg .GetStream (_ebf .Stream .PdfObjectDictionary .Get ("\u0053\u004d\u0061s\u006b"));_dabe {_dbge ,_cgbf :=_cac .NewXObjectImageFromStream (_bbgb );if _cgbf !=nil {_g .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0025\u002b\u0076",_cgbf );
-continue ;};if _cgbf =_fafg (_dbge ,_caa );_cgbf !=nil {_g .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0025\u002b\u0076",_cgbf );continue ;};};};return objects ,nil ;};func _fafg (_gacb *_cac .XObjectImage ,_faad imageModifications )error {_eebb ,_eae :=_gacb .ToImage ();
-if _eae !=nil {return _eae ;};if _faad .Scale !=0{_eebb ,_eae =_aee (_eebb ,_faad .Scale );if _eae !=nil {return _eae ;};};if _faad .Encoding !=nil {_gacb .Filter =_faad .Encoding ;};_gacb .Decode =nil ;switch _bbfed :=_gacb .Filter .(type ){case *_fg .FlateEncoder :if _bbfed .Predictor !=1&&_bbfed .Predictor !=11{_bbfed .Predictor =1;
-};};if _eae =_gacb .SetImage (_eebb ,nil );_eae !=nil {_g .Log .Debug ("\u0045\u0072\u0072or\u0020\u0073\u0065\u0074\u0074\u0069\u006e\u0067\u0020\u0069\u006d\u0061\u0067\u0065\u003a\u0020\u0025\u0076",_eae );return _eae ;};_gacb .ToPdfObject ();return nil ;
-};
-
-// Optimize implements Optimizer interface.
-func (_bbb *CleanUnusedResources )Optimize (objects []_fg .PdfObject )(_cfe []_fg .PdfObject ,_bca error ){_gcc ,_bca :=_dgec (objects );if _bca !=nil {return nil ,_bca ;};_dgg :=[]_fg .PdfObject {};for _ ,_aeb :=range objects {_ ,_gcaa :=_gcc [_aeb ];
-if _gcaa {continue ;};_dgg =append (_dgg ,_aeb );};return _dgg ,nil ;};
+type CombineIdenticalIndirectObjects struct{};
 
 // CleanFonts cleans up embedded fonts, reducing font sizes.
 type CleanFonts struct{
 
 // Subset embedded fonts if encountered (if true).
 // Otherwise attempts to reduce the font program.
-Subset bool ;};func _eff (_agb _fg .PdfObject )[]content {if _agb ==nil {return nil ;};_egd ,_dac :=_fg .GetArray (_agb );if !_dac {_g .Log .Debug ("\u0041\u006e\u006e\u006fts\u0020\u006e\u006f\u0074\u0020\u0061\u006e\u0020\u0061\u0072\u0072\u0061\u0079");
-return nil ;};var _cacg []content ;for _ ,_ecdd :=range _egd .Elements (){_ddbg ,_dbe :=_fg .GetDict (_ecdd );if !_dbe {_g .Log .Debug ("I\u0067\u006e\u006f\u0072\u0069\u006eg\u0020\u006e\u006f\u006e\u002d\u0064i\u0063\u0074\u0020\u0065\u006c\u0065\u006de\u006e\u0074\u0020\u0069\u006e\u0020\u0041\u006e\u006e\u006ft\u0073");
-continue ;};_edg ,_dbe :=_fg .GetDict (_ddbg .Get ("\u0041\u0050"));if !_dbe {_g .Log .Debug ("\u004e\u006f\u0020\u0041P \u0065\u006e\u0074\u0072\u0079\u0020\u002d\u0020\u0073\u006b\u0069\u0070\u0070\u0069n\u0067");continue ;};_befb :=_fg .TraceToDirectObject (_edg .Get ("\u004e"));
-if _befb ==nil {_g .Log .Debug ("N\u006f\u0020\u004e\u0020en\u0074r\u0079\u0020\u002d\u0020\u0073k\u0069\u0070\u0070\u0069\u006e\u0067");continue ;};var _bdgd *_fg .PdfObjectStream ;switch _bdbce :=_befb .(type ){case *_fg .PdfObjectDictionary :_aca ,_fcb :=_fg .GetName (_ddbg .Get ("\u0041\u0053"));
-if !_fcb {_g .Log .Debug ("\u004e\u006f\u0020\u0041S \u0065\u006e\u0074\u0072\u0079\u0020\u002d\u0020\u0073\u006b\u0069\u0070\u0070\u0069n\u0067");continue ;};_bdgd ,_fcb =_fg .GetStream (_bdbce .Get (*_aca ));if !_fcb {_g .Log .Debug ("\u0046o\u0072\u006d\u0020\u006eo\u0074\u0020\u0066\u006f\u0075n\u0064 \u002d \u0073\u006b\u0069\u0070\u0070\u0069\u006eg");
-continue ;};case *_fg .PdfObjectStream :_bdgd =_bdbce ;};if _bdgd ==nil {_g .Log .Debug ("\u0046\u006f\u0072m\u0020\u006e\u006f\u0074 \u0066\u006f\u0075\u006e\u0064\u0020\u0028n\u0069\u006c\u0029\u0020\u002d\u0020\u0073\u006b\u0069\u0070\u0070\u0069\u006e\u0067");
-continue ;};_gfb ,_fdb :=_cac .NewXObjectFormFromStream (_bdgd );if _fdb !=nil {_g .Log .Debug ("\u0045\u0072\u0072\u006f\u0072\u0020l\u006f\u0061\u0064\u0069\u006e\u0067\u0020\u0066\u006f\u0072\u006d\u003a\u0020%\u0076\u0020\u002d\u0020\u0069\u0067\u006eo\u0072\u0069\u006e\u0067",_fdb );
-continue ;};_bdab ,_fdb :=_gfb .GetContentStream ();if _fdb !=nil {_g .Log .Debug ("E\u0072\u0072\u006f\u0072\u0020\u0064e\u0063\u006f\u0064\u0069\u006e\u0067\u0020\u0063\u006fn\u0074\u0065\u006et\u0073:\u0020\u0025\u0076",_fdb );continue ;};_cacg =append (_cacg ,content {_ede :string (_bdab ),_cag :_gfb .Resources });
-};return _cacg ;};func _gdg (_dfaf _fg .PdfObject ,_geg map[_fg .PdfObject ]struct{})error {if _ggg ,_egce :=_dfaf .(*_fg .PdfIndirectObject );_egce {_geg [_dfaf ]=struct{}{};_agc :=_gdg (_ggg .PdfObject ,_geg );if _agc !=nil {return _agc ;};return nil ;
-};if _aac ,_dccf :=_dfaf .(*_fg .PdfObjectStream );_dccf {_geg [_aac ]=struct{}{};_egdf :=_gdg (_aac .PdfObjectDictionary ,_geg );if _egdf !=nil {return _egdf ;};return nil ;};if _dccd ,_fcbb :=_dfaf .(*_fg .PdfObjectDictionary );_fcbb {for _ ,_aea :=range _dccd .Keys (){_efb :=_dccd .Get (_aea );
-_ =_efb ;if _dgea ,_edb :=_efb .(*_fg .PdfObjectReference );_edb {_efb =_dgea .Resolve ();_dccd .Set (_aea ,_efb );};if _aea !="\u0050\u0061\u0072\u0065\u006e\u0074"{if _faf :=_gdg (_efb ,_geg );_faf !=nil {return _faf ;};};};return nil ;};if _gec ,_gac :=_dfaf .(*_fg .PdfObjectArray );
-_gac {if _gec ==nil {return _d .New ("\u0061\u0072\u0072a\u0079\u0020\u0069\u0073\u0020\u006e\u0069\u006c");};for _fga ,_faa :=range _gec .Elements (){if _facd ,_bgf :=_faa .(*_fg .PdfObjectReference );_bgf {_faa =_facd .Resolve ();_gec .Set (_fga ,_faa );
-};if _gda :=_gdg (_faa ,_geg );_gda !=nil {return _gda ;};};return nil ;};return nil ;};
+Subset bool ;};func _ecdg (_fefg _fbb .PdfObject )(_ced string ,_cdab []_fbb .PdfObject ){var _ebff _ff .Buffer ;switch _fcce :=_fefg .(type ){case *_fbb .PdfIndirectObject :_cdab =append (_cdab ,_fcce );_fefg =_fcce .PdfObject ;};switch _gcfe :=_fefg .(type ){case *_fbb .PdfObjectStream :if _cgff ,_fca :=_fbb .DecodeStream (_gcfe );
+_fca ==nil {_ebff .Write (_cgff );_cdab =append (_cdab ,_gcfe );};case *_fbb .PdfObjectArray :for _ ,_edfb :=range _gcfe .Elements (){switch _dfga :=_edfb .(type ){case *_fbb .PdfObjectStream :if _fdgg ,_ddef :=_fbb .DecodeStream (_dfga );_ddef ==nil {_ebff .Write (_fdgg );
+_cdab =append (_cdab ,_dfga );};};};};return _ebff .String (),_cdab ;};
 
 // Optimize optimizes PDF objects to decrease PDF size.
-func (_bcdc *CombineIdenticalIndirectObjects )Optimize (objects []_fg .PdfObject )(_abeg []_fg .PdfObject ,_gaf error ){_cfdf (objects );_cgbd :=make (map[_fg .PdfObject ]_fg .PdfObject );_eaffc :=make (map[_fg .PdfObject ]struct{});_bcb :=make (map[string ][]*_fg .PdfIndirectObject );
-for _ ,_gcfb :=range objects {_cfbb ,_aacc :=_gcfb .(*_fg .PdfIndirectObject );if !_aacc {continue ;};if _gbeg ,_egfb :=_cfbb .PdfObject .(*_fg .PdfObjectDictionary );_egfb {if _gbca ,_ggeb :=_gbeg .Get ("\u0054\u0079\u0070\u0065").(*_fg .PdfObjectName );
-_ggeb &&*_gbca =="\u0050\u0061\u0067\u0065"{continue ;};_fecc :=_b .New ();_fecc .Write ([]byte (_gbeg .WriteString ()));_cgac :=string (_fecc .Sum (nil ));_bcb [_cgac ]=append (_bcb [_cgac ],_cfbb );};};for _ ,_bgb :=range _bcb {if len (_bgb )< 2{continue ;
-};_bdfg :=_bgb [0];for _ace :=1;_ace < len (_bgb );_ace ++{_fbge :=_bgb [_ace ];_cgbd [_fbge ]=_bdfg ;_eaffc [_fbge ]=struct{}{};};};_abeg =make ([]_fg .PdfObject ,0,len (objects )-len (_eaffc ));for _ ,_cee :=range objects {if _ ,_ffgf :=_eaffc [_cee ];
-_ffgf {continue ;};_abeg =append (_abeg ,_cee );};_gef (_abeg ,_cgbd );return _abeg ,nil ;};type content struct{_ede string ;_cag *_cac .PdfPageResources ;};
+func (_eddb *CompressStreams )Optimize (objects []_fbb .PdfObject )(_gbg []_fbb .PdfObject ,_dca error ){_gbg =make ([]_fbb .PdfObject ,len (objects ));copy (_gbg ,objects );for _ ,_fbgb :=range objects {_acee ,_ggb :=_fbb .GetStream (_fbgb );if !_ggb {continue ;
+};if _bdbd :=_acee .Get ("\u0046\u0069\u006c\u0074\u0065\u0072");_bdbd !=nil {if _ ,_bfa :=_fbb .GetName (_bdbd );_bfa {continue ;};if _fbe ,_agf :=_fbb .GetArray (_bdbd );_agf &&_fbe .Len ()> 0{continue ;};};_gbe :=_fbb .NewFlateEncoder ();var _gba []byte ;
+_gba ,_dca =_gbe .EncodeBytes (_acee .Stream );if _dca !=nil {return _gbg ,_dca ;};_gge :=_gbe .MakeStreamDict ();if len (_gba )+len (_gge .WriteString ())< len (_acee .Stream ){_acee .Stream =_gba ;_acee .PdfObjectDictionary .Merge (_gge );_acee .PdfObjectDictionary .Set ("\u004c\u0065\u006e\u0067\u0074\u0068",_fbb .MakeInteger (int64 (len (_acee .Stream ))));
+};};return _gbg ,nil ;};func _bad (_dgg _fbb .PdfObject )[]content {if _dgg ==nil {return nil ;};_cgc ,_ggd :=_fbb .GetArray (_dgg );if !_ggd {_f .Log .Debug ("\u0041\u006e\u006e\u006fts\u0020\u006e\u006f\u0074\u0020\u0061\u006e\u0020\u0061\u0072\u0072\u0061\u0079");
+return nil ;};var _dga []content ;for _ ,_cggg :=range _cgc .Elements (){_fdg ,_cfc :=_fbb .GetDict (_cggg );if !_cfc {_f .Log .Debug ("I\u0067\u006e\u006f\u0072\u0069\u006eg\u0020\u006e\u006f\u006e\u002d\u0064i\u0063\u0074\u0020\u0065\u006c\u0065\u006de\u006e\u0074\u0020\u0069\u006e\u0020\u0041\u006e\u006e\u006ft\u0073");
+continue ;};_def ,_cfc :=_fbb .GetDict (_fdg .Get ("\u0041\u0050"));if !_cfc {_f .Log .Debug ("\u004e\u006f\u0020\u0041P \u0065\u006e\u0074\u0072\u0079\u0020\u002d\u0020\u0073\u006b\u0069\u0070\u0070\u0069n\u0067");continue ;};_fbg :=_fbb .TraceToDirectObject (_def .Get ("\u004e"));
+if _fbg ==nil {_f .Log .Debug ("N\u006f\u0020\u004e\u0020en\u0074r\u0079\u0020\u002d\u0020\u0073k\u0069\u0070\u0070\u0069\u006e\u0067");continue ;};var _bbc *_fbb .PdfObjectStream ;switch _efb :=_fbg .(type ){case *_fbb .PdfObjectDictionary :_egb ,_cbea :=_fbb .GetName (_fdg .Get ("\u0041\u0053"));
+if !_cbea {_f .Log .Debug ("\u004e\u006f\u0020\u0041S \u0065\u006e\u0074\u0072\u0079\u0020\u002d\u0020\u0073\u006b\u0069\u0070\u0070\u0069n\u0067");continue ;};_bbc ,_cbea =_fbb .GetStream (_efb .Get (*_egb ));if !_cbea {_f .Log .Debug ("\u0046o\u0072\u006d\u0020\u006eo\u0074\u0020\u0066\u006f\u0075n\u0064 \u002d \u0073\u006b\u0069\u0070\u0070\u0069\u006eg");
+continue ;};case *_fbb .PdfObjectStream :_bbc =_efb ;};if _bbc ==nil {_f .Log .Debug ("\u0046\u006f\u0072m\u0020\u006e\u006f\u0074 \u0066\u006f\u0075\u006e\u0064\u0020\u0028n\u0069\u006c\u0029\u0020\u002d\u0020\u0073\u006b\u0069\u0070\u0070\u0069\u006e\u0067");
+continue ;};_afc ,_ace :=_eg .NewXObjectFormFromStream (_bbc );if _ace !=nil {_f .Log .Debug ("\u0045\u0072\u0072\u006f\u0072\u0020l\u006f\u0061\u0064\u0069\u006e\u0067\u0020\u0066\u006f\u0072\u006d\u003a\u0020%\u0076\u0020\u002d\u0020\u0069\u0067\u006eo\u0072\u0069\u006e\u0067",_ace );
+continue ;};_gfe ,_ace :=_afc .GetContentStream ();if _ace !=nil {_f .Log .Debug ("E\u0072\u0072\u006f\u0072\u0020\u0064e\u0063\u006f\u0064\u0069\u006e\u0067\u0020\u0063\u006fn\u0074\u0065\u006et\u0073:\u0020\u0025\u0076",_ace );continue ;};_dga =append (_dga ,content {_fgf :string (_gfe ),_ccg :_afc .Resources });
+};return _dga ;};func _fae (_gefc []*_fbb .PdfIndirectObject )map[string ][]string {_ecbd :=map[string ][]string {};for _ ,_ggc :=range _gefc {_cec ,_cbb :=_fbb .GetDict (_ggc .PdfObject );if !_cbb {continue ;};_eccb :=_cec .Get ("\u0043\u006f\u006e\u0074\u0065\u006e\u0074\u0073");
+_ggae :=_fbb .TraceToDirectObject (_eccb );var _gagg []string ;if _ega ,_dac :=_ggae .(*_fbb .PdfObjectArray );_dac {for _ ,_bdb :=range _ega .Elements (){_eeb ,_aegb :=_bced (_bdb );if _aegb !=nil {continue ;};_gagg =append (_gagg ,_eeb );};};_dfd :=_fb .Join (_gagg ,"\u0020");
+_gcfd :=_cg .NewContentStreamParser (_dfd );_cgfc ,_dcd :=_gcfd .Parse ();if _dcd !=nil {continue ;};for _ ,_bafg :=range *_cgfc {_cdb :=_bafg .Operand ;_cefb :=_bafg .Params ;switch _cdb {case "\u0044\u006f":_eeec :=_cefb [0].String ();if _ ,_ccd :=_ecbd ["\u0058O\u0062\u006a\u0065\u0063\u0074"];
+!_ccd {_ecbd ["\u0058O\u0062\u006a\u0065\u0063\u0074"]=[]string {_eeec };}else {_ecbd ["\u0058O\u0062\u006a\u0065\u0063\u0074"]=append (_ecbd ["\u0058O\u0062\u006a\u0065\u0063\u0074"],_eeec );};case "\u0054\u0066":_gddg :=_cefb [0].String ();if _ ,_cebc :=_ecbd ["\u0046\u006f\u006e\u0074"];
+!_cebc {_ecbd ["\u0046\u006f\u006e\u0074"]=[]string {_gddg };}else {_ecbd ["\u0046\u006f\u006e\u0074"]=append (_ecbd ["\u0046\u006f\u006e\u0074"],_gddg );};case "\u0067\u0073":_dba :=_cefb [0].String ();if _ ,_gaf :=_ecbd ["\u0045x\u0074\u0047\u0053\u0074\u0061\u0074e"];
+!_gaf {_ecbd ["\u0045x\u0074\u0047\u0053\u0074\u0061\u0074e"]=[]string {_dba };}else {_ecbd ["\u0045x\u0074\u0047\u0053\u0074\u0061\u0074e"]=append (_ecbd ["\u0045x\u0074\u0047\u0053\u0074\u0061\u0074e"],_dba );};};};};return _ecbd ;};
+
+// Optimize optimizes PDF objects to decrease PDF size.
+func (_daaa *CombineDuplicateStreams )Optimize (objects []_fbb .PdfObject )(_dbf []_fbb .PdfObject ,_cega error ){_cbdc :=make (map[_fbb .PdfObject ]_fbb .PdfObject );_gega :=make (map[_fbb .PdfObject ]struct{});_gfg :=make (map[string ][]*_fbb .PdfObjectStream );
+for _ ,_dgbg :=range objects {if _begc ,_faee :=_dgbg .(*_fbb .PdfObjectStream );_faee {_aff :=_ee .New ();_aff .Write (_begc .Stream );_aff .Write ([]byte (_begc .PdfObjectDictionary .WriteString ()));_aee :=string (_aff .Sum (nil ));_gfg [_aee ]=append (_gfg [_aee ],_begc );
+};};for _ ,_bfe :=range _gfg {if len (_bfe )< 2{continue ;};_cebf :=_bfe [0];for _bfea :=1;_bfea < len (_bfe );_bfea ++{_bbfb :=_bfe [_bfea ];_cbdc [_bbfb ]=_cebf ;_gega [_bbfb ]=struct{}{};};};_dbf =make ([]_fbb .PdfObject ,0,len (objects )-len (_gega ));
+for _ ,_bbb :=range objects {if _ ,_aega :=_gega [_bbb ];_aega {continue ;};_dbf =append (_dbf ,_bbb );};_ffca (_dbf ,_cbdc );return _dbf ,nil ;};func _cea (_cff string ,_dfg []string )bool {for _ ,_abcge :=range _dfg {if _cff ==_abcge {return true ;};
+};return false ;};
+
+// Optimize optimizes PDF objects to decrease PDF size.
+func (_ebbca *ImagePPI )Optimize (objects []_fbb .PdfObject )(_adcd []_fbb .PdfObject ,_dce error ){if _ebbca .ImageUpperPPI <=0{return objects ,nil ;};_bed :=_abcb (objects );if len (_bed )==0{return objects ,nil ;};_cdba :=make (map[_fbb .PdfObject ]struct{});
+for _ ,_afca :=range _bed {_gdf :=_afca .Stream .PdfObjectDictionary .Get ("\u0053\u004d\u0061s\u006b");_cdba [_gdf ]=struct{}{};};_badc :=make (map[*_fbb .PdfObjectStream ]*imageInfo );for _ ,_gfea :=range _bed {_badc [_gfea .Stream ]=_gfea ;};var _dgef *_fbb .PdfObjectDictionary ;
+for _ ,_afa :=range objects {if _fgcb ,_dgeg :=_fbb .GetDict (_afa );_dgef ==nil &&_dgeg {if _gcfb ,_agec :=_fbb .GetName (_fgcb .Get ("\u0054\u0079\u0070\u0065"));_agec &&*_gcfb =="\u0043a\u0074\u0061\u006c\u006f\u0067"{_dgef =_fgcb ;};};};if _dgef ==nil {return objects ,nil ;
+};_ebc ,_eef :=_fbb .GetDict (_dgef .Get ("\u0050\u0061\u0067e\u0073"));if !_eef {return objects ,nil ;};_cbdf ,_abfg :=_fbb .GetArray (_ebc .Get ("\u004b\u0069\u0064\u0073"));if !_abfg {return objects ,nil ;};for _ ,_cbbb :=range _cbdf .Elements (){_fffc :=make (map[string ]*imageInfo );
+_gfb ,_addd :=_fbb .GetDict (_cbbb );if !_addd {continue ;};_ada ,_ :=_ecdg (_gfb .Get ("\u0043\u006f\u006e\u0074\u0065\u006e\u0074\u0073"));if len (_ada )==0{continue ;};_dcbb ,_bafc :=_fbb .GetDict (_gfb .Get ("\u0052e\u0073\u006f\u0075\u0072\u0063\u0065s"));
+if !_bafc {continue ;};_gabgb ,_bac :=_eg .NewPdfPageResourcesFromDict (_dcbb );if _bac !=nil {_f .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u0020\u0070\u0061\u0072\u0073\u0069\u006e\u0067\u0020\u0072\u0065\u0073\u006f\u0075\u0072\u0063\u0065\u0073\u0020-\u0020\u0069\u0067\u006e\u006fr\u0069\u006eg\u003a\u0020\u0025\u0076",_bac );
+continue ;};_geff ,_dbbc :=_fbb .GetDict (_dcbb .Get ("\u0058O\u0062\u006a\u0065\u0063\u0074"));if !_dbbc {continue ;};_fdb :=_geff .Keys ();for _ ,_beab :=range _fdb {if _dcee ,_gegc :=_fbb .GetStream (_geff .Get (_beab ));_gegc {if _feg ,_fgdf :=_badc [_dcee ];
+_fgdf {_fffc [string (_beab )]=_feg ;};};};_aade :=_cg .NewContentStreamParser (_ada );_bdc ,_bac :=_aade .Parse ();if _bac !=nil {_f .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0025\u002b\u0076",_bac );continue ;};_cgcb :=_cg .NewContentStreamProcessor (*_bdc );
+_cgcb .AddHandler (_cg .HandlerConditionEnumAllOperands ,"",func (_gae *_cg .ContentStreamOperation ,_abd _cg .GraphicsState ,_cege *_eg .PdfPageResources )error {switch _gae .Operand {case "\u0044\u006f":if len (_gae .Params )!=1{_f .Log .Debug ("E\u0052\u0052\u004f\u0052\u003a\u0020\u0049\u0067\u006e\u006f\u0072\u0069\u006e\u0067\u0020\u0044\u006f\u0020w\u0069\u0074\u0068\u0020\u006c\u0065\u006e\u0028\u0070\u0061ra\u006d\u0073\u0029 \u0021=\u0020\u0031");
+return nil ;};_gbgc ,_eaa :=_fbb .GetName (_gae .Params [0]);if !_eaa {_f .Log .Debug ("\u0045\u0052\u0052O\u0052\u003a\u0020\u0049\u0067\u006e\u006f\u0072\u0069\u006e\u0067\u0020\u0044\u006f\u0020\u0077\u0069\u0074\u0068\u0020\u006e\u006f\u006e\u0020\u004e\u0061\u006d\u0065\u0020p\u0061\u0072\u0061\u006d\u0065\u0074\u0065\u0072");
+return nil ;};if _feca ,_gcb :=_fffc [string (*_gbgc )];_gcb {_dea :=_abd .CTM .ScalingFactorX ();_eab :=_abd .CTM .ScalingFactorY ();_gggd ,_gdba :=_dea /72.0,_eab /72.0;_daac ,_bcgb :=float64 (_feca .Width )/_gggd ,float64 (_feca .Height )/_gdba ;if _gggd ==0||_gdba ==0{_daac =72.0;
+_bcgb =72.0;};_feca .PPI =_c .Max (_feca .PPI ,_daac );_feca .PPI =_c .Max (_feca .PPI ,_bcgb );};};return nil ;});_bac =_cgcb .Process (_gabgb );if _bac !=nil {_f .Log .Debug ("E\u0052\u0052\u004f\u0052 p\u0072o\u0063\u0065\u0073\u0073\u0069n\u0067\u003a\u0020\u0025\u002b\u0076",_bac );
+continue ;};};for _ ,_gefgc :=range _bed {if _ ,_ecd :=_cdba [_gefgc .Stream ];_ecd {continue ;};if _gefgc .PPI <=_ebbca .ImageUpperPPI {continue ;};_ebgf ,_fadb :=_eg .NewXObjectImageFromStream (_gefgc .Stream );if _fadb !=nil {_f .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0025\u002b\u0076",_fadb );
+continue ;};var _fcba imageModifications ;_fcba .Scale =_ebbca .ImageUpperPPI /_gefgc .PPI ;if _gefgc .BitsPerComponent ==1&&_gefgc .ColorComponents ==1{_ebbd :=_c .Round (_gefgc .PPI /_ebbca .ImageUpperPPI );_cfbeb :=_ag .NextPowerOf2 (uint (_ebbd ));
+if _ag .InDelta (float64 (_cfbeb ),1/_fcba .Scale ,0.3){_fcba .Scale =float64 (1)/float64 (_cfbeb );};if _ ,_gaga :=_ebgf .Filter .(*_fbb .JBIG2Encoder );!_gaga {_fcba .Encoding =_fbb .NewJBIG2Encoder ();};};if _fadb =_gddd (_ebgf ,_fcba );_fadb !=nil {_f .Log .Debug ("\u0045\u0072\u0072\u006f\u0072 \u0073\u0063\u0061\u006c\u0065\u0020\u0069\u006d\u0061\u0067\u0065\u0020\u006be\u0065\u0070\u0020\u006f\u0072\u0069\u0067\u0069\u006e\u0061\u006c\u0020\u0069\u006d\u0061\u0067\u0065\u003a\u0020\u0025\u0073",_fadb );
+continue ;};_fcba .Encoding =nil ;if _edb ,_begcd :=_fbb .GetStream (_gefgc .Stream .PdfObjectDictionary .Get ("\u0053\u004d\u0061s\u006b"));_begcd {_cgb ,_cbc :=_eg .NewXObjectImageFromStream (_edb );if _cbc !=nil {_f .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0025\u002b\u0076",_cbc );
+continue ;};if _cbc =_gddd (_cgb ,_fcba );_cbc !=nil {_f .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0025\u002b\u0076",_cbc );continue ;};};};return objects ,nil ;};func _abcb (_fcb []_fbb .PdfObject )[]*imageInfo {_cfbe :=_fbb .PdfObjectName ("\u0053u\u0062\u0074\u0079\u0070\u0065");
+_bdbda :=make (map[*_fbb .PdfObjectStream ]struct{});var _gcegg []*imageInfo ;for _ ,_fcg :=range _fcb {_ffc ,_dbc :=_fbb .GetStream (_fcg );if !_dbc {continue ;};if _ ,_agdb :=_bdbda [_ffc ];_agdb {continue ;};_bdbda [_ffc ]=struct{}{};_gfec :=_ffc .PdfObjectDictionary .Get (_cfbe );
+_gbgf ,_dbc :=_fbb .GetName (_gfec );if !_dbc ||string (*_gbgf )!="\u0049\u006d\u0061g\u0065"{continue ;};_bff :=&imageInfo {Stream :_ffc ,BitsPerComponent :8};if _bec ,_aede :=_fbb .GetIntVal (_ffc .Get ("\u0042\u0069t\u0073\u0050\u0065r\u0043\u006f\u006d\u0070\u006f\u006e\u0065\u006e\u0074"));
+_aede {_bff .BitsPerComponent =_bec ;};if _affg ,_gbgg :=_fbb .GetIntVal (_ffc .Get ("\u0057\u0069\u0064t\u0068"));_gbgg {_bff .Width =_affg ;};if _bece ,_ded :=_fbb .GetIntVal (_ffc .Get ("\u0048\u0065\u0069\u0067\u0068\u0074"));_ded {_bff .Height =_bece ;
+};_cca ,_aad :=_eg .NewPdfColorspaceFromPdfObject (_ffc .Get ("\u0043\u006f\u006c\u006f\u0072\u0053\u0070\u0061\u0063\u0065"));if _aad !=nil {_f .Log .Debug ("\u0045R\u0052\u004f\u0052\u003a\u0020\u0025v",_aad );continue ;};if _cca ==nil {_acggb ,_adc :=_fbb .GetName (_ffc .Get ("\u0046\u0069\u006c\u0074\u0065\u0072"));
+if _adc {switch _acggb .String (){case "\u0043\u0043\u0049\u0054\u0054\u0046\u0061\u0078\u0044e\u0063\u006f\u0064\u0065","J\u0042\u0049\u0047\u0032\u0044\u0065\u0063\u006f\u0064\u0065":_cca =_eg .NewPdfColorspaceDeviceGray ();_bff .BitsPerComponent =1;
+};};};switch _cefd :=_cca .(type ){case *_eg .PdfColorspaceDeviceRGB :_bff .ColorComponents =3;case *_eg .PdfColorspaceDeviceGray :_bff .ColorComponents =1;default:_f .Log .Debug ("\u004f\u0070\u0074\u0069\u006d\u0069\u007aa\u0074\u0069\u006fn\u0020\u0069\u0073 \u006e\u006ft\u0020\u0073\u0075\u0070\u0070\u006fr\u0074ed\u0020\u0066\u006f\u0072\u0020\u0063\u006f\u006c\u006f\u0072\u0020\u0073\u0070\u0061\u0063\u0065\u0020\u0025\u0054\u0020\u002d\u0020\u0073\u006b\u0069\u0070",_cefd );
+continue ;};_gcegg =append (_gcegg ,_bff );};return _gcegg ;};
+
+// Optimize optimizes PDF objects to decrease PDF size.
+func (_ecbf *Image )Optimize (objects []_fbb .PdfObject )(_cdf []_fbb .PdfObject ,_baff error ){if _ecbf .ImageQuality <=0{return objects ,nil ;};_bgac :=_abcb (objects );if len (_bgac )==0{return objects ,nil ;};_cgcg :=make (map[_fbb .PdfObject ]_fbb .PdfObject );
+_ggbc :=make (map[_fbb .PdfObject ]struct{});for _ ,_dedc :=range _bgac {_dfb :=_dedc .Stream .Get ("\u0053\u004d\u0061s\u006b");_ggbc [_dfb ]=struct{}{};};for _cegg ,_dbcb :=range _bgac {_ddbb :=_dbcb .Stream ;if _ ,_cba :=_ggbc [_ddbb ];_cba {continue ;
+};_dbca ,_gefg :=_eg .NewXObjectImageFromStream (_ddbb );if _gefg !=nil {_f .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0025\u002b\u0076",_gefg );continue ;};switch _dbca .Filter .(type ){case *_fbb .JBIG2Encoder :continue ;case *_fbb .CCITTFaxEncoder :continue ;
+};_cfbg ,_gefg :=_dbca .ToImage ();if _gefg !=nil {_f .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0025\u002b\u0076",_gefg );continue ;};_ffcg :=_fbb .NewDCTEncoder ();_ffcg .ColorComponents =_cfbg .ColorComponents ;_ffcg .Quality =_ecbf .ImageQuality ;
+_ffcg .BitsPerComponent =_dbcb .BitsPerComponent ;_ffcg .Width =_dbcb .Width ;_ffcg .Height =_dbcb .Height ;_bggb ,_gefg :=_ffcg .EncodeBytes (_cfbg .Data );if _gefg !=nil {_f .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0025\u002b\u0076",_gefg );
+continue ;};var _gede _fbb .StreamEncoder ;_gede =_ffcg ;{_bdg :=_fbb .NewFlateEncoder ();_bebc :=_fbb .NewMultiEncoder ();_bebc .AddEncoder (_bdg );_bebc .AddEncoder (_ffcg );_fgea ,_dgec :=_bebc .EncodeBytes (_cfbg .Data );if _dgec !=nil {_f .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0025\u002b\u0076",_dgec );
+continue ;};if len (_fgea )< len (_bggb ){_f .Log .Trace ("\u004d\u0075\u006c\u0074\u0069\u0020\u0065\u006e\u0063\u0020\u0069\u006d\u0070\u0072\u006f\u0076\u0065\u0073\u003a\u0020\u0025\u0064\u0020\u0074o\u0020\u0025\u0064\u0020\u0028o\u0072\u0069g\u0020\u0025\u0064\u0029",len (_bggb ),len (_fgea ),len (_ddbb .Stream ));
+_bggb =_fgea ;_gede =_bebc ;};};_fbbb :=len (_ddbb .Stream );if _fbbb < len (_bggb ){continue ;};_ffdf :=&_fbb .PdfObjectStream {Stream :_bggb };_ffdf .PdfObjectReference =_ddbb .PdfObjectReference ;_ffdf .PdfObjectDictionary =_fbb .MakeDict ();_ffdf .Merge (_ddbb .PdfObjectDictionary );
+_ffdf .Merge (_gede .MakeStreamDict ());_ffdf .Set ("\u004c\u0065\u006e\u0067\u0074\u0068",_fbb .MakeInteger (int64 (len (_bggb ))));_cgcg [_ddbb ]=_ffdf ;_bgac [_cegg ].Stream =_ffdf ;};_cdf =make ([]_fbb .PdfObject ,len (objects ));copy (_cdf ,objects );
+_ffca (_cdf ,_cgcg );return _cdf ,nil ;};func _bgae (_agfd []_fbb .PdfObject ){for _dgba ,_ggbcf :=range _agfd {switch _ddba :=_ggbcf .(type ){case *_fbb .PdfIndirectObject :_ddba .ObjectNumber =int64 (_dgba +1);_ddba .GenerationNumber =0;case *_fbb .PdfObjectStream :_ddba .ObjectNumber =int64 (_dgba +1);
+_ddba .GenerationNumber =0;case *_fbb .PdfObjectStreams :_ddba .ObjectNumber =int64 (_dgba +1);_ddba .GenerationNumber =0;};};};func _ffca (_agdea []_fbb .PdfObject ,_bdbg map[_fbb .PdfObject ]_fbb .PdfObject ){if len (_bdbg )==0{return ;};for _bgag ,_aegc :=range _agdea {if _bdd ,_dad :=_bdbg [_aegc ];
+_dad {_agdea [_bgag ]=_bdd ;continue ;};_bdbg [_aegc ]=_aegc ;switch _fed :=_aegc .(type ){case *_fbb .PdfObjectArray :_dgdf :=make ([]_fbb .PdfObject ,_fed .Len ());copy (_dgdf ,_fed .Elements ());_ffca (_dgdf ,_bdbg );for _dfbg ,_adb :=range _dgdf {_fed .Set (_dfbg ,_adb );
+};case *_fbb .PdfObjectStreams :_ffca (_fed .Elements (),_bdbg );case *_fbb .PdfObjectStream :_bcc :=[]_fbb .PdfObject {_fed .PdfObjectDictionary };_ffca (_bcc ,_bdbg );_fed .PdfObjectDictionary =_bcc [0].(*_fbb .PdfObjectDictionary );case *_fbb .PdfObjectDictionary :_bbce :=_fed .Keys ();
+_cegb :=make ([]_fbb .PdfObject ,len (_bbce ));for _bbe ,_daag :=range _bbce {_cegb [_bbe ]=_fed .Get (_daag );};_ffca (_cegb ,_bdbg );for _cagff ,_gcgc :=range _bbce {_fed .Set (_gcgc ,_cegb [_cagff ]);};case *_fbb .PdfIndirectObject :_bfaf :=[]_fbb .PdfObject {_fed .PdfObject };
+_ffca (_bfaf ,_bdbg );_fed .PdfObject =_bfaf [0];};};};func _bced (_cfcc _fbb .PdfObject )(string ,error ){_ddgg :=_fbb .TraceToDirectObject (_cfcc );switch _abe :=_ddgg .(type ){case *_fbb .PdfObjectString :return _abe .Str (),nil ;case *_fbb .PdfObjectStream :_fec ,_gea :=_fbb .DecodeStream (_abe );
+if _gea !=nil {return "",_gea ;};return string (_fec ),nil ;};return "",_a .Errorf ("\u0069\u006e\u0076\u0061\u006ci\u0064\u0020\u0063\u006f\u006e\u0074\u0065\u006e\u0074\u0020\u0073\u0074\u0072e\u0061\u006d\u0020\u006f\u0062\u006a\u0065\u0063\u0074\u0020\u0068\u006f\u006c\u0064\u0065\u0072\u0020\u0028\u0025\u0054\u0029",_ddgg );
+};
+
+// ObjectStreams groups PDF objects to object streams.
+// It implements interface model.Optimizer.
+type ObjectStreams struct{};
+
+// Optimize optimizes PDF objects to decrease PDF size.
+func (_gc *Chain )Optimize (objects []_fbb .PdfObject )(_gec []_fbb .PdfObject ,_ga error ){_eb :=objects ;for _ ,_bc :=range _gc ._ad {_d ,_age :=_bc .Optimize (_eb );if _age !=nil {_f .Log .Debug ("\u0045\u0052\u0052OR\u0020\u004f\u0070\u0074\u0069\u006d\u0069\u007a\u0061\u0074\u0069\u006f\u006e\u003a\u0020\u0025\u002b\u0076",_age );
+continue ;};_eb =_d ;};return _eb ,nil ;};
+
+// Image optimizes images by rewrite images into JPEG format with quality equals to ImageQuality.
+// TODO(a5i): Add support for inline images.
+// It implements interface model.Optimizer.
+type Image struct{ImageQuality int ;};
+
+// CombineDuplicateStreams combines duplicated streams by its data hash.
+// It implements interface model.Optimizer.
+type CombineDuplicateStreams struct{};
+
+// Optimize optimizes PDF objects to decrease PDF size.
+func (_acgd *CombineDuplicateDirectObjects )Optimize (objects []_fbb .PdfObject )(_gda []_fbb .PdfObject ,_edcg error ){_bgae (objects );_bea :=make (map[string ][]*_fbb .PdfObjectDictionary );var _caa func (_dbg *_fbb .PdfObjectDictionary );_caa =func (_dfag *_fbb .PdfObjectDictionary ){for _ ,_ebgc :=range _dfag .Keys (){_fded :=_dfag .Get (_ebgc );
+if _dbb ,_fge :=_fded .(*_fbb .PdfObjectDictionary );_fge {_cdbb :=_ee .New ();_cdbb .Write ([]byte (_dbb .WriteString ()));_ddbe :=string (_cdbb .Sum (nil ));_bea [_ddbe ]=append (_bea [_ddbe ],_dbb );_caa (_dbb );};};};for _ ,_cbbe :=range objects {_gff ,_aec :=_cbbe .(*_fbb .PdfIndirectObject );
+if !_aec {continue ;};if _fcc ,_fdce :=_gff .PdfObject .(*_fbb .PdfObjectDictionary );_fdce {_caa (_fcc );};};_fdgc :=make ([]_fbb .PdfObject ,0,len (_bea ));_bdba :=make (map[_fbb .PdfObject ]_fbb .PdfObject );for _ ,_fgfc :=range _bea {if len (_fgfc )< 2{continue ;
+};_aed :=_fbb .MakeDict ();_aed .Merge (_fgfc [0]);_dfe :=_fbb .MakeIndirectObject (_aed );_fdgc =append (_fdgc ,_dfe );for _aaf :=0;_aaf < len (_fgfc );_aaf ++{_fea :=_fgfc [_aaf ];_bdba [_fea ]=_dfe ;};};_gda =make ([]_fbb .PdfObject ,len (objects ));
+copy (_gda ,objects );_gda =append (_fdgc ,_gda ...);_ffca (_gda ,_bdba );return _gda ,nil ;};
+
+// Append appends optimizers to the chain.
+func (_ge *Chain )Append (optimizers ..._eg .Optimizer ){_ge ._ad =append (_ge ._ad ,optimizers ...)};func _gddd (_fce *_eg .XObjectImage ,_cdd imageModifications )error {_fead ,_efa :=_fce .ToImage ();if _efa !=nil {return _efa ;};if _cdd .Scale !=0{_fead ,_efa =_aecg (_fead ,_cdd .Scale );
+if _efa !=nil {return _efa ;};};if _cdd .Encoding !=nil {_fce .Filter =_cdd .Encoding ;};_fce .Decode =nil ;switch _gefae :=_fce .Filter .(type ){case *_fbb .FlateEncoder :if _gefae .Predictor !=1&&_gefae .Predictor !=11{_gefae .Predictor =1;};};if _efa =_fce .SetImage (_fead ,nil );
+_efa !=nil {_f .Log .Debug ("\u0045\u0072\u0072or\u0020\u0073\u0065\u0074\u0074\u0069\u006e\u0067\u0020\u0069\u006d\u0061\u0067\u0065\u003a\u0020\u0025\u0076",_efa );return _efa ;};_fce .ToPdfObject ();return nil ;};func _ebf (_acb *_fbb .PdfObjectDictionary )[]string {_gabf :=[]string {};
+for _ ,_ebfg :=range _acb .Keys (){_gabf =append (_gabf ,_ebfg .String ());};return _gabf ;};type imageInfo struct{BitsPerComponent int ;ColorComponents int ;Width int ;Height int ;Stream *_fbb .PdfObjectStream ;PPI float64 ;};func _aab (_ceb []_fbb .PdfObject )(_baf map[*_fbb .PdfObjectStream ]struct{},_dag error ){_baf =map[*_fbb .PdfObjectStream ]struct{}{};
+_adf :=map[*_eg .PdfFont ]struct{}{};_ddb :=_gcga (_ceb );for _ ,_abc :=range _ddb ._fba {_bgb ,_cfbb :=_fbb .GetDict (_abc .PdfObject );if !_cfbb {continue ;};_cce ,_cfbb :=_fbb .GetDict (_bgb .Get ("\u0052e\u0073\u006f\u0075\u0072\u0063\u0065s"));if !_cfbb {continue ;
+};_geg ,_ :=_ecdg (_bgb .Get ("\u0043\u006f\u006e\u0074\u0065\u006e\u0074\u0073"));_cge ,_eac :=_eg .NewPdfPageResourcesFromDict (_cce );if _eac !=nil {return nil ,_eac ;};_ffa :=[]content {{_fgf :_geg ,_ccg :_cge }};_fbd :=_bad (_bgb .Get ("\u0041\u006e\u006e\u006f\u0074\u0073"));
+if _fbd !=nil {_ffa =append (_ffa ,_fbd ...);};for _ ,_bgbg :=range _ffa {_ddde ,_ddf :=_b .NewFromContents (_bgbg ._fgf ,_bgbg ._ccg );if _ddf !=nil {return nil ,_ddf ;};_efd ,_ ,_ ,_ddf :=_ddde .ExtractPageText ();if _ddf !=nil {return nil ,_ddf ;};for _ ,_fgbd :=range _efd .Marks ().Elements (){if _fgbd .Font ==nil {continue ;
+};if _ ,_gef :=_adf [_fgbd .Font ];!_gef {_adf [_fgbd .Font ]=struct{}{};};};};};_eced :=map[*_fbb .PdfObjectStream ][]*_eg .PdfFont {};for _beb :=range _adf {_fbfe :=_beb .FontDescriptor ();if _fbfe ==nil ||_fbfe .FontFile2 ==nil {continue ;};_dgb ,_acgg :=_fbb .GetStream (_fbfe .FontFile2 );
+if !_acgg {continue ;};_eced [_dgb ]=append (_eced [_dgb ],_beb );};for _bef :=range _eced {var _dee []rune ;var _gdb []_ac .GlyphIndex ;for _ ,_agc :=range _eced [_bef ]{switch _acf :=_agc .Encoder ().(type ){case *_g .IdentityEncoder :_cfbc :=_acf .RegisteredRunes ();
+_abf :=make ([]_ac .GlyphIndex ,len (_cfbc ));for _bce ,_fdd :=range _cfbc {_abf [_bce ]=_ac .GlyphIndex (_fdd );};_gdb =append (_gdb ,_abf ...);case *_g .TrueTypeFontEncoder :_ggg :=_acf .RegisteredRunes ();_dee =append (_dee ,_ggg ...);case _g .SimpleEncoder :_fbfed :=_acf .Charcodes ();
+for _ ,_ddfb :=range _fbfed {_faga ,_gefa :=_acf .CharcodeToRune (_ddfb );if !_gefa {_f .Log .Debug ("\u0043\u0068a\u0072\u0063\u006f\u0064\u0065\u003c\u002d\u003e\u0072\u0075\u006e\u0065\u0020\u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064: \u0025\u0064",_ddfb );
+continue ;};_dee =append (_dee ,_faga );};};};_dag =_cgae (_bef ,_dee ,_gdb );if _dag !=nil {_f .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u0020\u0073\u0075\u0062\u0073\u0065\u0074\u0074\u0069\u006eg\u0020f\u006f\u006e\u0074\u0020\u0073\u0074\u0072\u0065\u0061\u006d\u003a\u0020\u0025\u0076",_dag );
+return nil ,_dag ;};_baf [_bef ]=struct{}{};};return _baf ,nil ;};
+
+// ImagePPI optimizes images by scaling images such that the PPI (pixels per inch) is never higher than ImageUpperPPI.
+// TODO(a5i): Add support for inline images.
+// It implements interface model.Optimizer.
+type ImagePPI struct{ImageUpperPPI float64 ;};
+
+// New creates a optimizers chain from options.
+func New (options Options )*Chain {_bfeb :=new (Chain );if options .CleanFonts ||options .SubsetFonts {_bfeb .Append (&CleanFonts {Subset :options .SubsetFonts });};if options .CleanContentstream {_bfeb .Append (new (CleanContentstream ));};if options .ImageUpperPPI > 0{_bgdb :=new (ImagePPI );
+_bgdb .ImageUpperPPI =options .ImageUpperPPI ;_bfeb .Append (_bgdb );};if options .ImageQuality > 0{_eaf :=new (Image );_eaf .ImageQuality =options .ImageQuality ;_bfeb .Append (_eaf );};if options .CombineDuplicateDirectObjects {_bfeb .Append (new (CombineDuplicateDirectObjects ));
+};if options .CombineDuplicateStreams {_bfeb .Append (new (CombineDuplicateStreams ));};if options .CombineIdenticalIndirectObjects {_bfeb .Append (new (CombineIdenticalIndirectObjects ));};if options .UseObjectStreams {_bfeb .Append (new (ObjectStreams ));
+};if options .CompressStreams {_bfeb .Append (new (CompressStreams ));};if options .CleanUnusedResources {_bfeb .Append (new (CleanUnusedResources ));};return _bfeb ;};
+
+// CompressStreams compresses uncompressed streams.
+// It implements interface model.Optimizer.
+type CompressStreams struct{};
+
+// GetOptimizers gets the list of optimizers in chain `c`.
+func (_fbf *Chain )GetOptimizers ()[]_eg .Optimizer {return _fbf ._ad };func _aeb (_ccgf _fbb .PdfObject ,_gcg map[_fbb .PdfObject ]struct{})error {if _ebg ,_cfea :=_ccgf .(*_fbb .PdfIndirectObject );_cfea {_gcg [_ccgf ]=struct{}{};_gcd :=_aeb (_ebg .PdfObject ,_gcg );
+if _gcd !=nil {return _gcd ;};return nil ;};if _aefg ,_bga :=_ccgf .(*_fbb .PdfObjectStream );_bga {_gcg [_aefg ]=struct{}{};_acdd :=_aeb (_aefg .PdfObjectDictionary ,_gcg );if _acdd !=nil {return _acdd ;};return nil ;};if _dagf ,_bgd :=_ccgf .(*_fbb .PdfObjectDictionary );
+_bgd {for _ ,_efgd :=range _dagf .Keys (){_beg :=_dagf .Get (_efgd );_ =_beg ;if _fcf ,_fad :=_beg .(*_fbb .PdfObjectReference );_fad {_beg =_fcf .Resolve ();_dagf .Set (_efgd ,_beg );};if _efgd !="\u0050\u0061\u0072\u0065\u006e\u0074"{if _dge :=_aeb (_beg ,_gcg );
+_dge !=nil {return _dge ;};};};return nil ;};if _aefgg ,_dddee :=_ccgf .(*_fbb .PdfObjectArray );_dddee {if _aefgg ==nil {return _bb .New ("\u0061\u0072\u0072a\u0079\u0020\u0069\u0073\u0020\u006e\u0069\u006c");};for _edd ,_fgac :=range _aefgg .Elements (){if _egcd ,_ege :=_fgac .(*_fbb .PdfObjectReference );
+_ege {_fgac =_egcd .Resolve ();_aefgg .Set (_edd ,_fgac );};if _cbg :=_aeb (_fgac ,_gcg );_cbg !=nil {return _cbg ;};};return nil ;};return nil ;};
+
+// CleanContentstream cleans up redundant operands in content streams, including Page and XObject Form
+// contents. This process includes:
+// 1. Marked content operators are removed.
+// 2. Some operands are simplified (shorter form).
+// TODO: Add more reduction methods and improving the methods for identifying unnecessary operands.
+type CleanContentstream struct{};func _acg (_ba *_cg .ContentStreamOperations )*_cg .ContentStreamOperations {if _ba ==nil {return nil ;};_ebd :=_cg .ContentStreamOperations {};for _ ,_cf :=range *_ba {switch _cf .Operand {case "\u0042\u0044\u0043","\u0042\u004d\u0043","\u0045\u004d\u0043":continue ;
+case "\u0054\u006d":if len (_cf .Params )==6{if _dd ,_ddd :=_fbb .GetNumbersAsFloat (_cf .Params );_ddd ==nil {if _dd [0]==1&&_dd [1]==0&&_dd [2]==0&&_dd [3]==1{_cf =&_cg .ContentStreamOperation {Params :[]_fbb .PdfObject {_cf .Params [4],_cf .Params [5]},Operand :"\u0054\u0064"};
+};};};};_ebd =append (_ebd ,_cf );};return &_ebd ;};
+
+// Optimize optimizes PDF objects to decrease PDF size.
+func (_deg *CleanFonts )Optimize (objects []_fbb .PdfObject )(_ffe []_fbb .PdfObject ,_dcg error ){var _ddg map[*_fbb .PdfObjectStream ]struct{};if _deg .Subset {var _dgbc error ;_ddg ,_dgbc =_aab (objects );if _dgbc !=nil {_f .Log .Debug ("\u0045\u0052\u0052\u004fR\u003a\u0020\u0046\u0061\u0069\u006c\u0065\u0064\u0020\u0073u\u0062s\u0065\u0074\u0074\u0069\u006e\u0067\u003a \u0025\u0076",_dgbc );
+return nil ,_dgbc ;};};for _ ,_bf :=range objects {_fagd ,_edc :=_fbb .GetStream (_bf );if !_edc {continue ;};if _ ,_gceg :=_ddg [_fagd ];_gceg {continue ;};_df ,_aef :=_fbb .NewEncoderFromStream (_fagd );if _aef !=nil {_f .Log .Debug ("\u0045\u0052RO\u0052\u0020\u0067e\u0074\u0074\u0069\u006eg e\u006eco\u0064\u0065\u0072\u003a\u0020\u0025\u0076 -\u0020\u0069\u0067\u006e\u006f\u0072\u0069n\u0067",_aef );
+continue ;};_fcd ,_aef :=_df .DecodeStream (_fagd );if _aef !=nil {_f .Log .Debug ("\u0044\u0065\u0063\u006f\u0064\u0069\u006e\u0067\u0020\u0065r\u0072\u006f\u0072\u0020\u003a\u0020\u0025v\u0020\u002d\u0020\u0069\u0067\u006e\u006f\u0072\u0069\u006e\u0067",_aef );
+continue ;};if len (_fcd )< 4{continue ;};_cbd :=string (_fcd [:4]);if _cbd =="\u004f\u0054\u0054\u004f"{continue ;};if _cbd !="\u0000\u0001\u0000\u0000"&&_cbd !="\u0074\u0072\u0075\u0065"{continue ;};_gedd ,_aef :=_ac .Parse (_ff .NewReader (_fcd ));if _aef !=nil {_f .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u0020P\u0061\u0072\u0073\u0069\u006e\u0067\u0020\u0066\u006f\u006e\u0074\u003a\u0020%\u0076\u0020\u002d\u0020\u0069\u0067\u006eo\u0072\u0069\u006e\u0067",_aef );
+continue ;};_aef =_gedd .Optimize ();if _aef !=nil {_f .Log .Debug ("\u0045\u0052RO\u0052\u0020\u004fp\u0074\u0069\u006d\u0069zin\u0067 f\u006f\u006e\u0074\u003a\u0020\u0025\u0076 -\u0020\u0073\u006b\u0069\u0070\u0070\u0069n\u0067",_aef );continue ;};var _gdc _ff .Buffer ;
+_aef =_gedd .Write (&_gdc );if _aef !=nil {_f .Log .Debug ("\u0045\u0052\u0052\u004f\u0052\u0020W\u0072\u0069\u0074\u0069\u006e\u0067\u0020\u0066\u006f\u006e\u0074\u003a\u0020%\u0076\u0020\u002d\u0020\u0069\u0067\u006eo\u0072\u0069\u006e\u0067",_aef );
+continue ;};if _gdc .Len ()> len (_fcd ){_f .Log .Debug ("\u0052\u0065-\u0077\u0072\u0069\u0074\u0074\u0065\u006e\u0020\u0066\u006f\u006e\u0074\u0020\u0069\u0073\u0020\u006c\u0061\u0072\u0067\u0065\u0072\u0020\u0074\u0068\u0061\u006e\u0020\u006f\u0072\u0069\u0067\u0069\u006e\u0061\u006c\u0020\u002d\u0020\u0073\u006b\u0069\u0070");
+continue ;};_afe ,_aef :=_fbb .MakeStream (_gdc .Bytes (),_fbb .NewFlateEncoder ());if _aef !=nil {continue ;};*_fagd =*_afe ;_fagd .Set ("\u004ce\u006e\u0067\u0074\u0068\u0031",_fbb .MakeInteger (int64 (_gdc .Len ())));};return objects ,nil ;};
+
+// Options describes PDF optimization parameters.
+type Options struct{CombineDuplicateStreams bool ;CombineDuplicateDirectObjects bool ;ImageUpperPPI float64 ;ImageQuality int ;UseObjectStreams bool ;CombineIdenticalIndirectObjects bool ;CompressStreams bool ;CleanFonts bool ;SubsetFonts bool ;CleanContentstream bool ;
+CleanUnusedResources bool ;};func _gcf (_cag []_fbb .PdfObject )(map[_fbb .PdfObject ]struct{},error ){_fde :=_gcga (_cag );_fdde :=_fde ._fba ;_gcef :=make (map[_fbb .PdfObject ]struct{});_eee :=_fae (_fdde );for _ ,_aaga :=range _fdde {_faf ,_bbf :=_fbb .GetDict (_aaga .PdfObject );
+if !_bbf {continue ;};_cagf ,_bbf :=_fbb .GetDict (_faf .Get ("\u0052e\u0073\u006f\u0075\u0072\u0063\u0065s"));if !_bbf {continue ;};_cda :=_eee ["\u0058O\u0062\u006a\u0065\u0063\u0074"];_edf ,_bbf :=_fbb .GetDict (_cagf .Get ("\u0058O\u0062\u006a\u0065\u0063\u0074"));
+if _bbf {_gga :=_ebf (_edf );for _ ,_gaag :=range _gga {if _cea (_gaag ,_cda ){continue ;};_aba :=*_fbb .MakeName (_gaag );_fga :=_edf .Get (_aba );_gcef [_fga ]=struct{}{};_edf .Remove (_aba );_acca :=_aeb (_fga ,_gcef );if _acca !=nil {_f .Log .Debug ("\u0066\u0061\u0069\u006ce\u0064\u0020\u0074\u006f\u0020\u0074\u0072\u0061\u0076\u0065r\u0073e\u0020\u006f\u0062\u006a\u0065\u0063\u0074 \u0025\u0076",_fga );
+};};};_cgf ,_bbf :=_fbb .GetDict (_cagf .Get ("\u0046\u006f\u006e\u0074"));_agb :=_eee ["\u0046\u006f\u006e\u0074"];if _bbf {_cfgc :=_ebf (_cgf );for _ ,_cef :=range _cfgc {if _cea (_cef ,_agb ){continue ;};_fef :=*_fbb .MakeName (_cef );_gece :=_cgf .Get (_fef );
+_gcef [_gece ]=struct{}{};_cgf .Remove (_fef );_dfa :=_aeb (_gece ,_gcef );if _dfa !=nil {_f .Log .Debug ("\u0046\u0061i\u006c\u0065\u0064\u0020\u0074\u006f\u0020\u0074\u0072\u0061\u0076\u0065\u0072\u0073\u0065\u0020\u006f\u0062\u006a\u0065\u0063\u0074 %\u0076\u000a",_gece );
+};};};_ddfc ,_bbf :=_fbb .GetDict (_cagf .Get ("\u0045x\u0074\u0047\u0053\u0074\u0061\u0074e"));if _bbf {_fafg :=_ebf (_ddfc );_afb :=_eee ["\u0045x\u0074\u0047\u0053\u0074\u0061\u0074e"];for _ ,_dgf :=range _fafg {if _cea (_dgf ,_afb ){continue ;};_ffd :=*_fbb .MakeName (_dgf );
+_afd :=_ddfc .Get (_ffd );_gcef [_afd ]=struct{}{};_ddfc .Remove (_ffd );_feb :=_aeb (_afd ,_gcef );if _feb !=nil {_f .Log .Debug ("\u0066\u0061i\u006c\u0065\u0064\u0020\u0074\u006f\u0020\u0074\u0072\u0061\u0076\u0065\u0072\u0073\u0065\u0020\u006f\u0062\u006a\u0065\u0063\u0074 %\u0076\u000a",_afd );
+};};};};return _gcef ,nil ;};
+
+// Optimize implements Optimizer interface.
+func (_eeae *CleanUnusedResources )Optimize (objects []_fbb .PdfObject )(_acc []_fbb .PdfObject ,_gdde error ){_daa ,_gdde :=_gcf (objects );if _gdde !=nil {return nil ,_gdde ;};_cd :=[]_fbb .PdfObject {};for _ ,_aae :=range objects {_ ,_agd :=_daa [_aae ];
+if _agd {continue ;};_cd =append (_cd ,_aae );};return _cd ,nil ;};type objectStructure struct{_bccf *_fbb .PdfObjectDictionary ;_bbcee *_fbb .PdfObjectDictionary ;_fba []*_fbb .PdfIndirectObject ;};
+
+// Optimize optimizes PDF objects to decrease PDF size.
+func (_gd *CleanContentstream )Optimize (objects []_fbb .PdfObject )(_db []_fbb .PdfObject ,_ffb error ){_geb :=map[*_fbb .PdfObjectStream ]struct{}{};var _ade []*_fbb .PdfObjectStream ;_fdc :=func (_gcea *_fbb .PdfObjectStream ){if _ ,_baa :=_geb [_gcea ];
+!_baa {_geb [_gcea ]=struct{}{};_ade =append (_ade ,_gcea );};};_cga :=map[_fbb .PdfObject ]bool {};_aa :=map[_fbb .PdfObject ]bool {};for _ ,_ef :=range objects {switch _ea :=_ef .(type ){case *_fbb .PdfIndirectObject :switch _gag :=_ea .PdfObject .(type ){case *_fbb .PdfObjectDictionary :if _cfd ,_ged :=_fbb .GetName (_gag .Get ("\u0054\u0079\u0070\u0065"));
+!_ged ||_cfd .String ()!="\u0050\u0061\u0067\u0065"{continue ;};if _eba ,_bg :=_fbb .GetStream (_gag .Get ("\u0043\u006f\u006e\u0074\u0065\u006e\u0074\u0073"));_bg {_fdc (_eba );}else if _aag ,_geba :=_fbb .GetArray (_gag .Get ("\u0043\u006f\u006e\u0074\u0065\u006e\u0074\u0073"));
+_geba {var _dcf []*_fbb .PdfObjectStream ;for _ ,_fbc :=range _aag .Elements (){if _be ,_gg :=_fbb .GetStream (_fbc );_gg {_dcf =append (_dcf ,_be );};};if len (_dcf )> 0{var _fa _ff .Buffer ;for _ ,_fag :=range _dcf {if _fc ,_cfg :=_fbb .DecodeStream (_fag );
+_cfg ==nil {_fa .Write (_fc );};_cga [_fag ]=true ;};_fgb ,_ece :=_fbb .MakeStream (_fa .Bytes (),_fbb .NewFlateEncoder ());if _ece !=nil {return nil ,_ece ;};_aa [_fgb ]=true ;_gag .Set ("\u0043\u006f\u006e\u0074\u0065\u006e\u0074\u0073",_fgb );_fdc (_fgb );
+};};};case *_fbb .PdfObjectStream :if _fbbe ,_eea :=_fbb .GetName (_ea .Get ("\u0054\u0079\u0070\u0065"));!_eea ||_fbbe .String ()!="\u0058O\u0062\u006a\u0065\u0063\u0074"{continue ;};if _af ,_efg :=_fbb .GetName (_ea .Get ("\u0053u\u0062\u0074\u0079\u0070\u0065"));
+!_efg ||_af .String ()!="\u0046\u006f\u0072\u006d"{continue ;};_fdc (_ea );};};for _ ,_dcb :=range _ade {_ffb =_de (_dcb );if _ffb !=nil {return nil ,_ffb ;};};_db =nil ;for _ ,_cfb :=range objects {if _cga [_cfb ]{continue ;};_db =append (_db ,_cfb );
+};for _cc :=range _aa {_db =append (_db ,_cc );};return _db ,nil ;};type content struct{_fgf string ;_ccg *_eg .PdfPageResources ;};func _cgae (_gaa *_fbb .PdfObjectStream ,_ceg []rune ,_aaa []_ac .GlyphIndex )error {_gaa ,_ecb :=_fbb .GetStream (_gaa );
+if !_ecb {_f .Log .Debug ("\u0045\u006d\u0062\u0065\u0064\u0064\u0065\u0064\u0020\u0066\u006f\u006e\u0074\u0020\u006f\u0062\u006a\u0065c\u0074\u0020\u006e\u006f\u0074\u0020\u0066o\u0075\u006e\u0064\u0020\u002d\u002d\u0020\u0041\u0042\u004f\u0052T\u0020\u0073\u0075\u0062\u0073\u0065\u0074\u0074\u0069\u006e\u0067");
+return _bb .New ("\u0066\u006f\u006e\u0074fi\u006c\u0065\u0032\u0020\u006e\u006f\u0074\u0020\u0066\u006f\u0075\u006e\u0064");};_bd ,_fbbg :=_fbb .DecodeStream (_gaa );if _fbbg !=nil {_f .Log .Debug ("\u0044\u0065c\u006f\u0064\u0065 \u0065\u0072\u0072\u006f\u0072\u003a\u0020\u0025\u0076",_fbbg );
+return _fbbg ;};_acd ,_fbbg :=_ac .Parse (_ff .NewReader (_bd ));if _fbbg !=nil {_f .Log .Debug ("\u0045\u0072\u0072\u006f\u0072\u0020\u0070\u0061\u0072\u0073\u0069n\u0067\u0020\u0025\u0064\u0020\u0062\u0079\u0074\u0065\u0020f\u006f\u006e\u0074",len (_gaa .Stream ));
+return _fbbg ;};_cgg :=_aaa ;if len (_ceg )> 0{_fe :=_acd .LookupRunes (_ceg );_cgg =append (_cgg ,_fe ...);};_acd ,_fbbg =_acd .SubsetKeepIndices (_cgg );if _fbbg !=nil {_f .Log .Debug ("\u0045R\u0052\u004f\u0052\u0020s\u0075\u0062\u0073\u0065\u0074t\u0069n\u0067 \u0066\u006f\u006e\u0074\u003a\u0020\u0025v",_fbbg );
+return _fbbg ;};var _dda _ff .Buffer ;_fbbg =_acd .Write (&_dda );if _fbbg !=nil {_f .Log .Debug ("\u0045\u0052\u0052\u004fR \u0057\u0072\u0069\u0074\u0069\u006e\u0067\u0020\u0066\u006f\u006e\u0074\u003a\u0020%\u0076",_fbbg );return _fbbg ;};if _dda .Len ()> len (_bd ){_f .Log .Debug ("\u0052\u0065-\u0077\u0072\u0069\u0074\u0074\u0065\u006e\u0020\u0066\u006f\u006e\u0074\u0020\u0069\u0073\u0020\u006c\u0061\u0072\u0067\u0065\u0072\u0020\u0074\u0068\u0061\u006e\u0020\u006f\u0072\u0069\u0067\u0069\u006e\u0061\u006c\u0020\u002d\u0020\u0073\u006b\u0069\u0070");
+return nil ;};_gdd ,_fbbg :=_fbb .MakeStream (_dda .Bytes (),_fbb .NewFlateEncoder ());if _fbbg !=nil {_f .Log .Debug ("\u0045\u0052\u0052\u004fR \u0057\u0072\u0069\u0074\u0069\u006e\u0067\u0020\u0066\u006f\u006e\u0074\u003a\u0020%\u0076",_fbbg );return _fbbg ;
+};*_gaa =*_gdd ;_gaa .Set ("\u004ce\u006e\u0067\u0074\u0068\u0031",_fbb .MakeInteger (int64 (_dda .Len ())));return nil ;};func _gcga (_cdac []_fbb .PdfObject )objectStructure {_dfee :=objectStructure {};_beba :=false ;for _ ,_adce :=range _cdac {switch _eaeb :=_adce .(type ){case *_fbb .PdfIndirectObject :_dcaf ,_caag :=_fbb .GetDict (_eaeb );
+if !_caag {continue ;};_bebg ,_caag :=_fbb .GetName (_dcaf .Get ("\u0054\u0079\u0070\u0065"));if !_caag {continue ;};switch _bebg .String (){case "\u0043a\u0074\u0061\u006c\u006f\u0067":_dfee ._bccf =_dcaf ;_beba =true ;};};if _beba {break ;};};if !_beba {return _dfee ;
+};_daad ,_geffc :=_fbb .GetDict (_dfee ._bccf .Get ("\u0050\u0061\u0067e\u0073"));if !_geffc {return _dfee ;};_dfee ._bbcee =_daad ;_cad ,_geffc :=_fbb .GetArray (_daad .Get ("\u004b\u0069\u0064\u0073"));if !_geffc {return _dfee ;};for _ ,_feae :=range _cad .Elements (){_agbc ,_abfb :=_fbb .GetIndirect (_feae );
+if !_abfb {break ;};_dfee ._fba =append (_dfee ._fba ,_agbc );};return _dfee ;};type imageModifications struct{Scale float64 ;Encoding _fbb .StreamEncoder ;};
+
+// Chain allows to use sequence of optimizers.
+// It implements interface model.Optimizer.
+type Chain struct{_ad []_eg .Optimizer };
+
+// CombineDuplicateDirectObjects combines duplicated direct objects by its data hash.
+// It implements interface model.Optimizer.
+type CombineDuplicateDirectObjects struct{};func _de (_fg *_fbb .PdfObjectStream )error {_bca ,_cb :=_fbb .DecodeStream (_fg );if _cb !=nil {return _cb ;};_ec :=_cg .NewContentStreamParser (string (_bca ));_gce ,_cb :=_ec .Parse ();if _cb !=nil {return _cb ;
+};_gce =_acg (_gce );_ce :=_gce .Bytes ();if len (_ce )>=len (_bca ){return nil ;};_da ,_cb :=_fbb .MakeStream (_gce .Bytes (),_fbb .NewFlateEncoder ());if _cb !=nil {return _cb ;};_fg .Stream =_da .Stream ;_fg .Merge (_da .PdfObjectDictionary );return nil ;
+};
+
+// CleanUnusedResources represents an optimizer used to clean unused resources.
+type CleanUnusedResources struct{};
+
+// Optimize optimizes PDF objects to decrease PDF size.
+func (_ecg *CombineIdenticalIndirectObjects )Optimize (objects []_fbb .PdfObject )(_egag []_fbb .PdfObject ,_eae error ){_bgae (objects );_ddad :=make (map[_fbb .PdfObject ]_fbb .PdfObject );_dfdd :=make (map[_fbb .PdfObject ]struct{});_gb :=make (map[string ][]*_fbb .PdfIndirectObject );
+for _ ,_fadc :=range objects {_gegg ,_dgc :=_fadc .(*_fbb .PdfIndirectObject );if !_dgc {continue ;};if _cfad ,_ccb :=_gegg .PdfObject .(*_fbb .PdfObjectDictionary );_ccb {if _gdcb ,_bgg :=_cfad .Get ("\u0054\u0079\u0070\u0065").(*_fbb .PdfObjectName );
+_bgg &&*_gdcb =="\u0050\u0061\u0067\u0065"{continue ;};_bfc :=_ee .New ();_bfc .Write ([]byte (_cfad .WriteString ()));_gca :=string (_bfc .Sum (nil ));_gb [_gca ]=append (_gb [_gca ],_gegg );};};for _ ,_add :=range _gb {if len (_add )< 2{continue ;};_cgfb :=_add [0];
+for _dde :=1;_dde < len (_add );_dde ++{_dcfb :=_add [_dde ];_ddad [_dcfb ]=_cgfb ;_dfdd [_dcfb ]=struct{}{};};};_egag =make ([]_fbb .PdfObject ,0,len (objects )-len (_dfdd ));for _ ,_gdg :=range objects {if _ ,_dab :=_dfdd [_gdg ];_dab {continue ;};_egag =append (_egag ,_gdg );
+};_ffca (_egag ,_ddad );return _egag ,nil ;};func _aecg (_fgfg *_eg .Image ,_ggaf float64 )(*_eg .Image ,error ){_febd ,_dcbd :=_fgfg .ToGoImage ();if _dcbd !=nil {return nil ,_dcbd ;};var _gfgb _ag .Image ;_fddd ,_gabg :=_febd .(*_ag .Monochrome );if _gabg {if _dcbd =_fddd .ResolveDecode ();
+_dcbd !=nil {return nil ,_dcbd ;};_gfgb ,_dcbd =_fddd .Scale (_ggaf );if _dcbd !=nil {return nil ,_dcbd ;};}else {_ccaa :=int (_c .RoundToEven (float64 (_fgfg .Width )*_ggaf ));_defe :=int (_c .RoundToEven (float64 (_fgfg .Height )*_ggaf ));_gfgb ,_dcbd =_ag .NewImage (_ccaa ,_defe ,int (_fgfg .BitsPerComponent ),_fgfg .ColorComponents ,nil ,nil ,nil );
+if _dcbd !=nil {return nil ,_dcbd ;};_ed .CatmullRom .Scale (_gfgb ,_gfgb .Bounds (),_febd ,_febd .Bounds (),_ed .Over ,&_ed .Options {});};_ggec :=_gfgb .Base ();_bgad :=&_eg .Image {Width :int64 (_ggec .Width ),Height :int64 (_ggec .Height ),BitsPerComponent :int64 (_ggec .BitsPerComponent ),ColorComponents :_ggec .ColorComponents ,Data :_ggec .Data };
+_bgad .SetDecode (_ggec .Decode );_bgad .SetAlpha (_ggec .Alpha );return _bgad ,nil ;};
