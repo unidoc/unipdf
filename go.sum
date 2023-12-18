@@ -32,8 +32,12 @@ github.com/stretchr/testify v1.7.1 h1:5TQK59W5E3v0r2duFAb7P95B6hEeOyEnHRa8MjYSMT
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/trimmer-io/go-xmp v1.0.0 h1:zY8bolSga5kOjBAaHS6hrdxLgEoYuT875xTy0QDwZWs=
 github.com/trimmer-io/go-xmp v1.0.0/go.mod h1:Aaptr9sp1lLv7UnCAdQ+gSHZyY2miYaKmcNVj7HRBwA=
-github.com/unidoc/freetype v0.2.1 h1:H0fP9gKlfkdZXlmKcvyGMHOkT1vcg/9k0Jqu9UeoKN8=
-github.com/unidoc/freetype v0.2.1/go.mod h1:mJ/Q7JnqEoWtajJVrV6S1InbRv0K/fJerPB5SQs32KI=
+github.com/unidoc/freetype v0.2.2 h1:YamDW1CN1RKQij02JKEk44h2jzholJM72cZdsK6URh4=
+github.com/unidoc/freetype v0.2.2/go.mod h1:mJ/Q7JnqEoWtajJVrV6S1InbRv0K/fJerPB5SQs32KI=
+github.com/unidoc/freetype v0.2.3-0.20231205120720-a3f6ed28b644 h1:zQSHSxGLqt8f3zRnSq8v4gI3CW69/qmYSoDZ1vB56CE=
+github.com/unidoc/freetype v0.2.3-0.20231205120720-a3f6ed28b644/go.mod h1:mJ/Q7JnqEoWtajJVrV6S1InbRv0K/fJerPB5SQs32KI=
+github.com/unidoc/freetype v0.2.3 h1:uPqW+AY0vXN6K2tvtg8dMAtHTEvvHTN52b72XpZU+3I=
+github.com/unidoc/freetype v0.2.3/go.mod h1:mJ/Q7JnqEoWtajJVrV6S1InbRv0K/fJerPB5SQs32KI=
 github.com/unidoc/garabic v0.0.0-20220702200334-8c7cb25baa11 h1:kExUKrbi429KdVVuAc85z4P+W/Rk4bjGWB5KzZLl/l8=
 github.com/unidoc/garabic v0.0.0-20220702200334-8c7cb25baa11/go.mod h1:SX63w9Ww4+Z7E96B01OuG59SleQUb+m+dmapZ8o1Jac=
 github.com/unidoc/pkcs7 v0.0.0-20200411230602-d883fd70d1df/go.mod h1:UEzOZUEpJfDpywVJMUT8QiugqEZC29pDq7kdIZhWCr8=
