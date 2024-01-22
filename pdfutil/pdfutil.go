@@ -9,7 +9,7 @@
 // Use of this source code is governed by the UniDoc End User License Agreement
 // terms that can be accessed at https://unidoc.io/eula/
 
-package pdfutil ;import (_ea "github.com/unidoc/unipdf/v3/common";_a "github.com/unidoc/unipdf/v3/contentstream";_b "github.com/unidoc/unipdf/v3/contentstream/draw";_g "github.com/unidoc/unipdf/v3/core";_f "github.com/unidoc/unipdf/v3/model";);
+package pdfutil ;import (_fb "github.com/unidoc/unipdf/v3/common";_a "github.com/unidoc/unipdf/v3/contentstream";_b "github.com/unidoc/unipdf/v3/contentstream/draw";_g "github.com/unidoc/unipdf/v3/core";_e "github.com/unidoc/unipdf/v3/model";);
 
 // NormalizePage performs the following operations on the passed in page:
 // - Normalize the page rotation.
@@ -26,10 +26,10 @@ package pdfutil ;import (_ea "github.com/unidoc/unipdf/v3/common";_a "github.com
 // PDF viewer.
 // NOTE: This function does not normalize annotations, outlines other parts
 // that are not part of the basic geometry and page content streams.
-func NormalizePage (page *_f .PdfPage )error {_be ,_eb :=page .GetMediaBox ();if _eb !=nil {return _eb ;};_beb ,_eb :=page .GetRotate ();if _eb !=nil {_ea .Log .Debug ("\u0045\u0052R\u004f\u0052\u003a\u0020\u0025\u0073\u0020\u002d\u0020\u0069\u0067\u006e\u006f\u0072\u0069\u006e\u0067\u0020\u0061\u006e\u0064\u0020\u0061\u0073\u0073\u0075\u006d\u0069\u006e\u0067\u0020\u006e\u006f\u0020\u0072\u006f\u0074\u0061\u0074\u0069\u006f\u006e\u000a",_eb .Error ());
-};_gf :=_beb %360!=0&&_beb %90==0;_be .Normalize ();_ec ,_c ,_bf ,_bff :=_be .Llx ,_be .Lly ,_be .Width (),_be .Height ();_fg :=_ec !=0||_c !=0;if !_gf &&!_fg {return nil ;};_ca :=func (_gb ,_eba ,_af float64 )_b .BoundingBox {return _b .Path {Points :[]_b .Point {_b .NewPoint (0,0).Rotate (_af ),_b .NewPoint (_gb ,0).Rotate (_af ),_b .NewPoint (0,_eba ).Rotate (_af ),_b .NewPoint (_gb ,_eba ).Rotate (_af )}}.GetBoundingBox ();
-};_ge :=_a .NewContentCreator ();var _fa float64 ;if _gf {_fa =-float64 (_beb );_d :=_ca (_bf ,_bff ,_fa );_ge .Translate ((_d .Width -_bf )/2+_bf /2,(_d .Height -_bff )/2+_bff /2);_ge .RotateDeg (_fa );_ge .Translate (-_bf /2,-_bff /2);_bf ,_bff =_d .Width ,_d .Height ;
-};if _fg {_ge .Translate (-_ec ,-_c );};_cd :=_ge .Operations ();_cc ,_eb :=_g .MakeStream (_cd .Bytes (),_g .NewFlateEncoder ());if _eb !=nil {return _eb ;};_cda :=_g .MakeArray (_cc );_cda .Append (page .GetContentStreamObjs ()...);*_be =_f .PdfRectangle {Urx :_bf ,Ury :_bff };
-if _cb :=page .CropBox ;_cb !=nil {_cb .Normalize ();_gg ,_ga ,_df ,_fd :=_cb .Llx -_ec ,_cb .Lly -_c ,_cb .Width (),_cb .Height ();if _gf {_ce :=_ca (_df ,_fd ,_fa );_df ,_fd =_ce .Width ,_ce .Height ;};*_cb =_f .PdfRectangle {Llx :_gg ,Lly :_ga ,Urx :_gg +_df ,Ury :_ga +_fd };
-};_ea .Log .Debug ("\u0052\u006f\u0074\u0061\u0074\u0065\u003d\u0025\u0066\u00b0\u0020\u004f\u0070\u0073\u003d%\u0071 \u004d\u0065\u0064\u0069\u0061\u0042\u006f\u0078\u003d\u0025\u002e\u0032\u0066",_fa ,_cd ,_be );page .Contents =_cda ;page .Rotate =nil ;
+func NormalizePage (page *_e .PdfPage )error {_ec ,_ee :=page .GetMediaBox ();if _ee !=nil {return _ee ;};_af ,_ee :=page .GetRotate ();if _ee !=nil {_fb .Log .Debug ("\u0045\u0052R\u004f\u0052\u003a\u0020\u0025\u0073\u0020\u002d\u0020\u0069\u0067\u006e\u006f\u0072\u0069\u006e\u0067\u0020\u0061\u006e\u0064\u0020\u0061\u0073\u0073\u0075\u006d\u0069\u006e\u0067\u0020\u006e\u006f\u0020\u0072\u006f\u0074\u0061\u0074\u0069\u006f\u006e\u000a",_ee .Error ());
+};_ba :=_af %360!=0&&_af %90==0;_ec .Normalize ();_d ,_ga ,_bg ,_c :=_ec .Llx ,_ec .Lly ,_ec .Width (),_ec .Height ();_ca :=_d !=0||_ga !=0;if !_ba &&!_ca {return nil ;};_ae :=func (_da ,_cd ,_bgf float64 )_b .BoundingBox {return _b .Path {Points :[]_b .Point {_b .NewPoint (0,0).Rotate (_bgf ),_b .NewPoint (_da ,0).Rotate (_bgf ),_b .NewPoint (0,_cd ).Rotate (_bgf ),_b .NewPoint (_da ,_cd ).Rotate (_bgf )}}.GetBoundingBox ();
+};_gd :=_a .NewContentCreator ();var _bb float64 ;if _ba {_bb =-float64 (_af );_gad :=_ae (_bg ,_c ,_bb );_gd .Translate ((_gad .Width -_bg )/2+_bg /2,(_gad .Height -_c )/2+_c /2);_gd .RotateDeg (_bb );_gd .Translate (-_bg /2,-_c /2);_bg ,_c =_gad .Width ,_gad .Height ;
+};if _ca {_gd .Translate (-_d ,-_ga );};_eca :=_gd .Operations ();_fa ,_ee :=_g .MakeStream (_eca .Bytes (),_g .NewFlateEncoder ());if _ee !=nil {return _ee ;};_fd :=_g .MakeArray (_fa );_fd .Append (page .GetContentStreamObjs ()...);*_ec =_e .PdfRectangle {Urx :_bg ,Ury :_c };
+if _afb :=page .CropBox ;_afb !=nil {_afb .Normalize ();_ac ,_gae ,_bab ,_cg :=_afb .Llx -_d ,_afb .Lly -_ga ,_afb .Width (),_afb .Height ();if _ba {_caf :=_ae (_bab ,_cg ,_bb );_bab ,_cg =_caf .Width ,_caf .Height ;};*_afb =_e .PdfRectangle {Llx :_ac ,Lly :_gae ,Urx :_ac +_bab ,Ury :_gae +_cg };
+};_fb .Log .Debug ("\u0052\u006f\u0074\u0061\u0074\u0065\u003d\u0025\u0066\u00b0\u0020\u004f\u0070\u0073\u003d%\u0071 \u004d\u0065\u0064\u0069\u0061\u0042\u006f\u0078\u003d\u0025\u002e\u0032\u0066",_bb ,_eca ,_ec );page .Contents =_fd ;page .Rotate =nil ;
 return nil ;};
