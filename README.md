@@ -67,6 +67,10 @@ The profits are invested back into making unipdf better. We want to make the bes
 
 If you are interested in contributing, please contact us.
 
+## Go Version Compatibility
+
+Officially we support three latest Go versions, but internally we would test the build with up to five latest Go versions in our CI runner.
+
 ## Support and consulting
 
 Please email us at support@unidoc.io for any queries.
