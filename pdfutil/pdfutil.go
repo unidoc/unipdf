@@ -9,27 +9,28 @@
 // Use of this source code is governed by the UniDoc End User License Agreement
 // terms that can be accessed at https://unidoc.io/eula/
 
-package pdfutil ;import (_c "github.com/unidoc/unipdf/v3/common";_d "github.com/unidoc/unipdf/v3/contentstream";_a "github.com/unidoc/unipdf/v3/contentstream/draw";_ce "github.com/unidoc/unipdf/v3/core";_ge "github.com/unidoc/unipdf/v3/model";);
+package pdfutil ;import (_e "github.com/unidoc/unipdf/v3/common";_gac "github.com/unidoc/unipdf/v3/contentstream";_d "github.com/unidoc/unipdf/v3/contentstream/draw";_ga "github.com/unidoc/unipdf/v3/core";_b "github.com/unidoc/unipdf/v3/model";);
 
 // NormalizePage performs the following operations on the passed in page:
-// - Normalize the page rotation.
-//   Rotates the contents of the page according to the Rotate entry, thus
-//   flattening the rotation. The Rotate entry of the page is set to nil.
-// - Normalize the media box.
-//   If the media box of the page is offsetted (Llx != 0 or Lly != 0),
-//   the contents of the page are translated to (-Llx, -Lly). After
-//   normalization, the media box is updated (Llx and Lly are set to 0 and
-//   Urx and Ury are updated accordingly).
-// - Normalize the crop box.
-//   The crop box of the page is updated based on the previous operations.
+//   - Normalize the page rotation.
+//     Rotates the contents of the page according to the Rotate entry, thus
+//     flattening the rotation. The Rotate entry of the page is set to nil.
+//   - Normalize the media box.
+//     If the media box of the page is offsetted (Llx != 0 or Lly != 0),
+//     the contents of the page are translated to (-Llx, -Lly). After
+//     normalization, the media box is updated (Llx and Lly are set to 0 and
+//     Urx and Ury are updated accordingly).
+//   - Normalize the crop box.
+//     The crop box of the page is updated based on the previous operations.
+//
 // After normalization, the page should look the same if openend using a
 // PDF viewer.
 // NOTE: This function does not normalize annotations, outlines other parts
 // that are not part of the basic geometry and page content streams.
-func NormalizePage (page *_ge .PdfPage )error {_gee ,_db :=page .GetMediaBox ();if _db !=nil {return _db ;};_ad ,_db :=page .GetRotate ();if _db !=nil {_c .Log .Debug ("\u0045\u0052R\u004f\u0052\u003a\u0020\u0025\u0073\u0020\u002d\u0020\u0069\u0067\u006e\u006f\u0072\u0069\u006e\u0067\u0020\u0061\u006e\u0064\u0020\u0061\u0073\u0073\u0075\u006d\u0069\u006e\u0067\u0020\u006e\u006f\u0020\u0072\u006f\u0074\u0061\u0074\u0069\u006f\u006e\u000a",_db .Error ());
-};_e :=_ad %360!=0&&_ad %90==0;_gee .Normalize ();_gg ,_ed ,_b ,_ae :=_gee .Llx ,_gee .Lly ,_gee .Width (),_gee .Height ();_ga :=_gg !=0||_ed !=0;if !_e &&!_ga {return nil ;};_f :=func (_dg ,_gb ,_dbb float64 )_a .BoundingBox {return _a .Path {Points :[]_a .Point {_a .NewPoint (0,0).Rotate (_dbb ),_a .NewPoint (_dg ,0).Rotate (_dbb ),_a .NewPoint (0,_gb ).Rotate (_dbb ),_a .NewPoint (_dg ,_gb ).Rotate (_dbb )}}.GetBoundingBox ();
-};_ba :=_d .NewContentCreator ();var _bg float64 ;if _e {_bg =-float64 (_ad );_fb :=_f (_b ,_ae ,_bg );_ba .Translate ((_fb .Width -_b )/2+_b /2,(_fb .Height -_ae )/2+_ae /2);_ba .RotateDeg (_bg );_ba .Translate (-_b /2,-_ae /2);_b ,_ae =_fb .Width ,_fb .Height ;
-};if _ga {_ba .Translate (-_gg ,-_ed );};_df :=_ba .Operations ();_bad ,_db :=_ce .MakeStream (_df .Bytes (),_ce .NewFlateEncoder ());if _db !=nil {return _db ;};_fd :=_ce .MakeArray (_bad );_fd .Append (page .GetContentStreamObjs ()...);*_gee =_ge .PdfRectangle {Urx :_b ,Ury :_ae };
-if _gf :=page .CropBox ;_gf !=nil {_gf .Normalize ();_dd ,_cd ,_bd ,_gac :=_gf .Llx -_gg ,_gf .Lly -_ed ,_gf .Width (),_gf .Height ();if _e {_bc :=_f (_bd ,_gac ,_bg );_bd ,_gac =_bc .Width ,_bc .Height ;};*_gf =_ge .PdfRectangle {Llx :_dd ,Lly :_cd ,Urx :_dd +_bd ,Ury :_cd +_gac };
-};_c .Log .Debug ("\u0052\u006f\u0074\u0061\u0074\u0065\u003d\u0025\u0066\u00b0\u0020\u004f\u0070\u0073\u003d%\u0071 \u004d\u0065\u0064\u0069\u0061\u0042\u006f\u0078\u003d\u0025\u002e\u0032\u0066",_bg ,_df ,_gee );page .Contents =_fd ;page .Rotate =nil ;
+func NormalizePage (page *_b .PdfPage )error {_a ,_gad :=page .GetMediaBox ();if _gad !=nil {return _gad ;};_bc ,_gad :=page .GetRotate ();if _gad !=nil {_e .Log .Debug ("\u0045\u0052R\u004f\u0052\u003a\u0020\u0025\u0073\u0020\u002d\u0020\u0069\u0067\u006e\u006f\u0072\u0069\u006e\u0067\u0020\u0061\u006e\u0064\u0020\u0061\u0073\u0073\u0075\u006d\u0069\u006e\u0067\u0020\u006e\u006f\u0020\u0072\u006f\u0074\u0061\u0074\u0069\u006f\u006e\u000a",_gad .Error ());
+};_gacf :=_bc %360!=0&&_bc %90==0;_a .Normalize ();_ef ,_dd ,_bcc ,_af :=_a .Llx ,_a .Lly ,_a .Width (),_a .Height ();_ad :=_ef !=0||_dd !=0;if !_gacf &&!_ad {return nil ;};_gd :=func (_f ,_c ,_bd float64 )_d .BoundingBox {return _d .Path {Points :[]_d .Point {_d .NewPoint (0,0).Rotate (_bd ),_d .NewPoint (_f ,0).Rotate (_bd ),_d .NewPoint (0,_c ).Rotate (_bd ),_d .NewPoint (_f ,_c ).Rotate (_bd )}}.GetBoundingBox ();
+};_gf :=_gac .NewContentCreator ();var _fe float64 ;if _gacf {_fe =-float64 (_bc );_gg :=_gd (_bcc ,_af ,_fe );_gf .Translate ((_gg .Width -_bcc )/2+_bcc /2,(_gg .Height -_af )/2+_af /2);_gf .RotateDeg (_fe );_gf .Translate (-_bcc /2,-_af /2);_bcc ,_af =_gg .Width ,_gg .Height ;
+};if _ad {_gf .Translate (-_ef ,-_dd );};_bdc :=_gf .Operations ();_efa ,_gad :=_ga .MakeStream (_bdc .Bytes (),_ga .NewFlateEncoder ());if _gad !=nil {return _gad ;};_df :=_ga .MakeArray (_efa );_df .Append (page .GetContentStreamObjs ()...);*_a =_b .PdfRectangle {Urx :_bcc ,Ury :_af };
+if _efg :=page .CropBox ;_efg !=nil {_efg .Normalize ();_fb ,_eb ,_ggg ,_fee :=_efg .Llx -_ef ,_efg .Lly -_dd ,_efg .Width (),_efg .Height ();if _gacf {_ac :=_gd (_ggg ,_fee ,_fe );_ggg ,_fee =_ac .Width ,_ac .Height ;};*_efg =_b .PdfRectangle {Llx :_fb ,Lly :_eb ,Urx :_fb +_ggg ,Ury :_eb +_fee };
+};_e .Log .Debug ("\u0052\u006f\u0074\u0061\u0074\u0065\u003d\u0025\u0066\u00b0\u0020\u004f\u0070\u0073\u003d%\u0071 \u004d\u0065\u0064\u0069\u0061\u0042\u006f\u0078\u003d\u0025\u002e\u0032\u0066",_fe ,_bdc ,_a );page .Contents =_df ;page .Rotate =nil ;
 return nil ;};
