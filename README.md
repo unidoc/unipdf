@@ -13,7 +13,7 @@ creating and reading, processing PDF files. The library is written and supported
 - [Create PDF reports](https://github.com/unidoc/unipdf-examples/blob/master/report/pdf_report.go). Example output: [unidoc-report.pdf](https://github.com/unidoc/unipdf-examples/blob/master/report/unidoc-report.pdf).
 - [Table PDF reports](https://github.com/unidoc/unipdf-examples/blob/master/report/pdf_tables.go). Example output: [unipdf-tables.pdf](https://github.com/unidoc/unipdf-examples/blob/master/report/unipdf-tables.pdf).
 - [Invoice creation](https://unidoc.io/news/simple-invoices)
-- [Styled paragraphs](https://github.com/unidoc/unipdf-examples/blob/master/report/pdf_formatted_text.go)
+- [Styled paragraphs](https://github.com/unidoc/unipdf-examples/blob/master/text/pdf_formatted_text.go)
 - [Merge PDF pages](https://github.com/unidoc/unipdf-examples/blob/master/pages/pdf_merge.go)
 - [Split PDF pages](https://github.com/unidoc/unipdf-examples/blob/master/pages/pdf_split.go) and change page order
 - [Rotate pages](https://github.com/unidoc/unipdf-examples/blob/master/pages/pdf_rotate.go)
