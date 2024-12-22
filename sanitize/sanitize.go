@@ -9,21 +9,17 @@
 // Use of this source code is governed by the UniDoc End User License Agreement
 // terms that can be accessed at https://unidoc.io/eula/
 
-package sanitize ;import (_d "github.com/unidoc/unipdf/v3/common";_ba "github.com/unidoc/unipdf/v3/core";);func (_dba *Sanitizer )analyze (_ddd []_ba .PdfObject ){_dbc :=map[string ]int {};for _ ,_aaf :=range _ddd {switch _edb :=_aaf .(type ){case *_ba .PdfIndirectObject :_aag ,_bg :=_ba .GetDict (_edb .PdfObject );
-if _bg {if _ca ,_ge :=_ba .GetName (_aag .Get ("\u0054\u0079\u0070\u0065"));_ge &&*_ca =="\u0043a\u0074\u0061\u006c\u006f\u0067"{if _ ,_ad :=_ba .GetIndirect (_aag .Get ("\u004f\u0070\u0065\u006e\u0041\u0063\u0074\u0069\u006f\u006e"));_ad {_dbc ["\u004f\u0070\u0065\u006e\u0041\u0063\u0074\u0069\u006f\u006e"]++;
-};}else if _ebb ,_bb :=_ba .GetName (_aag .Get ("\u0053"));_bb {_gee :=_ebb .String ();if _gee =="\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074"||_gee =="\u0055\u0052\u0049"||_gee =="\u0047\u006f\u0054\u006f"||_gee =="\u0047\u006f\u0054o\u0052"||_gee =="\u004c\u0061\u0075\u006e\u0063\u0068"{_dbc [_gee ]++;
-}else if _gee =="\u0052e\u006e\u0064\u0069\u0074\u0069\u006fn"{if _ ,_cg :=_ba .GetStream (_aag .Get ("\u004a\u0053"));_cg {_dbc [_gee ]++;};};}else if _adf :=_aag .Get ("\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074");_adf !=nil {_dbc ["\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074"]++;
-}else if _eg ,_cgd :=_ba .GetIndirect (_aag .Get ("\u0050\u0061\u0072\u0065\u006e\u0074"));_cgd {if _fdg ,_fc :=_ba .GetDict (_eg .PdfObject );_fc {if _da ,_deb :=_ba .GetDict (_fdg .Get ("\u0041\u0041"));_deb {_gab :=_da .Get ("\u004b");_aff ,_afd :=_ba .GetIndirect (_gab );
-if _afd {if _egc ,_aefa :=_ba .GetDict (_aff .PdfObject );_aefa {if _ff ,_cae :=_ba .GetName (_egc .Get ("\u0053"));_cae &&*_ff =="\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074"{_dbc ["\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074"]++;
-}else if _ ,_ecf :=_ba .GetString (_egc .Get ("\u004a\u0053"));_ecf {_dbc ["\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074"]++;}else {_bf :=_da .Get ("\u0046");if _bf !=nil {_gafg ,_caea :=_ba .GetIndirect (_bf );if _caea {if _cc ,_gg :=_ba .GetDict (_gafg .PdfObject );
-_gg {if _eec ,_gc :=_ba .GetName (_cc .Get ("\u0053"));_gc {_cba :=_eec .String ();_dbc [_cba ]++;};};};};};};};};};};};};};_dba ._c =_dbc ;};
+package sanitize ;import (_a "github.com/unidoc/unipdf/v3/common";_b "github.com/unidoc/unipdf/v3/core";);
+
+// New returns a new sanitizer object.
+func New (opts SanitizationOpts )*Sanitizer {return &Sanitizer {_g :opts }};
 
 // Sanitizer represents a sanitizer object.
 // It implements the Optimizer interface to access the objects field from the writer.
-type Sanitizer struct{_de SanitizationOpts ;_c map[string ]int ;};
+type Sanitizer struct{_g SanitizationOpts ;_e map[string ]int ;};
 
-// New returns a new sanitizer object.
-func New (opts SanitizationOpts )*Sanitizer {return &Sanitizer {_de :opts }};
+// GetSuspiciousObjects returns a count of each detected suspicious object.
+func (_edg *Sanitizer )GetSuspiciousObjects ()map[string ]int {return _edg ._e };
 
 // SanitizationOpts specifies the objects to be removed during sanitization.
 type SanitizationOpts struct{
@@ -51,21 +47,25 @@ OpenAction bool ;
 // Launch specifies wether Launch Action should be removed.
 // A launch action launches an application or opens or prints a document.
 // 12.6.4.5 Launch Actions, PDF32000_2008.
-Launch bool ;};func (_ee *Sanitizer )processObjects (_f []_ba .PdfObject )([]_ba .PdfObject ,error ){_dc :=[]_ba .PdfObject {};_dd :=_ee ._de ;for _ ,_fa :=range _f {switch _be :=_fa .(type ){case *_ba .PdfIndirectObject :_ecb ,_ea :=_ba .GetDict (_be );
-if _ea {if _eaf ,_bc :=_ba .GetName (_ecb .Get ("\u0054\u0079\u0070\u0065"));_bc &&*_eaf =="\u0043a\u0074\u0061\u006c\u006f\u0067"{if _ ,_ed :=_ba .GetIndirect (_ecb .Get ("\u004f\u0070\u0065\u006e\u0041\u0063\u0074\u0069\u006f\u006e"));_ed &&_dd .OpenAction {_ecb .Remove ("\u004f\u0070\u0065\u006e\u0041\u0063\u0074\u0069\u006f\u006e");
-};}else if _fd ,_a :=_ba .GetName (_ecb .Get ("\u0053"));_a {switch *_fd {case "\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074":if _dd .JavaScript {if _cd ,_aa :=_ba .GetStream (_ecb .Get ("\u004a\u0053"));_aa {_ef :=[]byte {};_eag ,_df :=_ba .MakeStream (_ef ,nil );
-if _df ==nil {*_cd =*_eag ;};};_d .Log .Debug ("\u004a\u0061\u0076\u0061\u0073\u0063\u0072\u0069\u0070\u0074\u0020a\u0063\u0074\u0069\u006f\u006e\u0020\u0073\u006b\u0069\u0070p\u0065\u0064\u002e");continue ;};case "\u0055\u0052\u0049":if _dd .URI {_d .Log .Debug ("\u0055\u0052\u0049\u0020ac\u0074\u0069\u006f\u006e\u0020\u0073\u006b\u0069\u0070\u0070\u0065\u0064\u002e");
-continue ;};case "\u0047\u006f\u0054\u006f":if _dd .GoTo {_d .Log .Debug ("G\u004fT\u004f\u0020\u0061\u0063\u0074\u0069\u006f\u006e \u0073\u006b\u0069\u0070pe\u0064\u002e");continue ;};case "\u0047\u006f\u0054o\u0052":if _dd .GoToR {_d .Log .Debug ("R\u0065\u006d\u006f\u0074\u0065\u0020G\u006f\u0054\u004f\u0020\u0061\u0063\u0074\u0069\u006fn\u0020\u0073\u006bi\u0070p\u0065\u0064\u002e");
-continue ;};case "\u004c\u0061\u0075\u006e\u0063\u0068":if _dd .Launch {_d .Log .Debug ("\u004a\u0061\u0076\u0061\u0073\u0063\u0072\u0069\u0070\u0074\u0020a\u0063\u0074\u0069\u006f\u006e\u0020\u0073\u006b\u0069\u0070p\u0065\u0064\u002e");continue ;};case "\u0052e\u006e\u0064\u0069\u0074\u0069\u006fn":if _fb ,_ddc :=_ba .GetStream (_ecb .Get ("\u004a\u0053"));
-_ddc {_cb :=[]byte {};_dea ,_eaa :=_ba .MakeStream (_cb ,nil );if _eaa ==nil {*_fb =*_dea ;};};};}else if _ag :=_ecb .Get ("\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074");_ag !=nil &&_dd .JavaScript {continue ;}else if _fg ,_efc :=_ba .GetName (_ecb .Get ("\u0054\u0079\u0070\u0065"));
-_efc &&*_fg =="\u0041\u006e\u006eo\u0074"&&_dd .JavaScript {if _ae ,_def :=_ba .GetIndirect (_ecb .Get ("\u0050\u0061\u0072\u0065\u006e\u0074"));_def {if _af ,_eef :=_ba .GetDict (_ae .PdfObject );_eef {if _db ,_g :=_ba .GetDict (_af .Get ("\u0041\u0041"));
-_g {_ce ,_aef :=_ba .GetIndirect (_db .Get ("\u004b"));if _aef {if _gf ,_ga :=_ba .GetDict (_ce .PdfObject );_ga {if _eefb ,_fdc :=_ba .GetName (_gf .Get ("\u0053"));_fdc &&*_eefb =="\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074"{_gf .Clear ();
-}else if _dbb :=_db .Get ("\u0046");_dbb !=nil {if _cdb ,_cda :=_ba .GetIndirect (_dbb );_cda {if _gaf ,_efce :=_ba .GetDict (_cdb .PdfObject );_efce {if _bcb ,_cec :=_ba .GetName (_gaf .Get ("\u0053"));_cec &&*_bcb =="\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074"{_gaf .Clear ();
-};};};};};};};};};};};case *_ba .PdfObjectStream :_d .Log .Debug ("\u0070d\u0066\u0020\u006f\u0062j\u0065\u0063\u0074\u0020\u0073t\u0072e\u0061m\u0020\u0074\u0079\u0070\u0065\u0020\u0025T",_be );case *_ba .PdfObjectStreams :_d .Log .Debug ("\u0070\u0064\u0066\u0020\u006f\u0062\u006a\u0065\u0063\u0074\u0020s\u0074\u0072\u0065\u0061\u006d\u0073\u0020\u0074\u0079\u0070e\u0020\u0025\u0054",_be );
-default:_d .Log .Debug ("u\u006e\u006b\u006e\u006fwn\u0020p\u0064\u0066\u0020\u006f\u0062j\u0065\u0063\u0074\u0020\u0025\u0054",_be );};_dc =append (_dc ,_fa );};_ee .analyze (_dc );return _dc ,nil ;};
-
-// GetSuspiciousObjects returns a count of each detected suspicious object.
-func (_eeg *Sanitizer )GetSuspiciousObjects ()map[string ]int {return _eeg ._c };
+Launch bool ;};func (_egb *Sanitizer )processObjects (_c []_b .PdfObject )([]_b .PdfObject ,error ){_ag :=[]_b .PdfObject {};_ef :=_egb ._g ;for _ ,_ac :=range _c {switch _gd :=_ac .(type ){case *_b .PdfIndirectObject :_aa ,_gdf :=_b .GetDict (_gd );if _gdf {if _fg ,_d :=_b .GetName (_aa .Get ("\u0054\u0079\u0070\u0065"));
+_d &&*_fg =="\u0043a\u0074\u0061\u006c\u006f\u0067"{if _ ,_fd :=_b .GetIndirect (_aa .Get ("\u004f\u0070\u0065\u006e\u0041\u0063\u0074\u0069\u006f\u006e"));_fd &&_ef .OpenAction {_aa .Remove ("\u004f\u0070\u0065\u006e\u0041\u0063\u0074\u0069\u006f\u006e");
+};}else if _efd ,_ad :=_b .GetName (_aa .Get ("\u0053"));_ad {switch *_efd {case "\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074":if _ef .JavaScript {if _fe ,_db :=_b .GetStream (_aa .Get ("\u004a\u0053"));_db {_bf :=[]byte {};_aag ,_bc :=_b .MakeStream (_bf ,nil );
+if _bc ==nil {*_fe =*_aag ;};};_a .Log .Debug ("\u004a\u0061\u0076\u0061\u0073\u0063\u0072\u0069\u0070\u0074\u0020a\u0063\u0074\u0069\u006f\u006e\u0020\u0073\u006b\u0069\u0070p\u0065\u0064\u002e");continue ;};case "\u0055\u0052\u0049":if _ef .URI {_a .Log .Debug ("\u0055\u0052\u0049\u0020ac\u0074\u0069\u006f\u006e\u0020\u0073\u006b\u0069\u0070\u0070\u0065\u0064\u002e");
+continue ;};case "\u0047\u006f\u0054\u006f":if _ef .GoTo {_a .Log .Debug ("G\u004fT\u004f\u0020\u0061\u0063\u0074\u0069\u006f\u006e \u0073\u006b\u0069\u0070pe\u0064\u002e");continue ;};case "\u0047\u006f\u0054o\u0052":if _ef .GoToR {_a .Log .Debug ("R\u0065\u006d\u006f\u0074\u0065\u0020G\u006f\u0054\u004f\u0020\u0061\u0063\u0074\u0069\u006fn\u0020\u0073\u006bi\u0070p\u0065\u0064\u002e");
+continue ;};case "\u004c\u0061\u0075\u006e\u0063\u0068":if _ef .Launch {_a .Log .Debug ("\u004a\u0061\u0076\u0061\u0073\u0063\u0072\u0069\u0070\u0074\u0020a\u0063\u0074\u0069\u006f\u006e\u0020\u0073\u006b\u0069\u0070p\u0065\u0064\u002e");continue ;};case "\u0052e\u006e\u0064\u0069\u0074\u0069\u006fn":if _aagc ,_fda :=_b .GetStream (_aa .Get ("\u004a\u0053"));
+_fda {_be :=[]byte {};_gc ,_ae :=_b .MakeStream (_be ,nil );if _ae ==nil {*_aagc =*_gc ;};};};}else if _de :=_aa .Get ("\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074");_de !=nil &&_ef .JavaScript {continue ;}else if _bb ,_fa :=_b .GetName (_aa .Get ("\u0054\u0079\u0070\u0065"));
+_fa &&*_bb =="\u0041\u006e\u006eo\u0074"&&_ef .JavaScript {if _bee ,_aca :=_b .GetIndirect (_aa .Get ("\u0050\u0061\u0072\u0065\u006e\u0074"));_aca {if _gf ,_bfd :=_b .GetDict (_bee .PdfObject );_bfd {if _ab ,_gb :=_b .GetDict (_gf .Get ("\u0041\u0041"));
+_gb {_dd ,_cfc :=_b .GetIndirect (_ab .Get ("\u004b"));if _cfc {if _dc ,_gdb :=_b .GetDict (_dd .PdfObject );_gdb {if _efg ,_fb :=_b .GetName (_dc .Get ("\u0053"));_fb &&*_efg =="\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074"{_dc .Clear ();
+}else if _da :=_ab .Get ("\u0046");_da !=nil {if _gfa ,_cd :=_b .GetIndirect (_da );_cd {if _bg ,_ebf :=_b .GetDict (_gfa .PdfObject );_ebf {if _bd ,_fad :=_b .GetName (_bg .Get ("\u0053"));_fad &&*_bd =="\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074"{_bg .Clear ();
+};};};};};};};};};};};case *_b .PdfObjectStream :_a .Log .Debug ("\u0070d\u0066\u0020\u006f\u0062j\u0065\u0063\u0074\u0020\u0073t\u0072e\u0061m\u0020\u0074\u0079\u0070\u0065\u0020\u0025T",_gd );case *_b .PdfObjectStreams :_a .Log .Debug ("\u0070\u0064\u0066\u0020\u006f\u0062\u006a\u0065\u0063\u0074\u0020s\u0074\u0072\u0065\u0061\u006d\u0073\u0020\u0074\u0079\u0070e\u0020\u0025\u0054",_gd );
+default:_a .Log .Debug ("u\u006e\u006b\u006e\u006fwn\u0020p\u0064\u0066\u0020\u006f\u0062j\u0065\u0063\u0074\u0020\u0025\u0054",_gd );};_ag =append (_ag ,_ac );};_egb .analyze (_ag );return _ag ,nil ;};
 
 // Optimize optimizes `objects` and returns updated list of objects.
-func (_e *Sanitizer )Optimize (objects []_ba .PdfObject )([]_ba .PdfObject ,error ){return _e .processObjects (objects );};
+func (_eg *Sanitizer )Optimize (objects []_b .PdfObject )([]_b .PdfObject ,error ){return _eg .processObjects (objects );};func (_aea *Sanitizer )analyze (_ca []_b .PdfObject ){_dba :=map[string ]int {};for _ ,_cfg :=range _ca {switch _cc :=_cfg .(type ){case *_b .PdfIndirectObject :_bdg ,_ba :=_b .GetDict (_cc .PdfObject );
+if _ba {if _af ,_ggc :=_b .GetName (_bdg .Get ("\u0054\u0079\u0070\u0065"));_ggc &&*_af =="\u0043a\u0074\u0061\u006c\u006f\u0067"{if _ ,_gcc :=_b .GetIndirect (_bdg .Get ("\u004f\u0070\u0065\u006e\u0041\u0063\u0074\u0069\u006f\u006e"));_gcc {_dba ["\u004f\u0070\u0065\u006e\u0041\u0063\u0074\u0069\u006f\u006e"]++;
+};}else if _acd ,_ff :=_b .GetName (_bdg .Get ("\u0053"));_ff {_fdb :=_acd .String ();if _fdb =="\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074"||_fdb =="\u0055\u0052\u0049"||_fdb =="\u0047\u006f\u0054\u006f"||_fdb =="\u0047\u006f\u0054o\u0052"||_fdb =="\u004c\u0061\u0075\u006e\u0063\u0068"{_dba [_fdb ]++;
+}else if _fdb =="\u0052e\u006e\u0064\u0069\u0074\u0069\u006fn"{if _ ,_afe :=_b .GetStream (_bdg .Get ("\u004a\u0053"));_afe {_dba [_fdb ]++;};};}else if _bdb :=_bdg .Get ("\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074");_bdb !=nil {_dba ["\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074"]++;
+}else if _dbc ,_dg :=_b .GetIndirect (_bdg .Get ("\u0050\u0061\u0072\u0065\u006e\u0074"));_dg {if _dgf ,_fdf :=_b .GetDict (_dbc .PdfObject );_fdf {if _ebc ,_dgfe :=_b .GetDict (_dgf .Get ("\u0041\u0041"));_dgfe {_df :=_ebc .Get ("\u004b");_ce ,_dgb :=_b .GetIndirect (_df );
+if _dgb {if _ee ,_gge :=_b .GetDict (_ce .PdfObject );_gge {if _ec ,_cdc :=_b .GetName (_ee .Get ("\u0053"));_cdc &&*_ec =="\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074"{_dba ["\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074"]++;
+}else if _ ,_ed :=_b .GetString (_ee .Get ("\u004a\u0053"));_ed {_dba ["\u004a\u0061\u0076\u0061\u0053\u0063\u0072\u0069\u0070\u0074"]++;}else {_eef :=_ebc .Get ("\u0046");if _eef !=nil {_gfe ,_cac :=_b .GetIndirect (_eef );if _cac {if _fc ,_gde :=_b .GetDict (_gfe .PdfObject );
+_gde {if _ede ,_fba :=_b .GetName (_fc .Get ("\u0053"));_fba {_gbb :=_ede .String ();_dba [_gbb ]++;};};};};};};};};};};};};};_aea ._e =_dba ;};
