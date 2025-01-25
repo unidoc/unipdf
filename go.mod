@@ -1,6 +1,6 @@
 module github.com/unidoc/unipdf/v3
 
-go 1.18
+go 1.19
 
 require (
 	github.com/adrg/sysfont v0.1.2
