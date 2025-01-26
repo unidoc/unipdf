@@ -9,4 +9,4 @@
 // Use of this source code is governed by the UniDoc End User License Agreement
 // terms that can be accessed at https://unidoc.io/eula/
 
-package internal ;import _b "errors";var ErrOOB =_b .New ("o\u0075\u0074\u0020\u006f\u0066\u0020\u0062\u0061\u006e\u0064");
+package internal ;import _a "errors";var ErrOOB =_a .New ("o\u0075\u0074\u0020\u006f\u0066\u0020\u0062\u0061\u006e\u0064");
