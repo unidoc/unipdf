@@ -1,6 +1,6 @@
 module github.com/unidoc/unipdf/v3
 
-go 1.19
+go 1.20
 
 require (
 	github.com/adrg/sysfont v0.1.2
@@ -13,11 +13,11 @@ require (
 	github.com/unidoc/garabic v0.0.0-20220702200334-8c7cb25baa11
 	github.com/unidoc/pkcs7 v0.2.0
 	github.com/unidoc/timestamp v0.0.0-20200412005513-91597fd3793a
-	github.com/unidoc/unichart v0.3.0
+	github.com/unidoc/unichart v0.4.0
 	github.com/unidoc/unitype v0.5.1
-	golang.org/x/crypto v0.32.0
+	golang.org/x/crypto v0.33.0
 	golang.org/x/image v0.24.0
-	golang.org/x/net v0.34.0
+	golang.org/x/net v0.35.0
 	golang.org/x/text v0.22.0
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da
 )
