@@ -43,7 +43,7 @@ Contact us if you need any specific examples.
 ## Installation
 With modules:
 ~~~
-go get github.com/unidoc/unipdf/v3
+go get github.com/unidoc/unipdf/v4
 ~~~
 
 ## License key
