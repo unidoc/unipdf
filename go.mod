@@ -31,4 +31,5 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	software.sslmate.com/src/go-pkcs12 v0.5.0 // indirect
 )
