@@ -10,30 +10,30 @@
 // terms that can be accessed at https://unidoc.io/eula/
 
 // Package license helps manage commercial licenses and check if they are valid for the version of unipdf used.
-package license ;import _c "github.com/unidoc/unipdf/v4/internal/license";const (LicenseTierUnlicensed =_c .LicenseTierUnlicensed ;LicenseTierCommunity =_c .LicenseTierCommunity ;LicenseTierIndividual =_c .LicenseTierIndividual ;LicenseTierBusiness =_c .LicenseTierBusiness ;
-);func SetMeteredKeyUsageLogVerboseMode (val bool ){_c .SetMeteredKeyUsageLogVerboseMode (val )};
+package license ;import _e "github.com/unidoc/unipdf/v4/internal/license";
+
+// LicenseKey represents a loaded license key.
+type LicenseKey =_e .LicenseKey ;
+
+// GetLicenseKey returns the currently loaded license key.
+func GetLicenseKey ()*LicenseKey {return _e .GetLicenseKey ()};
+
+// SetLicenseKey sets and validates the license key.
+func SetLicenseKey (content string ,customerName string )error {return _e .SetLicenseKey (content ,customerName );};func SetMeteredKeyUsageLogVerboseMode (val bool ){_e .SetMeteredKeyUsageLogVerboseMode (val )};
 
 // GetMeteredState checks the currently used metered document usage status,
 // documents used and credits available.
-func GetMeteredState ()(_c .MeteredStatus ,error ){return _c .GetMeteredState ()};
+func GetMeteredState ()(_e .MeteredStatus ,error ){return _e .GetMeteredState ()};const (LicenseTierUnlicensed =_e .LicenseTierUnlicensed ;LicenseTierCommunity =_e .LicenseTierCommunity ;LicenseTierIndividual =_e .LicenseTierIndividual ;LicenseTierBusiness =_e .LicenseTierBusiness ;
+);
 
 // MakeUnlicensedKey returns a default key.
-func MakeUnlicensedKey ()*LicenseKey {return _c .MakeUnlicensedKey ()};
+func MakeUnlicensedKey ()*LicenseKey {return _e .MakeUnlicensedKey ()};
 
-// SetLicenseKey sets and validates the license key.
-func SetLicenseKey (content string ,customerName string )error {return _c .SetLicenseKey (content ,customerName );};
+// SetMeteredKey sets the metered API key required for SaaS operation.
+// Document usage is reported periodically for the product to function correctly.
+func SetMeteredKey (apiKey string )error {return _e .SetMeteredKey (apiKey )};
 
 // SetMeteredKeyPersistentCache sets the metered License API Key persistent cache.
 // Default value 'true', set to `false` will report the usage immediately to license server,
 // this can be used when there's no access to persistent data storage.
-func SetMeteredKeyPersistentCache (val bool ){_c .SetMeteredKeyPersistentCache (val )};
-
-// SetMeteredKey sets the metered API key required for SaaS operation.
-// Document usage is reported periodically for the product to function correctly.
-func SetMeteredKey (apiKey string )error {return _c .SetMeteredKey (apiKey )};
-
-// GetLicenseKey returns the currently loaded license key.
-func GetLicenseKey ()*LicenseKey {return _c .GetLicenseKey ()};
-
-// LicenseKey represents a loaded license key.
-type LicenseKey =_c .LicenseKey ;
+func SetMeteredKeyPersistentCache (val bool ){_e .SetMeteredKeyPersistentCache (val )};

@@ -9,5 +9,5 @@
 // Use of this source code is governed by the UniDoc End User License Agreement
 // terms that can be accessed at https://unidoc.io/eula/
 
-package precision ;import _e "math";func RoundFloat (value float64 ,precision int )float64 {_gf :=_e .Pow (10,float64 (precision ));return _e .Round (value *_gf )/_gf ;};func RoundDefault (value float64 )float64 {return RoundFloat (value ,DefaultPrecision )};
+package precision ;import _f "math";func RoundFloat (value float64 ,precision int )float64 {_b :=_f .Pow (10,float64 (precision ));return _f .Round (value *_b )/_b ;};func RoundDefault (value float64 )float64 {return RoundFloat (value ,DefaultPrecision )};
 const (DefaultPrecision =4;);
