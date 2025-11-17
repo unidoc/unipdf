@@ -5,9 +5,10 @@ go 1.23.0
 require (
 	github.com/adrg/sysfont v0.1.2
 	github.com/boombuler/barcode v1.0.2
+	github.com/go-text/typesetting v0.3.0
 	github.com/gorilla/i18n v0.0.0-20150820051429-8b358169da46
 	github.com/h2non/filetype v1.1.3
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/trimmer-io/go-xmp v1.0.0
 	github.com/unidoc/freetype v0.2.3
 	github.com/unidoc/garabic v0.0.0-20220702200334-8c7cb25baa11
@@ -30,6 +31,7 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
