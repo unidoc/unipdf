@@ -5,7 +5,6 @@ go 1.23.0
 require (
 	github.com/adrg/sysfont v0.1.2
 	github.com/boombuler/barcode v1.0.2
-	github.com/go-text/typesetting v0.3.0
 	github.com/gorilla/i18n v0.0.0-20150820051429-8b358169da46
 	github.com/h2non/filetype v1.1.3
 	github.com/stretchr/testify v1.11.1
@@ -14,6 +13,7 @@ require (
 	github.com/unidoc/garabic v0.0.0-20220702200334-8c7cb25baa11
 	github.com/unidoc/pkcs7 v0.3.0
 	github.com/unidoc/timestamp v0.0.0-20200412005513-91597fd3793a
+	github.com/unidoc/typesetting v0.1.0
 	github.com/unidoc/unichart v0.5.1
 	github.com/unidoc/unitype v0.5.1
 	golang.org/x/crypto v0.41.0

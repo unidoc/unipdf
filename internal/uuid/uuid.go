@@ -9,6 +9,7 @@
 // Use of this source code is governed by the UniDoc End User License Agreement
 // terms that can be accessed at https://unidoc.io/eula/
 
-package uuid ;import (_a "crypto/rand";_g "encoding/hex";_ac "io";);func MustUUID ()UUID {uuid ,_gge :=NewUUID ();if _gge !=nil {panic (_gge );};return uuid ;};var _e UUID ;type UUID [16]byte ;var _gg =_a .Reader ;func NewUUID ()(UUID ,error ){var uuid UUID ;
-_ ,_gc :=_ac .ReadFull (_gg ,uuid [:]);if _gc !=nil {return _e ,_gc ;};uuid [6]=(uuid [6]&0x0f)|0x40;uuid [8]=(uuid [8]&0x3f)|0x80;return uuid ,nil ;};var Nil =_e ;func (_cd UUID )String ()string {var _ce [36]byte ;_ag (_ce [:],_cd );return string (_ce [:])};
-func _ag (_aa []byte ,_db UUID ){_g .Encode (_aa ,_db [:4]);_aa [8]='-';_g .Encode (_aa [9:13],_db [4:6]);_aa [13]='-';_g .Encode (_aa [14:18],_db [6:8]);_aa [18]='-';_g .Encode (_aa [19:23],_db [8:10]);_aa [23]='-';_g .Encode (_aa [24:],_db [10:]);};
+package uuid ;import (_f "crypto/rand";_dd "encoding/hex";_e "io";);var Nil =_ba ;func NewUUID ()(UUID ,error ){var uuid UUID ;_ ,_b :=_e .ReadFull (_a ,uuid [:]);if _b !=nil {return _ba ,_b ;};uuid [6]=(uuid [6]&0x0f)|0x40;uuid [8]=(uuid [8]&0x3f)|0x80;
+return uuid ,nil ;};var _a =_f .Reader ;func (_dg UUID )String ()string {var _ce [36]byte ;_g (_ce [:],_dg );return string (_ce [:])};func _g (_gg []byte ,_db UUID ){_dd .Encode (_gg ,_db [:4]);_gg [8]='-';_dd .Encode (_gg [9:13],_db [4:6]);_gg [13]='-';
+_dd .Encode (_gg [14:18],_db [6:8]);_gg [18]='-';_dd .Encode (_gg [19:23],_db [8:10]);_gg [23]='-';_dd .Encode (_gg [24:],_db [10:]);};var _ba UUID ;type UUID [16]byte ;func MustUUID ()UUID {uuid ,_c :=NewUUID ();if _c !=nil {panic (_c );};return uuid ;
+};
