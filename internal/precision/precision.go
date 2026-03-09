@@ -9,5 +9,5 @@
 // Use of this source code is governed by the UniDoc End User License Agreement
 // terms that can be accessed at https://unidoc.io/eula/
 
-package precision ;import _d "math";func RoundDefault (value float64 )float64 {return RoundFloat (value ,DefaultPrecision )};const (DefaultPrecision =4;);var _ga =[...]float64 {1e0,1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8,1e9,1e10,1e11,1e12,1e13,1e14,1e15,1e16,1e17,1e18,1e19,1e20,1e21,1e22};
-func RoundFloat (value float64 ,precision int )float64 {var _b float64 ;if precision >=0&&precision < len (_ga ){_b =_ga [precision ];}else {_b =_d .Pow (10,float64 (precision ));};return _d .Round (value *_b )/_b ;};
+package precision ;import _bb "math";func RoundDefault (value float64 )float64 {return RoundFloat (value ,DefaultPrecision )};var _a =[...]float64 {1e0,1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8,1e9,1e10,1e11,1e12,1e13,1e14,1e15,1e16,1e17,1e18,1e19,1e20,1e21,1e22};
+const (DefaultPrecision =4;);func RoundFloat (value float64 ,precision int )float64 {var _af float64 ;if precision >=0&&precision < len (_a ){_af =_a [precision ];}else {_af =_bb .Pow (10,float64 (precision ));};return _bb .Round (value *_af )/_af ;};
