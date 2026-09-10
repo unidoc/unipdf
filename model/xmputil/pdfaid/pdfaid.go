@@ -9,39 +9,39 @@
 // Use of this source code is governed by the UniDoc End User License Agreement
 // terms that can be accessed at https://unidoc.io/eula/
 
-package pdfaid ;import (_g "fmt";_f "github.com/unidoc/go-xmp/xmp";_b "github.com/unidoc/unipdf/v5/model/xmputil/pdfaextension";);
-
-// SyncModel implements xmp.Model interface.
-func (_df *Model )SyncModel (d *_f .Document )error {return nil };func init (){_f .Register (Namespace ,_f .XmpMetadata );_b .RegisterSchema (Namespace ,&Schema )};
-
-// CanTag implements xmp.Model interface.
-func (_ba *Model )CanTag (tag string )bool {_ ,_cf :=_f .GetNativeField (_ba ,tag );return _cf ==nil };
-
-// Can implements xmp.Model interface.
-func (_eb *Model )Can (nsName string )bool {return Namespace .GetName ()==nsName };var _ _f .Model =(*Model )(nil );var Schema =_b .Schema {NamespaceURI :Namespace .URI ,Prefix :Namespace .Name ,Schema :"\u0050D\u0046/\u0041\u0020\u0049\u0044\u0020\u0053\u0063\u0068\u0065\u006d\u0061",Property :[]_b .Property {{Category :_b .PropertyCategoryInternal ,Description :"\u0050\u0061\u0072\u0074 o\u0066\u0020\u0050\u0044\u0046\u002f\u0041\u0020\u0073\u0074\u0061\u006e\u0064\u0061r\u0064",Name :"\u0070\u0061\u0072\u0074",ValueType :_b .ValueTypeNameInteger },{Category :_b .PropertyCategoryInternal ,Description :"A\u006d\u0065\u006e\u0064\u006d\u0065n\u0074\u0020\u006f\u0066\u0020\u0050\u0044\u0046\u002fA\u0020\u0073\u0074a\u006ed\u0061\u0072\u0064",Name :"\u0061\u006d\u0064",ValueType :_b .ValueTypeNameText },{Category :_b .PropertyCategoryInternal ,Description :"C\u006f\u006e\u0066\u006f\u0072\u006da\u006e\u0063\u0065\u0020\u006c\u0065v\u0065\u006c\u0020\u006f\u0066\u0020\u0050D\u0046\u002f\u0041\u0020\u0073\u0074\u0061\u006e\u0064\u0061r\u0064",Name :"c\u006f\u006e\u0066\u006f\u0072\u006d\u0061\u006e\u0063\u0065",ValueType :_b .ValueTypeNameText }},ValueType :nil };
-
-
-// Namespaces implements xmp.Model interface.
-func (_geb *Model )Namespaces ()_f .NamespaceList {return _f .NamespaceList {Namespace }};
+package pdfaid ;import (_e "fmt";_bd "github.com/unidoc/go-xmp/xmp";_bf "github.com/unidoc/unipdf/v5/model/xmputil/pdfaextension";);
 
 // SyncFromXMP implements xmp.Model interface.
-func (_ae *Model )SyncFromXMP (d *_f .Document )error {return nil };
+func (_gg *Model )SyncFromXMP (d *_bd .Document )error {return nil };func init (){_bd .Register (Namespace ,_bd .XmpMetadata );_bf .RegisterSchema (Namespace ,&Schema )};var Schema =_bf .Schema {NamespaceURI :Namespace .URI ,Prefix :Namespace .Name ,Schema :"\u0050D\u0046/\u0041\u0020\u0049\u0044\u0020\u0053\u0063\u0068\u0065\u006d\u0061",Property :[]_bf .Property {{Category :_bf .PropertyCategoryInternal ,Description :"\u0050\u0061\u0072\u0074 o\u0066\u0020\u0050\u0044\u0046\u002f\u0041\u0020\u0073\u0074\u0061\u006e\u0064\u0061r\u0064",Name :"\u0070\u0061\u0072\u0074",ValueType :_bf .ValueTypeNameInteger },{Category :_bf .PropertyCategoryInternal ,Description :"A\u006d\u0065\u006e\u0064\u006d\u0065n\u0074\u0020\u006f\u0066\u0020\u0050\u0044\u0046\u002fA\u0020\u0073\u0074a\u006ed\u0061\u0072\u0064",Name :"\u0061\u006d\u0064",ValueType :_bf .ValueTypeNameText },{Category :_bf .PropertyCategoryInternal ,Description :"C\u006f\u006e\u0066\u006f\u0072\u006da\u006e\u0063\u0065\u0020\u006c\u0065v\u0065\u006c\u0020\u006f\u0066\u0020\u0050D\u0046\u002f\u0041\u0020\u0073\u0074\u0061\u006e\u0064\u0061r\u0064",Name :"c\u006f\u006e\u0066\u006f\u0072\u006d\u0061\u006e\u0063\u0065",ValueType :_bf .ValueTypeNameText }},ValueType :nil };
+
+
+// SyncModel implements xmp.Model interface.
+func (_bc *Model )SyncModel (d *_bd .Document )error {return nil };var Namespace =_bd .NewNamespace ("\u0070\u0064\u0066\u0061\u0069\u0064","\u0068\u0074\u0074p\u003a\u002f\u002f\u0077w\u0077\u002e\u0061\u0069\u0069\u006d\u002eo\u0072\u0067\u002f\u0070\u0064\u0066\u0061\u002f\u006e\u0073\u002f\u0069\u0064\u002f",NewModel );
+
 
 // NewModel creates a new model.
-func NewModel (name string )_f .Model {return &Model {}};
+func NewModel (name string )_bd .Model {return &Model {}};
 
 // Model is the XMP model for the PdfA metadata.
-type Model struct{Part int `xmp:"pdfaid:part"`;Conformance string `xmp:"pdfaid:conformance"`;Rev int `xmp:"pdfaid:rev"`;};
+type Model struct{Part int `xmp:"pdfaid:part"`;Conformance string `xmp:"pdfaid:conformance"`;Rev int `xmp:"pdfaid:rev"`;};var _ _bd .Model =(*Model )(nil );
 
-// MakeModel gets or create sa new model for PDF/A ID namespace.
-func MakeModel (d *_f .Document )(*Model ,error ){_a ,_ge :=d .MakeModel (Namespace );if _ge !=nil {return nil ,_ge ;};return _a .(*Model ),nil ;};
+// CanTag implements xmp.Model interface.
+func (_cg *Model )CanTag (tag string )bool {_ ,_bb :=_bd .GetNativeField (_cg ,tag );return _bb ==nil };
 
-// GetTag implements xmp.Model interface.
-func (_be *Model )GetTag (tag string )(string ,error ){_gd ,_cc :=_f .GetNativeField (_be ,tag );if _cc !=nil {return "",_g .Errorf ("\u0025\u0073\u003a\u0020\u0025\u0076",Namespace .GetName (),_cc );};return _gd ,nil ;};
+// Can implements xmp.Model interface.
+func (_cb *Model )Can (nsName string )bool {return Namespace .GetName ()==nsName };
 
 // SyncToXMP implements xmp.Model interface.
-func (_d *Model )SyncToXMP (d *_f .Document )error {return nil };var Namespace =_f .NewNamespace ("\u0070\u0064\u0066\u0061\u0069\u0064","\u0068\u0074\u0074p\u003a\u002f\u002f\u0077w\u0077\u002e\u0061\u0069\u0069\u006d\u002eo\u0072\u0067\u002f\u0070\u0064\u0066\u0061\u002f\u006e\u0073\u002f\u0069\u0064\u002f",NewModel );
-
+func (_ef *Model )SyncToXMP (d *_bd .Document )error {return nil };
 
 // SetTag implements xmp.Model interface.
-func (_cb *Model )SetTag (tag ,value string )error {if _ef :=_f .SetNativeField (_cb ,tag ,value );_ef !=nil {return _g .Errorf ("\u0025\u0073\u003a\u0020\u0025\u0076",Namespace .GetName (),_ef );};return nil ;};
+func (_eg *Model )SetTag (tag ,value string )error {if _efg :=_bd .SetNativeField (_eg ,tag ,value );_efg !=nil {return _e .Errorf ("\u0025\u0073\u003a\u0020\u0025\u0076",Namespace .GetName (),_efg );};return nil ;};
+
+// Namespaces implements xmp.Model interface.
+func (_bdb *Model )Namespaces ()_bd .NamespaceList {return _bd .NamespaceList {Namespace }};
+
+// GetTag implements xmp.Model interface.
+func (_caa *Model )GetTag (tag string )(string ,error ){_gd ,_be :=_bd .GetNativeField (_caa ,tag );if _be !=nil {return "",_e .Errorf ("\u0025\u0073\u003a\u0020\u0025\u0076",Namespace .GetName (),_be );};return _gd ,nil ;};
+
+// MakeModel gets or create sa new model for PDF/A ID namespace.
+func MakeModel (d *_bd .Document )(*Model ,error ){_bfe ,_c :=d .MakeModel (Namespace );if _c !=nil {return nil ,_c ;};return _bfe .(*Model ),nil ;};
