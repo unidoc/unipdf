@@ -288,3 +288,25 @@ Copyright 2012 Mozilla Foundation
  limitations under the License.
 
 ```
+
+* [xdg-go/stringprep](https://github.com/xdg-go/stringprep), Apache License, Version 2.0:
+
+  - Used for the SASLprep (RFC 4013) preparation of AES-256 encryption passwords required by ISO 32000-2 section 7.6.4.3.3.
+  - A copy of the package reduced to the tables SASLprep needs is vendored into `internal/stringprep` under the original Apache-2.0 license below.
+```
+
+Copyright 2018 by David A. Golden
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+```

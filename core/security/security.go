@@ -9,123 +9,220 @@
 // Use of this source code is governed by the UniDoc End User License Agreement
 // terms that can be accessed at https://unidoc.io/eula/
 
-package security ;import (_bb "bytes";_da "crypto/aes";_c "crypto/cipher";_ge "crypto/md5";_bd "crypto/rand";_gd "crypto/rc4";_g "crypto/sha256";_b "crypto/sha512";_eg "encoding/binary";_f "errors";_fe "fmt";_ed "github.com/unidoc/unipdf/v5/common";_e "hash";
-_dc "io";_gf "math";);func _acg (_fad []byte ,_cfd int ){_edea :=_cfd ;for _edea < len (_fad ){copy (_fad [_edea :],_fad [:_edea ]);_edea *=2;};};func _fef (_bbe _c .Block )*ecb {return &ecb {_gg :_bbe ,_dd :_bbe .BlockSize ()}};const (PermOwner =Permissions (_gf .MaxUint32 );
-PermPrinting =Permissions (1<<2);PermModify =Permissions (1<<3);PermExtractGraphics =Permissions (1<<4);PermAnnotate =Permissions (1<<5);PermFillForms =Permissions (1<<8);PermDisabilityExtract =Permissions (1<<9);PermRotateInsert =Permissions (1<<10);PermFullPrintQuality =Permissions (1<<11);
-);type ecbDecrypter ecb ;func (_a *ecbDecrypter )BlockSize ()int {return _a ._dd };func (_bee stdHandlerR4 )alg3Key (R int ,_bg []byte )[]byte {_ad :=_ge .New ();_bda :=_bee .paddedPass (_bg );_ad .Write (_bda );if R >=3{for _edf :=0;_edf < 50;_edf ++{_egc :=_ad .Sum (nil );
-_ad =_ge .New ();_ad .Write (_egc );};};_ecf :=_ad .Sum (nil );if R ==2{_ecf =_ecf [0:5];}else {_ecf =_ecf [0:_bee .Length /8];};return _ecf ;};func (_bbaa stdHandlerR6 )alg8 (_dbd *StdEncryptDict ,_ggga []byte ,_bge []byte )error {if _dff :=_be ("\u0061\u006c\u0067\u0038","\u004b\u0065\u0079",32,_ggga );
-_dff !=nil {return _dff ;};var _cbc [16]byte ;if _ ,_ebfe :=_dc .ReadFull (_bd .Reader ,_cbc [:]);_ebfe !=nil {return _ebfe ;};_gab :=_cbc [0:8];_cbcb :=_cbc [8:16];_gbcd :=make ([]byte ,len (_bge )+len (_gab ));_fde :=copy (_gbcd ,_bge );copy (_gbcd [_fde :],_gab );
-_eac ,_dag :=_bbaa .alg2b (_dbd .R ,_gbcd ,_bge ,nil );if _dag !=nil {return _dag ;};U :=make ([]byte ,len (_eac )+len (_gab )+len (_cbcb ));_fde =copy (U ,_eac [:32]);_fde +=copy (U [_fde :],_gab );copy (U [_fde :],_cbcb );_dbd .U =U ;_fde =len (_bge );
-copy (_gbcd [_fde :],_cbcb );_eac ,_dag =_bbaa .alg2b (_dbd .R ,_gbcd ,_bge ,nil );if _dag !=nil {return _dag ;};_fdf ,_dag :=_geb (_eac [:32]);if _dag !=nil {return _dag ;};_fb :=make ([]byte ,_da .BlockSize );_bdd :=_c .NewCBCEncrypter (_fdf ,_fb );UE :=make ([]byte ,32);
-_bdd .CryptBlocks (UE ,_ggga [:32]);_dbd .UE =UE ;return nil ;};func (_dfb stdHandlerR6 )alg11 (_fbg *StdEncryptDict ,_abc []byte )([]byte ,error ){if _dcae :=_be ("\u0061\u006c\u00671\u0031","\u0055",48,_fbg .U );_dcae !=nil {return nil ,_dcae ;};_aeg :=make ([]byte ,len (_abc )+8);
-_fcbe :=copy (_aeg ,_abc );_fcbe +=copy (_aeg [_fcbe :],_fbg .U [32:40]);_bce ,_face :=_dfb .alg2b (_fbg .R ,_aeg ,_abc ,nil );if _face !=nil {return nil ,_face ;};_bce =_bce [:32];if !_bb .Equal (_bce ,_fbg .U [:32]){return nil ,nil ;};return _bce ,nil ;
-};
-
-// Permissions is a bitmask of access permissions for a PDF file.
-type Permissions uint32 ;
+package security ;import (_gd "bytes";_gc "crypto";_bb "crypto/aes";_a "crypto/cipher";_e "crypto/md5";_f "crypto/rand";_d "crypto/rc4";_ga "crypto/rsa";_df "crypto/sha1";_aa "crypto/sha256";_b "crypto/sha512";_dc "crypto/x509";_ad "encoding/binary";_ag "errors";
+_ef "fmt";_gg "github.com/unidoc/pkcs7";_cf "github.com/unidoc/unipdf/v5/common";_fc "github.com/unidoc/unipdf/v5/internal/stringprep";_ge "hash";_c "io";_eb "math";_bg "unicode/utf8";);func (_ca stdHandlerR4 )alg4 (_gdc []byte ,_ []byte )([]byte ,error ){_ed ,_cfdb :=_d .NewCipher (_gdc );
+if _cfdb !=nil {return nil ,_ag .New ("\u0066a\u0069l\u0065\u0064\u0020\u0072\u0063\u0034\u0020\u0063\u0069\u0070\u0068");};_dgf :=[]byte (_dfgg );_geg :=make ([]byte ,len (_dgf ));_ed .XORKeyStream (_geg ,_dgf );return _geg ,nil ;};func (_bf *ecbDecrypter )CryptBlocks (dst ,src []byte ){if len (src )%_bf ._de !=0{_cf .Log .Error ("\u0045\u0052\u0052\u004f\u0052:\u0020\u0045\u0043\u0042\u0020\u0064\u0065\u0063\u0072\u0079\u0070\u0074\u003a \u0069\u006e\u0070\u0075\u0074\u0020\u006e\u006f\u0074\u0020\u0066\u0075\u006c\u006c\u0020\u0062\u006c\u006f\u0063\u006b\u0073");
+return ;};if len (dst )< len (src ){_cf .Log .Error ("\u0045R\u0052\u004fR\u003a\u0020\u0045C\u0042\u0020\u0064\u0065\u0063\u0072\u0079p\u0074\u003a\u0020\u006f\u0075\u0074p\u0075\u0074\u0020\u0073\u006d\u0061\u006c\u006c\u0065\u0072\u0020t\u0068\u0061\u006e\u0020\u0069\u006e\u0070\u0075\u0074");
+return ;};for len (src )> 0{_bf ._cfc .Decrypt (dst ,src [:_bf ._de ]);src =src [_bf ._de :];dst =dst [_bf ._de :];};};func (_gf *ecbDecrypter )BlockSize ()int {return _gf ._de };const (PermOwner =Permissions (_eb .MaxUint32 );PermPrinting =Permissions (1<<2);
+PermModify =Permissions (1<<3);PermExtractGraphics =Permissions (1<<4);PermAnnotate =Permissions (1<<5);PermFillForms =Permissions (1<<8);PermDisabilityExtract =Permissions (1<<9);PermRotateInsert =Permissions (1<<10);PermFullPrintQuality =Permissions (1<<11);
+);func _ea (_aae _a .Block )_a .BlockMode {return (*ecbDecrypter )(_bga (_aae ))};
 
 // StdEncryptDict is a set of additional fields used in standard encryption dictionary.
-type StdEncryptDict struct{R int ;P Permissions ;EncryptMetadata bool ;O ,U []byte ;OE ,UE []byte ;Perms []byte ;};func (_ff stdHandlerR4 )alg4 (_dead []byte ,_ []byte )([]byte ,error ){_faf ,_cf :=_gd .NewCipher (_dead );if _cf !=nil {return nil ,_f .New ("\u0066a\u0069l\u0065\u0064\u0020\u0072\u0063\u0034\u0020\u0063\u0069\u0070\u0068");
-};_dae :=[]byte (_ag );_bfc :=make ([]byte ,len (_dae ));_faf .XORKeyStream (_bfc ,_dae );return _bfc ,nil ;};var _ StdHandler =stdHandlerR6 {};type stdHandlerR6 struct{};
+type StdEncryptDict struct{R int ;P Permissions ;EncryptMetadata bool ;O ,U []byte ;OE ,UE []byte ;Perms []byte ;};const _fea =Permissions (1)|Permissions (1<<9);
 
-// AuthEvent is an event type that triggers authentication.
-type AuthEvent string ;type ecb struct{_gg _c .Block ;_dd int ;};func (_cgc stdHandlerR6 )alg2b (R int ,_eba ,_dad ,_aaa []byte )([]byte ,error ){if R ==5{return _ffe (_eba );};return _ddc (_eba ,_dad ,_aaa );};
+// PubSecPermissionBytes encodes p as the 4 big-endian permission bytes that
+// follow the seed in a recipient's envelope: the Table 24 bits of p, bits 1
+// and 10 always set, and the owner bit (bit 2) when p grants every
+// permission (PermOwner, or all Perm* flags), which makes the recipient
+// owner-equivalent. PubSecPermissions reads the result back as PermOwner, or
+// as p masked to Table 24 plus PermDisabilityExtract.
+func PubSecPermissionBytes (p Permissions )[4]byte {_cga :=(p &_ffd )|_fea ;if _cga &_ffd ==_ffd {_cga |=_cfe ;};var _db [4]byte ;_ad .BigEndian .PutUint32 (_db [:],uint32 (_cga ));return _db ;};
 
 // GenerateParams generates and sets O and U parameters for the encryption dictionary.
 // It expects R, P and EncryptMetadata fields to be set.
-func (_ebdf stdHandlerR4 )GenerateParams (d *StdEncryptDict ,opass ,upass []byte )([]byte ,error ){O ,_ade :=_ebdf .alg3 (d .R ,upass ,opass );if _ade !=nil {_ed .Log .Debug ("\u0045R\u0052\u004fR\u003a\u0020\u0045r\u0072\u006f\u0072\u0020\u0067\u0065\u006ee\u0072\u0061\u0074\u0069\u006e\u0067 \u004f\u0020\u0066\u006f\u0072\u0020\u0065\u006e\u0063\u0072\u0079p\u0074\u0069\u006f\u006e\u0020\u0028\u0025\u0073\u0029",_ade );
-return nil ,_ade ;};d .O =O ;if _ed .Log .IsLogLevel (_ed .LogLevelTrace ){_ed .Log .Trace ("\u0067\u0065\u006e\u0020\u004f\u003a\u0020\u0025\u0020\u0078",O );};_fac :=_ebdf .alg2 (d ,upass );U ,_ade :=_ebdf .alg5 (_fac ,upass );if _ade !=nil {_ed .Log .Debug ("\u0045R\u0052\u004fR\u003a\u0020\u0045r\u0072\u006f\u0072\u0020\u0067\u0065\u006ee\u0072\u0061\u0074\u0069\u006e\u0067 \u004f\u0020\u0066\u006f\u0072\u0020\u0065\u006e\u0063\u0072\u0079p\u0074\u0069\u006f\u006e\u0020\u0028\u0025\u0073\u0029",_ade );
-return nil ,_ade ;};d .U =U ;if _ed .Log .IsLogLevel (_ed .LogLevelTrace ){_ed .Log .Trace ("\u0067\u0065\u006e\u0020\u0055\u003a\u0020\u0025\u0020\u0078",U );};return _fac ,nil ;};func (_db stdHandlerR4 )alg7 (_gfd *StdEncryptDict ,_fgc []byte )([]byte ,error ){_ebdc :=_db .alg3Key (_gfd .R ,_fgc );
-_agb :=make ([]byte ,len (_gfd .O ));if _gfd .R ==2{_fc ,_gag :=_gd .NewCipher (_ebdc );if _gag !=nil {return nil ,_f .New ("\u0066\u0061\u0069\u006c\u0065\u0064\u0020\u0063\u0069\u0070\u0068\u0065\u0072");};_fc .XORKeyStream (_agb ,_gfd .O );}else if _gfd .R >=3{_bfca :=append ([]byte {},_gfd .O ...);
-for _ee :=0;_ee < 20;_ee ++{_bga :=append ([]byte {},_ebdc ...);for _edae :=0;_edae < len (_ebdc );_edae ++{_bga [_edae ]^=byte (19-_ee );};_ac ,_cdg :=_gd .NewCipher (_bga );if _cdg !=nil {return nil ,_f .New ("\u0066\u0061\u0069\u006c\u0065\u0064\u0020\u0063\u0069\u0070\u0068\u0065\u0072");
-};_ac .XORKeyStream (_agb ,_bfca );_bfca =append ([]byte {},_agb ...);};}else {return nil ,_f .New ("\u0069n\u0076\u0061\u006c\u0069\u0064\u0020R");};_fed ,_dg :=_db .alg6 (_gfd ,_agb );if _dg !=nil {return nil ,nil ;};return _fed ,nil ;};
+func (_fbde stdHandlerR4 )GenerateParams (d *StdEncryptDict ,opass ,upass []byte )([]byte ,error ){O ,_aec :=_fbde .alg3 (d .R ,upass ,opass );if _aec !=nil {_cf .Log .Debug ("\u0045R\u0052\u004fR\u003a\u0020\u0045r\u0072\u006f\u0072\u0020\u0067\u0065\u006ee\u0072\u0061\u0074\u0069\u006e\u0067 \u004f\u0020\u0066\u006f\u0072\u0020\u0065\u006e\u0063\u0072\u0079p\u0074\u0069\u006f\u006e\u0020\u0028\u0025\u0073\u0029",_aec );
+return nil ,_aec ;};d .O =O ;if _cf .Log .IsLogLevel (_cf .LogLevelTrace ){_cf .Log .Trace ("\u0067\u0065\u006e\u0020\u004f\u003a\u0020\u0025\u0020\u0078",O );};_bae :=_fbde .alg2 (d ,upass );U ,_aec :=_fbde .alg5 (_bae ,upass );if _aec !=nil {_cf .Log .Debug ("\u0045R\u0052\u004fR\u003a\u0020\u0045r\u0072\u006f\u0072\u0020\u0067\u0065\u006ee\u0072\u0061\u0074\u0069\u006e\u0067 \u004f\u0020\u0066\u006f\u0072\u0020\u0065\u006e\u0063\u0072\u0079p\u0074\u0069\u006f\u006e\u0020\u0028\u0025\u0073\u0029",_aec );
+return nil ,_aec ;};d .U =U ;if _cf .Log .IsLogLevel (_cf .LogLevelTrace ){_cf .Log .Trace ("\u0067\u0065\u006e\u0020\u0055\u003a\u0020\u0025\u0020\u0078",U );};return _bae ,nil ;};func (_bbeg stdHandlerR6 )alg11 (_cdc *StdEncryptDict ,_bfcb []byte )([]byte ,error ){if _ede :=_eg ("\u0061\u006c\u00671\u0031","\u0055",48,_cdc .U );
+_ede !=nil {return nil ,_ede ;};_dfee :=make ([]byte ,len (_bfcb )+8);_faa :=copy (_dfee ,_bfcb );_faa +=copy (_dfee [_faa :],_cdc .U [32:40]);_eaf ,_fec :=_bbeg .alg2b (_cdc .R ,_dfee ,_bfcb ,nil );if _fec !=nil {return nil ,_fec ;};_eaf =_eaf [:32];if !_gd .Equal (_eaf ,_cdc .U [:32]){return nil ,nil ;
+};return _eaf ,nil ;};const _ffd =_fa &^_cfe ;
 
-// GenerateParams is the algorithm opposite to alg2a (R>=5).
-// It generates U,O,UE,OE,Perms fields using AESv3 encryption.
-// There is no algorithm number assigned to this function in the spec.
-// It expects R, P and EncryptMetadata fields to be set.
-func (_ffa stdHandlerR6 )GenerateParams (d *StdEncryptDict ,opass ,upass []byte )([]byte ,error ){_eca :=make ([]byte ,32);if _ ,_fgd :=_dc .ReadFull (_bd .Reader ,_eca );_fgd !=nil {return nil ,_fgd ;};d .U =nil ;d .O =nil ;d .UE =nil ;d .OE =nil ;d .Perms =nil ;
-if len (upass )> 127{upass =upass [:127];};if len (opass )> 127{opass =opass [:127];};if _cag :=_ffa .alg8 (d ,_eca ,upass );_cag !=nil {return nil ,_cag ;};if _egce :=_ffa .alg9 (d ,_eca ,opass );_egce !=nil {return nil ,_egce ;};if d .R ==5{return _eca ,nil ;
-};if _ege :=_ffa .alg10 (d ,_eca );_ege !=nil {return nil ,_ege ;};return _eca ,nil ;};func _ffe (_acd []byte )([]byte ,error ){_ebf :=_g .New ();_ebf .Write (_acd );return _ebf .Sum (nil ),nil };func _cd (_de _c .Block )_c .BlockMode {return (*ecbDecrypter )(_fef (_de ))};
-func (_gb *ecbEncrypter )CryptBlocks (dst ,src []byte ){if len (src )%_gb ._dd !=0{_ed .Log .Error ("\u0045\u0052\u0052\u004f\u0052:\u0020\u0045\u0043\u0042\u0020\u0065\u006e\u0063\u0072\u0079\u0070\u0074\u003a \u0069\u006e\u0070\u0075\u0074\u0020\u006e\u006f\u0074\u0020\u0066\u0075\u006c\u006c\u0020\u0062\u006c\u006f\u0063\u006b\u0073");
-return ;};if len (dst )< len (src ){_ed .Log .Error ("\u0045R\u0052\u004fR\u003a\u0020\u0045C\u0042\u0020\u0065\u006e\u0063\u0072\u0079p\u0074\u003a\u0020\u006f\u0075\u0074p\u0075\u0074\u0020\u0073\u006d\u0061\u006c\u006c\u0065\u0072\u0020t\u0068\u0061\u006e\u0020\u0069\u006e\u0070\u0075\u0074");
-return ;};for len (src )> 0{_gb ._gg .Encrypt (dst ,src [:_gb ._dd ]);src =src [_gb ._dd :];dst =dst [_gb ._dd :];};};func (stdHandlerR4 )paddedPass (_dcg []byte )[]byte {_feb :=make ([]byte ,32);_gfa :=copy (_feb ,_dcg );for ;_gfa < 32;_gfa ++{_feb [_gfa ]=_ag [_gfa -len (_dcg )];
-};return _feb ;};const (EventDocOpen =AuthEvent ("\u0044o\u0063\u004f\u0070\u0065\u006e");EventEFOpen =AuthEvent ("\u0045\u0046\u004f\u0070\u0065\u006e"););func _ddc (_fcf ,_ccf ,_bfad []byte )([]byte ,error ){var (_cfg ,_gbc ,_ada _e .Hash ;);_cfg =_g .New ();
-_ebe :=make ([]byte ,64);_eef :=_cfg ;_eef .Write (_fcf );K :=_eef .Sum (_ebe [:0]);_edb :=make ([]byte ,64*(127+64+48));_cgd :=func (_ int )([]byte ,error ){_cdbc :=len (_ccf )+len (K )+len (_bfad );_bfbc :=_edb [:_cdbc ];_cbe :=copy (_bfbc ,_ccf );_cbe +=copy (_bfbc [_cbe :],K [:]);
-_cbe +=copy (_bfbc [_cbe :],_bfad );if _cbe !=_cdbc {_ed .Log .Error ("E\u0052\u0052\u004f\u0052\u003a\u0020u\u006e\u0065\u0078\u0070\u0065\u0063t\u0065\u0064\u0020\u0072\u006f\u0075\u006ed\u0020\u0069\u006e\u0070\u0075\u0074\u0020\u0073\u0069\u007ae\u002e");
-return nil ,_f .New ("\u0077\u0072\u006f\u006e\u0067\u0020\u0073\u0069\u007a\u0065");};K1 :=_edb [:_cdbc *64];_acg (K1 ,_cdbc );_caf ,_fga :=_geb (K [0:16]);if _fga !=nil {return nil ,_fga ;};_abd :=_c .NewCBCEncrypter (_caf ,K [16:32]);_abd .CryptBlocks (K1 ,K1 );
-E :=K1 ;_gff :=0;for _befe :=0;_befe < 16;_befe ++{_gff +=int (E [_befe ]%3);};var _fgb _e .Hash ;switch _gff %3{case 0:_fgb =_cfg ;case 1:if _gbc ==nil {_gbc =_b .New384 ();};_fgb =_gbc ;case 2:if _ada ==nil {_ada =_b .New ();};_fgb =_ada ;};_fgb .Reset ();
-_fgb .Write (E );K =_fgb .Sum (_ebe [:0]);return E ,nil ;};for _gge :=0;;{E ,_adb :=_cgd (_gge );if _adb !=nil {return nil ,_adb ;};_fcb :=E [len (E )-1];_gge ++;if _gge >=64&&_fcb <=uint8 (_gge -32){break ;};};return K [:32],nil ;};type ecbEncrypter ecb ;
+// PubSecEncryptDict holds the entries specific to a public-key encryption
+// dictionary. For V4 and V5 the /Recipients array and EncryptMetadata live in
+// the crypt-filter dictionary named by /StmF; for V1 and V2 the array is at
+// the top level of the encryption dictionary.
+type PubSecEncryptDict struct{
 
+// SubFilter names the dictionary layout (one of the PubSecSubFilter*
+// constants).
+SubFilter string ;
+
+// Recipients holds the DER-encoded CMS EnvelopedData objects in array
+// order. The order matters: it is part of the key derivation.
+Recipients [][]byte ;
+
+// EncryptMetadata indicates whether the document-level metadata stream
+// is encrypted. It changes the derived key.
+EncryptMetadata bool ;};var ErrRecipientNotOpened =_ag .New ("\u0061 \u0072\u0065\u0063\u0069\u0070\u0069\u0065\u006e\u0074\u0020\u0065\u006e\u0074r\u0079\u0020\u0061d\u0064\u0072\u0065\u0073\u0073\u0065d\u0020\u0074o\u0020\u0074\u0068\u0065\u0020\u0063\u0065\u0072\u0074\u0069\u0066\u0069\u0063\u0061\u0074\u0065\u0020\u0063\u006f\u0075\u006c\u0064\u0020\u006e\u006f\u0074\u0020\u0062\u0065 \u006f\u0070\u0065\u006e\u0065d\u0020\u0077\u0069t\u0068\u0020\u0074\u0068\u0065 \u0070\u0072\u0069\u0076\u0061\u0074\u0065\u0020\u006b\u0065\u0079");
+type errInvalidField struct{Func string ;Field string ;Exp int ;Got int ;};func (_acf stdHandlerR4 )alg5 (_fbe []byte ,_ []byte )([]byte ,error ){_bfc :=_e .New ();_bfc .Write ([]byte (_dfgg ));_bfc .Write ([]byte (_acf .ID0 ));_cgd :=_bfc .Sum (nil );
+if _cf .Log .IsLogLevel (_cf .LogLevelTrace ){_cf .Log .Trace ("\u0061\u006c\u0067\u0035");};if _cf .Log .IsLogLevel (_cf .LogLevelTrace ){_cf .Log .Trace ("\u0065k\u0065\u0079\u003a\u0020\u0025\u0020x",_fbe );};if _cf .Log .IsLogLevel (_cf .LogLevelTrace ){_cf .Log .Trace ("\u0049D\u003a\u0020\u0025\u0020\u0078",_acf .ID0 );
+};if len (_cgd )!=16{return nil ,_ag .New ("\u0068a\u0073\u0068\u0020\u006c\u0065\u006e\u0067\u0074\u0068\u0020\u006eo\u0074\u0020\u0031\u0036\u0020\u0062\u0079\u0074\u0065\u0073");};_dcg ,_bbea :=_d .NewCipher (_fbe );if _bbea !=nil {return nil ,_ag .New ("\u0066a\u0069l\u0065\u0064\u0020\u0072\u0063\u0034\u0020\u0063\u0069\u0070\u0068");
+};_aac :=make ([]byte ,16);_dcg .XORKeyStream (_aac ,_cgd );_gde :=make ([]byte ,len (_fbe ));for _acd :=0;_acd < 19;_acd ++{for _efc :=0;_efc < len (_fbe );_efc ++{_gde [_efc ]=_fbe [_efc ]^byte (_acd +1);};_dcg ,_bbea =_d .NewCipher (_gde );if _bbea !=nil {return nil ,_ag .New ("\u0066a\u0069l\u0065\u0064\u0020\u0072\u0063\u0034\u0020\u0063\u0069\u0070\u0068");
+};_dcg .XORKeyStream (_aac ,_aac );if _cf .Log .IsLogLevel (_cf .LogLevelTrace ){_cf .Log .Trace ("\u0069\u0020\u003d\u0020\u0025\u0064\u002c\u0020\u0065\u006b\u0065\u0079:\u0020\u0025\u0020\u0078",_acd ,_gde );};if _cf .Log .IsLogLevel (_cf .LogLevelTrace ){_cf .Log .Trace ("\u0069\u0020\u003d\u0020\u0025\u0064\u0020\u002d\u003e\u0020\u0025\u0020\u0078",_acd ,_aac );
+};};_dcd :=make ([]byte ,32);for _cff :=0;_cff < 16;_cff ++{_dcd [_cff ]=_aac [_cff ];};_ ,_bbea =_f .Read (_dcd [16:32]);if _bbea !=nil {return nil ,_ag .New ("\u0066a\u0069\u006c\u0065\u0064 \u0074\u006f\u0020\u0067\u0065n\u0020r\u0061n\u0064\u0020\u006e\u0075\u006d\u0062\u0065r");
+};return _dcd ,nil ;};var _ StdHandler =stdHandlerR4 {};var ErrNotRecipient =_ag .New ("\u0063\u0065\u0072\u0074\u0069\u0066i\u0063\u0061\u0074e\u0020\u0069\u0073 \u006e\u006f\u0074\u0020\u0061\u006d\u006f\u006e\u0067\u0020t\u0068\u0065\u0020\u0072\u0065ci\u0070\u0069\u0065\u006e\u0074\u0073\u0020\u006f\u0066\u0020\u0074\u0068\u0069\u0073\u0020\u0064\u006f\u0063\u0075\u006d\u0065\u006e\u0074");
+func (_bda stdHandlerR6 )alg2aUser (_dga *StdEncryptDict ,_gaa []byte )([]byte ,Permissions ,error ){_gcc ,_caf :=_bda .alg11 (_dga ,_gaa );if _caf !=nil {return nil ,0,_caf ;};if len (_gcc )==0{return nil ,0,nil ;};_abc :=make ([]byte ,len (_gaa )+8);
+_ead :=copy (_abc ,_gaa );copy (_abc [_ead :],_dga .U [40:48]);return _bda .alg2aFileKey (_dga ,_abc ,_gaa ,nil ,_dga .UE ,_dga .P );};func (_ggcf stdHandlerR6 )alg10 (_fbdd *StdEncryptDict ,_efca []byte )error {if _dab :=_eg ("\u0061\u006c\u00671\u0030","\u004b\u0065\u0079",32,_efca );
+_dab !=nil {return _dab ;};_bgcd :=uint64 (uint32 (_fbdd .P ))|(_eb .MaxUint32 <<32);Perms :=make ([]byte ,16);_ad .LittleEndian .PutUint64 (Perms [:8],_bgcd );if _fbdd .EncryptMetadata {Perms [8]='T';}else {Perms [8]='F';};copy (Perms [9:12],"\u0061\u0064\u0062");
+if _ ,_egd :=_c .ReadFull (_f .Reader ,Perms [12:16]);_egd !=nil {return _egd ;};_gdf ,_ecd :=_eda (_efca [:32]);if _ecd !=nil {return _ecd ;};_ccef :=_gba (_gdf );_ccef .CryptBlocks (Perms ,Perms );_fbdd .Perms =Perms [:16];return nil ;};
+
+// Normalized returns p with the reserved bits of the P entry set to the
+// values required by the PDF specification.
+func (_gac Permissions )Normalized ()Permissions {return (_gac |_cg )&^_eac };func _eg (_fd ,_deg string ,_bfd int ,_bgc []byte )error {if len (_bgc )< _bfd {return errInvalidField {Func :_fd ,Field :_deg ,Exp :_bfd ,Got :len (_bgc )};};return nil ;};
+
+// PubSecPermissions decodes the 4 big-endian permission bytes that follow the
+// seed in a recipient's envelope. Bits outside those defined by Table 24 are
+// ignored. A recipient with the owner bit set gets PermOwner.
+func PubSecPermissions (p [4]byte )Permissions {_cc :=Permissions (_ad .BigEndian .Uint32 (p [:]))&_fa ;if _cc &_cfe !=0{return PermOwner ;};return _cc ;};type ecbEncrypter ecb ;const (EventDocOpen =AuthEvent ("\u0044o\u0063\u004f\u0070\u0065\u006e");EventEFOpen =AuthEvent ("\u0045\u0046\u004f\u0070\u0065\u006e");
+);const (_cg =Permissions (0xFFFFF0C0);_eac =Permissions (0x3););func _cd (_gbab []byte )[]byte {if len (_gbab )> _ee {return _gbab [:_ee ];};return _gbab ;};type stdHandlerR4 struct{Length int ;ID0 string ;};const (PubSecSubFilterS3 ="\u0061\u0064\u0062\u0065\u002e\u0070\u006b\u0063\u0073\u0037\u002e\u0073\u0033";
+PubSecSubFilterS4 ="\u0061\u0064\u0062\u0065\u002e\u0070\u006b\u0063\u0073\u0037\u002e\u0073\u0034";PubSecSubFilterS5 ="\u0061\u0064\u0062\u0065\u002e\u0070\u006b\u0063\u0073\u0037\u002e\u0073\u0035";PubSecSeedLength =20;PubSecEnvelopeLength =PubSecSeedLength +4;
+);func _gga (_dbe ,_bffg ,_gff []byte )([]byte ,error ){var (_dacc ,_acb ,_fgga _ge .Hash ;);_dacc =_aa .New ();_ffg :=make ([]byte ,64);_gdef :=_dacc ;_gdef .Write (_dbe );K :=_gdef .Sum (_ffg [:0]);_cbd :=make ([]byte ,64*(127+64+48));_cbgg :=func (_ int )([]byte ,error ){_cced :=len (_bffg )+len (K )+len (_gff );
+_bgb :=_cbd [:_cced ];_fbcd :=copy (_bgb ,_bffg );_fbcd +=copy (_bgb [_fbcd :],K [:]);_fbcd +=copy (_bgb [_fbcd :],_gff );if _fbcd !=_cced {_cf .Log .Error ("E\u0052\u0052\u004f\u0052\u003a\u0020u\u006e\u0065\u0078\u0070\u0065\u0063t\u0065\u0064\u0020\u0072\u006f\u0075\u006ed\u0020\u0069\u006e\u0070\u0075\u0074\u0020\u0073\u0069\u007ae\u002e");
+return nil ,_ag .New ("\u0077\u0072\u006f\u006e\u0067\u0020\u0073\u0069\u007a\u0065");};K1 :=_cbd [:_cced *64];_efcd (K1 ,_cced );_eef ,_dcfe :=_eda (K [0:16]);if _dcfe !=nil {return nil ,_dcfe ;};_eaec :=_a .NewCBCEncrypter (_eef ,K [16:32]);_eaec .CryptBlocks (K1 ,K1 );
+E :=K1 ;_fgf :=0;for _def :=0;_def < 16;_def ++{_fgf +=int (E [_def ]%3);};var _agea _ge .Hash ;switch _fgf %3{case 0:_agea =_dacc ;case 1:if _acb ==nil {_acb =_b .New384 ();};_agea =_acb ;case 2:if _fgga ==nil {_fgga =_b .New ();};_agea =_fgga ;};_agea .Reset ();
+_agea .Write (E );K =_agea .Sum (_ffg [:0]);return E ,nil ;};for _gge :=0;;{E ,_bge :=_cbgg (_gge );if _bge !=nil {return nil ,_bge ;};_fce :=E [len (E )-1];_gge ++;if _gge >=64&&_fce <=uint8 (_gge -32){break ;};};return K [:32],nil ;};func (_feb stdHandlerR6 )alg8 (_acc *StdEncryptDict ,_fdb []byte ,_adf []byte )error {if _cedb :=_eg ("\u0061\u006c\u0067\u0038","\u004b\u0065\u0079",32,_fdb );
+_cedb !=nil {return _cedb ;};var _baf [16]byte ;if _ ,_bfbb :=_c .ReadFull (_f .Reader ,_baf [:]);_bfbb !=nil {return _bfbb ;};_aaa :=_baf [0:8];_cae :=_baf [8:16];_abf :=make ([]byte ,len (_adf )+len (_aaa ));_ggea :=copy (_abf ,_adf );copy (_abf [_ggea :],_aaa );
+_efbb ,_cede :=_feb .alg2b (_acc .R ,_abf ,_adf ,nil );if _cede !=nil {return _cede ;};U :=make ([]byte ,len (_efbb )+len (_aaa )+len (_cae ));_ggea =copy (U ,_efbb [:32]);_ggea +=copy (U [_ggea :],_aaa );copy (U [_ggea :],_cae );_acc .U =U ;_ggea =len (_adf );
+copy (_abf [_ggea :],_cae );_efbb ,_cede =_feb .alg2b (_acc .R ,_abf ,_adf ,nil );if _cede !=nil {return _cede ;};_fba ,_cede :=_eda (_efbb [:32]);if _cede !=nil {return _cede ;};_edcf :=make ([]byte ,_bb .BlockSize );_ggc :=_a .NewCBCEncrypter (_fba ,_edcf );
+UE :=make ([]byte ,32);_ggc .CryptBlocks (UE ,_fdb [:32]);_acc .UE =UE ;return nil ;};func (_bag stdHandlerR6 )alg2aFileKey (_eaa *StdEncryptDict ,_bcb ,_fbg ,_bec ,_beaa []byte ,_fbga Permissions )([]byte ,Permissions ,error ){if _cgad :=_eg ("\u0061\u006c\u00672\u0061","\u004b\u0065\u0079",32,_beaa );
+_cgad !=nil {return nil ,0,_cgad ;};_beaa =_beaa [:32];_ddd ,_eee :=_bag .alg2b (_eaa .R ,_bcb ,_fbg ,_bec );if _eee !=nil {return nil ,0,_eee ;};_edc ,_eee :=_bb .NewCipher (_ddd [:32]);if _eee !=nil {return nil ,0,_eee ;};_gdcd :=make ([]byte ,_bb .BlockSize );
+_aef :=_a .NewCBCDecrypter (_edc ,_gdcd );_efa :=make ([]byte ,32);_aef .CryptBlocks (_efa ,_beaa );if _eaa .R ==5{return _efa ,_fbga ,nil ;};_eee =_bag .alg13 (_eaa ,_efa );if _eee !=nil {return nil ,0,_eee ;};return _efa ,_fbga ,nil ;};func (_cad stdHandlerR6 )alg2a (_dea *StdEncryptDict ,_gaf []byte )([]byte ,Permissions ,error ){if _eff :=_eg ("\u0061\u006c\u00672\u0061","\u004f",48,_dea .O );
+_eff !=nil {return nil ,0,_eff ;};if _dfb :=_eg ("\u0061\u006c\u00672\u0061","\u0055",48,_dea .U );_dfb !=nil {return nil ,0,_dfb ;};_cdd :=_cd (_gaf );_cea :=[][]byte {_cdd };_ccc ,_beed :=_fb (_gaf );if _beed !=nil {_cf .Log .Debug ("\u0041\u0045\u0053\u0056\u0033 \u0070\u0061\u0073\u0073\u0077\u006f\u0072\u0064\u0020\u0070\u0072\u0065\u0070a\u0072\u0061\u0074\u0069\u006f\u006e\u0020\u0066\u0061\u0069\u006c\u0065\u0064\u003b\u0020\u0074\u0072\u0079\u0069\u006e\u0067\u0020\u0072\u0061\u0077\u0020\u0062\u0079\u0074\u0065s");
+}else if _ccc =_cd (_ccc );!_gd .Equal (_ccc ,_cdd ){_cea =[][]byte {_ccc ,_cdd };};for _ ,_cce :=range _cea {_cbc ,_afe ,_gcd :=_cad .alg2aOwner (_dea ,_cce );if _gcd !=nil ||len (_cbc )!=0{return _cbc ,_afe ,_gcd ;};};for _ ,_ddg :=range _cea {_aecf ,_gcdb ,_faf :=_cad .alg2aUser (_dea ,_ddg );
+if _faf !=nil ||len (_aecf )!=0{return _aecf ,_gcdb ,_faf ;};};if len (_cea [0])!=0&&len (_cdd )!=0{return _cad .alg2aUser (_dea ,nil );};return nil ,0,nil ;};var _fgg =_ag .New ("\u0070\u0061\u0073\u0073\u0077o\u0072\u0064\u0020\u0063\u006f\u006e\u0074\u0061\u0069\u006e\u0073\u0020\u0063h\u0061\u0072\u0061\u0063\u0074\u0065\u0072\u0073\u0020\u0070\u0072\u006f\u0068\u0069\u0062\u0069\u0074\u0065\u0064\u0020\u0062\u0079\u0020\u0053\u0041\u0053\u004c\u0070\u0072\u0065p");
+
+
+// PubSecWrap builds the /Recipients entries for recipients, which all get
+// the same permission bytes: one CMS EnvelopedData object addressed to every
+// certificate (Table 23: one object per set of equal access rights),
+// enveloping the 20-byte seed followed by the 4 permission bytes. The content
+// is encrypted with AES-128-CBC and its key transported with RSA PKCS#1
+// v1.5; every certificate must carry an RSA public key.
+func PubSecWrap (seed []byte ,perm [4]byte ,recipients []*_dc .Certificate )([][]byte ,error ){if len (seed )!=PubSecSeedLength {return nil ,_ef .Errorf ("\u0073e\u0065\u0064\u0020\u0069s\u0020\u0025\u0064\u0020\u0062y\u0074e\u0073,\u0020\u0077\u0061\u006e\u0074\u0020\u0025d",len (seed ),PubSecSeedLength );
+};if len (recipients )==0{return nil ,_ag .New ("\u0061\u0074 \u006c\u0065\u0061\u0073\u0074\u0020\u006f\u006e\u0065\u0020\u0072\u0065\u0063\u0069\u0070\u0069\u0065\u006e\u0074\u0020\u0063\u0065\u0072\u0074\u0069\u0066\u0069\u0063\u0061\u0074\u0065\u0020\u0069\u0073\u0020\u0072\u0065\u0071\u0075\u0069\u0072\u0065\u0064");
+};_bd :=make ([]byte ,PubSecEnvelopeLength );copy (_bd ,seed );copy (_bd [PubSecSeedLength :],perm [:]);for _ddfe ,_ded :=range recipients {if _ded ==nil {return nil ,_ef .Errorf ("\u0072\u0065\u0063\u0069\u0070\u0069\u0065\u006e\u0074\u0020\u0025\u0064\u003a\u0020\u0063e\u0072t\u0069\u0066\u0069\u0063\u0061\u0074\u0065\u0020\u0069\u0073\u0020\u006e\u0069\u006c",_ddfe );
+};if _ ,_fde :=_ded .PublicKey .(*_ga .PublicKey );!_fde {return nil ,_ef .Errorf ("\u0072\u0065\u0063\u0069\u0070\u0069\u0065\u006e\u0074\u0020\u0025\u0064\u003a\u0020\u0070\u0075\u0062\u006c\u0069\u0063 \u006b\u0065\u0079\u0020\u0069\u0073\u0020\u0025\u0054\u002c\u0020\u006f\u006e\u006c\u0079\u0020\u0052\u0053\u0041\u0020\u006b\u0065\u0079\u0073\u0020\u0061\u0072\u0065\u0020\u0073u\u0070\u0070\u006f\u0072\u0074e\u0064",_ddfe ,_ded .PublicKey );
+};};_ac ,_aab :=_gg .EncryptWithAlgorithm (_bd ,recipients ,_gg .EncryptionAlgorithmAES128CBC );if _aab !=nil {return nil ,_aab ;};return [][]byte {_ac },nil ;};func (_eea stdHandlerR4 )alg6 (_cfb *StdEncryptDict ,_dac []byte )([]byte ,error ){var (_gdag []byte ;
+_fgbb error ;);_aaec :=_eea .alg2 (_cfb ,_dac );if _cfb .R ==2{_gdag ,_fgbb =_eea .alg4 (_aaec ,_dac );}else if _cfb .R >=3{_gdag ,_fgbb =_eea .alg5 (_aaec ,_dac );}else {return nil ,_ag .New ("\u0069n\u0076\u0061\u006c\u0069\u0064\u0020R");};if _fgbb !=nil {return nil ,_fgbb ;
+};if _cf .Log .IsLogLevel (_cf .LogLevelTrace ){_cf .Log .Trace ("\u0063\u0068\u0065\u0063k:\u0020\u0025\u0020\u0078\u0020\u003d\u003d\u0020\u0025\u0020\u0078\u0020\u003f",string (_gdag ),string (_cfb .U ));};_dgc :=_gdag ;_bee :=_cfb .U ;if _cfb .R >=3{if len (_dgc )> 16{_dgc =_dgc [0:16];
+};if len (_bee )> 16{_bee =_bee [0:16];};};if !_gd .Equal (_dgc ,_bee ){return nil ,nil ;};return _aaec ,nil ;};const _ee =127;func (_cgaa stdHandlerR6 )alg2aOwner (_cgf *StdEncryptDict ,_dbfb []byte )([]byte ,Permissions ,error ){_age ,_efeb :=_cgaa .alg12 (_cgf ,_dbfb );
+if _efeb !=nil {return nil ,0,_efeb ;};if len (_age )==0{return nil ,0,nil ;};_bddb :=make ([]byte ,len (_dbfb )+8+48);_fdeb :=copy (_bddb ,_dbfb );_fdeb +=copy (_bddb [_fdeb :],_cgf .O [40:48]);copy (_bddb [_fdeb :],_cgf .U [0:48]);return _cgaa .alg2aFileKey (_cgf ,_bddb ,_dbfb ,_cgf .U [0:48],_cgf .OE ,PermOwner );
+};func _ecg (_egf []byte )bool {for _ ,_dg :=range _egf {if _dg < 0x20||_dg > 0x7e{return false ;};};return true ;};func (stdHandlerR4 )paddedPass (_cb []byte )[]byte {_ba :=make ([]byte ,32);_eae :=copy (_ba ,_cb );for ;_eae < 32;_eae ++{_ba [_eae ]=_dfgg [_eae -len (_cb )];
+};return _ba ;};func (_dd *ecbEncrypter )CryptBlocks (dst ,src []byte ){if len (src )%_dd ._de !=0{_cf .Log .Error ("\u0045\u0052\u0052\u004f\u0052:\u0020\u0045\u0043\u0042\u0020\u0065\u006e\u0063\u0072\u0079\u0070\u0074\u003a \u0069\u006e\u0070\u0075\u0074\u0020\u006e\u006f\u0074\u0020\u0066\u0075\u006c\u006c\u0020\u0062\u006c\u006f\u0063\u006b\u0073");
+return ;};if len (dst )< len (src ){_cf .Log .Error ("\u0045R\u0052\u004fR\u003a\u0020\u0045C\u0042\u0020\u0065\u006e\u0063\u0072\u0079p\u0074\u003a\u0020\u006f\u0075\u0074p\u0075\u0074\u0020\u0073\u006d\u0061\u006c\u006c\u0065\u0072\u0020t\u0068\u0061\u006e\u0020\u0069\u006e\u0070\u0075\u0074");
+return ;};for len (src )> 0{_dd ._cfc .Encrypt (dst ,src [:_dd ._de ]);src =src [_dd ._de :];dst =dst [_dd ._de :];};};func _eda (_afc []byte )(_a .Block ,error ){_ceb ,_fae :=_bb .NewCipher (_afc );if _fae !=nil {_cf .Log .Error ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0063\u006f\u0075\u006c\u0064\u0020\u006e\u006f\u0074\u0020\u0063\u0072\u0065\u0061\u0074\u0065\u0020A\u0045\u0053\u0020\u0063\u0069p\u0068\u0065r\u003a\u0020\u0025\u0076",_fae );
+return nil ,_fae ;};return _ceb ,nil ;};func _efcd (_aeb []byte ,_cffa int ){_fgd :=_cffa ;for _fgd < len (_aeb ){copy (_aeb [_fgd :],_aeb [:_fgd ]);_fgd *=2;};};func (_cdf stdHandlerR4 )alg3Key (R int ,_aff []byte )[]byte {_ddfeg :=_e .New ();_fddg :=_cdf .paddedPass (_aff );
+_ddfeg .Write (_fddg );if R >=3{for _fddd :=0;_fddd < 50;_fddd ++{_bdd :=_ddfeg .Sum (nil );_ddfeg =_e .New ();_ddfeg .Write (_bdd );};};_dfe :=_ddfeg .Sum (nil );if R ==2{_dfe =_dfe [0:5];}else {_dfe =_dfe [0:_cdf .Length /8];};return _dfe ;};const (_cfe =Permissions (1<<1);
+_fa =Permissions (0x0F3E););
 
 // Authenticate implements StdHandler interface.
-func (_dgea stdHandlerR6 )Authenticate (d *StdEncryptDict ,pass []byte )([]byte ,Permissions ,error ){return _dgea .alg2a (d ,pass );};func (_cff stdHandlerR6 )alg2a (_adga *StdEncryptDict ,_add []byte )([]byte ,Permissions ,error ){if _cb :=_be ("\u0061\u006c\u00672\u0061","\u004f",48,_adga .O );
-_cb !=nil {return nil ,0,_cb ;};if _gfe :=_be ("\u0061\u006c\u00672\u0061","\u0055",48,_adga .U );_gfe !=nil {return nil ,0,_gfe ;};if len (_add )> 127{_add =_add [:127];};_ddb ,_gad :=_cff .alg12 (_adga ,_add );if _gad !=nil {return nil ,0,_gad ;};var (_adgg []byte ;
-_gfg []byte ;_fd []byte ;);var _dca Permissions ;if len (_ddb )!=0{_dca =PermOwner ;_acc :=make ([]byte ,len (_add )+8+48);_addd :=copy (_acc ,_add );_addd +=copy (_acc [_addd :],_adga .O [40:48]);copy (_acc [_addd :],_adga .U [0:48]);_adgg =_acc ;_gfg =_adga .OE ;
-_fd =_adga .U [0:48];}else {_ddb ,_gad =_cff .alg11 (_adga ,_add );if _gad ==nil &&len (_ddb )==0{_ddb ,_gad =_cff .alg11 (_adga ,[]byte (""));};if _gad !=nil {return nil ,0,_gad ;}else if len (_ddb )==0{return nil ,0,nil ;};_dca =_adga .P ;_fab :=make ([]byte ,len (_add )+8);
-_cdf :=copy (_fab ,_add );copy (_fab [_cdf :],_adga .U [40:48]);_adgg =_fab ;_gfg =_adga .UE ;_fd =nil ;};if _gcb :=_be ("\u0061\u006c\u00672\u0061","\u004b\u0065\u0079",32,_gfg );_gcb !=nil {return nil ,0,_gcb ;};_gfg =_gfg [:32];_ab ,_gad :=_cff .alg2b (_adga .R ,_adgg ,_add ,_fd );
-if _gad !=nil {return nil ,0,_gad ;};_ea ,_gad :=_da .NewCipher (_ab [:32]);if _gad !=nil {return nil ,0,_gad ;};_eff :=make ([]byte ,_da .BlockSize );_ebb :=_c .NewCBCDecrypter (_ea ,_eff );_dge :=make ([]byte ,32);_ebb .CryptBlocks (_dge ,_gfg );if _adga .R ==5{return _dge ,_dca ,nil ;
-};_gad =_cff .alg13 (_adga ,_dge );if _gad !=nil {return nil ,0,_gad ;};return _dge ,_dca ,nil ;};
+func (_eeb stdHandlerR4 )Authenticate (d *StdEncryptDict ,pass []byte )([]byte ,Permissions ,error ){if _cf .Log .IsLogLevel (_cf .LogLevelTrace ){_cf .Log .Trace ("\u0044\u0065b\u0075\u0067\u0067\u0069n\u0067\u0020a\u0075\u0074\u0068\u0065\u006e\u0074\u0069\u0063a\u0074\u0069\u006f\u006e\u0020\u002d\u0020\u006f\u0077\u006e\u0065\u0072 \u0070\u0061\u0073\u0073");
+};_bbb ,_dadf :=_eeb .alg7 (d ,pass );if _dadf !=nil {return nil ,0,_dadf ;};if _bbb !=nil {if _cf .Log .IsLogLevel (_cf .LogLevelTrace ){_cf .Log .Trace ("\u0074h\u0069\u0073\u002e\u0061u\u0074\u0068\u0065\u006e\u0074i\u0063a\u0074e\u0064\u0020\u003d\u0020\u0054\u0072\u0075e");
+};return _bbb ,PermOwner ,nil ;};if _cf .Log .IsLogLevel (_cf .LogLevelTrace ){_cf .Log .Trace ("\u0044\u0065bu\u0067\u0067\u0069n\u0067\u0020\u0061\u0075the\u006eti\u0063\u0061\u0074\u0069\u006f\u006e\u0020- \u0075\u0073\u0065\u0072\u0020\u0070\u0061s\u0073");
+};_bbb ,_dadf =_eeb .alg6 (d ,pass );if _dadf !=nil {return nil ,0,_dadf ;};if _bbb !=nil {if _cf .Log .IsLogLevel (_cf .LogLevelTrace ){_cf .Log .Trace ("\u0074h\u0069\u0073\u002e\u0061u\u0074\u0068\u0065\u006e\u0074i\u0063a\u0074e\u0064\u0020\u003d\u0020\u0054\u0072\u0075e");
+};return _bbb ,d .P ,nil ;};return nil ,0,nil ;};
 
-// Authenticate implements StdHandler interface.
-func (_eec stdHandlerR4 )Authenticate (d *StdEncryptDict ,pass []byte )([]byte ,Permissions ,error ){if _ed .Log .IsLogLevel (_ed .LogLevelTrace ){_ed .Log .Trace ("\u0044\u0065b\u0075\u0067\u0067\u0069n\u0067\u0020a\u0075\u0074\u0068\u0065\u006e\u0074\u0069\u0063a\u0074\u0069\u006f\u006e\u0020\u002d\u0020\u006f\u0077\u006e\u0065\u0072 \u0070\u0061\u0073\u0073");
-};_fagee ,_aae :=_eec .alg7 (d ,pass );if _aae !=nil {return nil ,0,_aae ;};if _fagee !=nil {if _ed .Log .IsLogLevel (_ed .LogLevelTrace ){_ed .Log .Trace ("\u0074h\u0069\u0073\u002e\u0061u\u0074\u0068\u0065\u006e\u0074i\u0063a\u0074e\u0064\u0020\u003d\u0020\u0054\u0072\u0075e");
-};return _fagee ,PermOwner ,nil ;};if _ed .Log .IsLogLevel (_ed .LogLevelTrace ){_ed .Log .Trace ("\u0044\u0065bu\u0067\u0067\u0069n\u0067\u0020\u0061\u0075the\u006eti\u0063\u0061\u0074\u0069\u006f\u006e\u0020- \u0075\u0073\u0065\u0072\u0020\u0070\u0061s\u0073");
-};_fagee ,_aae =_eec .alg6 (d ,pass );if _aae !=nil {return nil ,0,_aae ;};if _fagee !=nil {if _ed .Log .IsLogLevel (_ed .LogLevelTrace ){_ed .Log .Trace ("\u0074h\u0069\u0073\u002e\u0061u\u0074\u0068\u0065\u006e\u0074i\u0063a\u0074e\u0064\u0020\u003d\u0020\u0054\u0072\u0075e");
-};return _fagee ,d .P ,nil ;};return nil ,0,nil ;};type errInvalidField struct{Func string ;Field string ;Exp int ;Got int ;};type stdHandlerR4 struct{Length int ;ID0 string ;};func (_ede errInvalidField )Error ()string {return _fe .Sprintf ("\u0025s\u003a\u0020e\u0078\u0070\u0065\u0063t\u0065\u0064\u0020%\u0073\u0020\u0066\u0069\u0065\u006c\u0064\u0020\u0074o \u0062\u0065\u0020%\u0064\u0020b\u0079\u0074\u0065\u0073\u002c\u0020g\u006f\u0074 \u0025\u0064",_ede .Func ,_ede .Field ,_ede .Exp ,_ede .Got );
-};func (_ecd stdHandlerR6 )alg9 (_gfb *StdEncryptDict ,_edgg []byte ,_gfc []byte )error {if _bgg :=_be ("\u0061\u006c\u0067\u0039","\u004b\u0065\u0079",32,_edgg );_bgg !=nil {return _bgg ;};if _cce :=_be ("\u0061\u006c\u0067\u0039","\u0055",48,_gfb .U );
-_cce !=nil {return _cce ;};var _cac [16]byte ;if _ ,_ega :=_dc .ReadFull (_bd .Reader ,_cac [:]);_ega !=nil {return _ega ;};_gbdc :=_cac [0:8];_egf :=_cac [8:16];_acdg :=_gfb .U [:48];_gcg :=make ([]byte ,len (_gfc )+len (_gbdc )+len (_acdg ));_fdd :=copy (_gcg ,_gfc );
-_fdd +=copy (_gcg [_fdd :],_gbdc );_fdd +=copy (_gcg [_fdd :],_acdg );_cgg ,_eeca :=_ecd .alg2b (_gfb .R ,_gcg ,_gfc ,_acdg );if _eeca !=nil {return _eeca ;};O :=make ([]byte ,len (_cgg )+len (_gbdc )+len (_egf ));_fdd =copy (O ,_cgg [:32]);_fdd +=copy (O [_fdd :],_gbdc );
-_fdd +=copy (O [_fdd :],_egf );_gfb .O =O ;_fdd =len (_gfc );_fdd +=copy (_gcg [_fdd :],_egf );_cgg ,_eeca =_ecd .alg2b (_gfb .R ,_gcg ,_gfc ,_acdg );if _eeca !=nil {return _eeca ;};_eecg ,_eeca :=_geb (_cgg [:32]);if _eeca !=nil {return _eeca ;};_deb :=make ([]byte ,_da .BlockSize );
-_gdb :=_c .NewCBCEncrypter (_eecg ,_deb );OE :=make ([]byte ,32);_gdb .CryptBlocks (OE ,_edgg [:32]);_gfb .OE =OE ;return nil ;};func (_cafb stdHandlerR6 )alg10 (_fbe *StdEncryptDict ,_adbd []byte )error {if _aaac :=_be ("\u0061\u006c\u00671\u0030","\u004b\u0065\u0079",32,_adbd );
-_aaac !=nil {return _aaac ;};_dcd :=uint64 (uint32 (_fbe .P ))|(_gf .MaxUint32 <<32);Perms :=make ([]byte ,16);_eg .LittleEndian .PutUint64 (Perms [:8],_dcd );if _fbe .EncryptMetadata {Perms [8]='T';}else {Perms [8]='F';};copy (Perms [9:12],"\u0061\u0064\u0062");
-if _ ,_gcd :=_dc .ReadFull (_bd .Reader ,Perms [12:16]);_gcd !=nil {return _gcd ;};_age ,_ccde :=_geb (_adbd [:32]);if _ccde !=nil {return _ccde ;};_gaa :=_fa (_age );_gaa .CryptBlocks (Perms ,Perms );_fbe .Perms =Perms [:16];return nil ;};func _be (_gba ,_dac string ,_gga int ,_aa []byte )error {if len (_aa )< _gga {return errInvalidField {Func :_gba ,Field :_dac ,Exp :_gga ,Got :len (_aa )};
-};return nil ;};func (_gggd stdHandlerR6 )alg12 (_agef *StdEncryptDict ,_ffc []byte )([]byte ,error ){if _dcda :=_be ("\u0061\u006c\u00671\u0032","\u0055",48,_agef .U );_dcda !=nil {return nil ,_dcda ;};if _gfgb :=_be ("\u0061\u006c\u00671\u0032","\u004f",48,_agef .O );
-_gfgb !=nil {return nil ,_gfgb ;};_ecg :=make ([]byte ,len (_ffc )+8+48);_beg :=copy (_ecg ,_ffc );_beg +=copy (_ecg [_beg :],_agef .O [32:40]);_beg +=copy (_ecg [_beg :],_agef .U [0:48]);_fbd ,_efb :=_gggd .alg2b (_agef .R ,_ecg ,_ffc ,_agef .U [0:48]);
-if _efb !=nil {return nil ,_efb ;};_fbd =_fbd [:32];if !_bb .Equal (_fbd ,_agef .O [:32]){return nil ,nil ;};return _fbd ,nil ;};func (_egg stdHandlerR4 )alg5 (_ggab []byte ,_ []byte )([]byte ,error ){_bfg :=_ge .New ();_bfg .Write ([]byte (_ag ));_bfg .Write ([]byte (_egg .ID0 ));
-_bad :=_bfg .Sum (nil );if _ed .Log .IsLogLevel (_ed .LogLevelTrace ){_ed .Log .Trace ("\u0061\u006c\u0067\u0035");};if _ed .Log .IsLogLevel (_ed .LogLevelTrace ){_ed .Log .Trace ("\u0065k\u0065\u0079\u003a\u0020\u0025\u0020x",_ggab );};if _ed .Log .IsLogLevel (_ed .LogLevelTrace ){_ed .Log .Trace ("\u0049D\u003a\u0020\u0025\u0020\u0078",_egg .ID0 );
-};if len (_bad )!=16{return nil ,_f .New ("\u0068a\u0073\u0068\u0020\u006c\u0065\u006e\u0067\u0074\u0068\u0020\u006eo\u0074\u0020\u0031\u0036\u0020\u0062\u0079\u0074\u0065\u0073");};_cdd ,_def :=_gd .NewCipher (_ggab );if _def !=nil {return nil ,_f .New ("\u0066a\u0069l\u0065\u0064\u0020\u0072\u0063\u0034\u0020\u0063\u0069\u0070\u0068");
-};_bbaf :=make ([]byte ,16);_cdd .XORKeyStream (_bbaf ,_bad );_bac :=make ([]byte ,len (_ggab ));for _ffg :=0;_ffg < 19;_ffg ++{for _adg :=0;_adg < len (_ggab );_adg ++{_bac [_adg ]=_ggab [_adg ]^byte (_ffg +1);};_cdd ,_def =_gd .NewCipher (_bac );if _def !=nil {return nil ,_f .New ("\u0066a\u0069l\u0065\u0064\u0020\u0072\u0063\u0034\u0020\u0063\u0069\u0070\u0068");
-};_cdd .XORKeyStream (_bbaf ,_bbaf );if _ed .Log .IsLogLevel (_ed .LogLevelTrace ){_ed .Log .Trace ("\u0069\u0020\u003d\u0020\u0025\u0064\u002c\u0020\u0065\u006b\u0065\u0079:\u0020\u0025\u0020\u0078",_ffg ,_bac );};if _ed .Log .IsLogLevel (_ed .LogLevelTrace ){_ed .Log .Trace ("\u0069\u0020\u003d\u0020\u0025\u0064\u0020\u002d\u003e\u0020\u0025\u0020\u0078",_ffg ,_bbaf );
-};};_efc :=make ([]byte ,32);for _bgb :=0;_bgb < 16;_bgb ++{_efc [_bgb ]=_bbaf [_bgb ];};_ ,_def =_bd .Read (_efc [16:32]);if _def !=nil {return nil ,_f .New ("\u0066a\u0069\u006c\u0065\u0064 \u0074\u006f\u0020\u0067\u0065n\u0020r\u0061n\u0064\u0020\u006e\u0075\u006d\u0062\u0065r");
-};return _efc ,nil ;};
+// PubSecFileKey derives the file encryption key from a recipient's seed and
+// the complete /Recipients array (ISO 32000-1 §7.6.4.3). The hash is SHA-1 for
+// V up to 4 and SHA-256 for V 5; its input is the seed, the raw bytes of every
+// recipient entry in array order, and four 0xFF bytes when the metadata is
+// not encrypted. The first lengthBits/8 bytes of the digest form the key.
+//
+// The digest is selected by V and not by SubFilter: PDFBox labels V4 AESV2
+// files adbe.pkcs7.s5 and still hashes with SHA-1.
+func PubSecFileKey (seed []byte ,recipients [][]byte ,v ,lengthBits int ,encryptMetadata bool )[]byte {var _gda _ge .Hash ;if v >=5{_gda =_aa .New ();}else {_gda =_df .New ();};_gda .Write (seed );for _ ,_ade :=range recipients {_gda .Write (_ade );};if !encryptMetadata {_gda .Write ([]byte {0xff,0xff,0xff,0xff});
+};_fg :=_gda .Sum (nil );_dfg :=lengthBits /8;if _dfg <=0||_dfg > len (_fg ){_dfg =len (_fg );};return _fg [:_dfg ];};func (_fgc stdHandlerR6 )alg9 (_bdb *StdEncryptDict ,_ebf []byte ,_dgd []byte )error {if _cfdbe :=_eg ("\u0061\u006c\u0067\u0039","\u004b\u0065\u0079",32,_ebf );
+_cfdbe !=nil {return _cfdbe ;};if _fbec :=_eg ("\u0061\u006c\u0067\u0039","\u0055",48,_bdb .U );_fbec !=nil {return _fbec ;};var _ceba [16]byte ;if _ ,_cfdd :=_c .ReadFull (_f .Reader ,_ceba [:]);_cfdd !=nil {return _cfdd ;};_cedec :=_ceba [0:8];_defa :=_ceba [8:16];
+_gea :=_bdb .U [:48];_gee :=make ([]byte ,len (_dgd )+len (_cedec )+len (_gea ));_bccf :=copy (_gee ,_dgd );_bccf +=copy (_gee [_bccf :],_cedec );_bccf +=copy (_gee [_bccf :],_gea );_cac ,_cgag :=_fgc .alg2b (_bdb .R ,_gee ,_dgd ,_gea );if _cgag !=nil {return _cgag ;
+};O :=make ([]byte ,len (_cac )+len (_cedec )+len (_defa ));_bccf =copy (O ,_cac [:32]);_bccf +=copy (O [_bccf :],_cedec );_bccf +=copy (O [_bccf :],_defa );_bdb .O =O ;_bccf =len (_dgd );_bccf +=copy (_gee [_bccf :],_defa );_cac ,_cgag =_fgc .alg2b (_bdb .R ,_gee ,_dgd ,_gea );
+if _cgag !=nil {return _cgag ;};_dcb ,_cgag :=_eda (_cac [:32]);if _cgag !=nil {return _cgag ;};_dedc :=make ([]byte ,_bb .BlockSize );_dfd :=_a .NewCBCEncrypter (_dcb ,_dedc );OE :=make ([]byte ,32);_dfd .CryptBlocks (OE ,_ebf [:32]);_bdb .OE =OE ;return nil ;
+};
 
-// NewHandlerR6 creates a new standard security handler for R=5 and R=6.
-func NewHandlerR6 ()StdHandler {return stdHandlerR6 {}};var _ StdHandler =stdHandlerR4 {};func (_gee stdHandlerR4 )alg2 (_ba *StdEncryptDict ,_ef []byte )[]byte {if _ed .Log .IsLogLevel (_ed .LogLevelTrace ){_ed .Log .Trace ("\u0061\u006c\u0067\u0032");
-};_bef :=_gee .paddedPass (_ef );_ebg :=_ge .New ();_ebg .Write (_bef );_ebg .Write (_ba .O );var _bfa [4]byte ;_eg .LittleEndian .PutUint32 (_bfa [:],uint32 (_ba .P ));_ebg .Write (_bfa [:]);if _ed .Log .IsLogLevel (_ed .LogLevelTrace ){_ed .Log .Trace ("\u0067o\u0020\u0050\u003a\u0020\u0025\u0020x",_bfa );
-};_ebg .Write ([]byte (_gee .ID0 ));if _ed .Log .IsLogLevel (_ed .LogLevelTrace ){_ed .Log .Trace ("\u0074\u0068\u0069\u0073\u002e\u0052\u0020\u003d\u0020\u0025d\u0020\u0065\u006e\u0063\u0072\u0079\u0070t\u004d\u0065\u0074\u0061\u0064\u0061\u0074\u0061\u0020\u0025\u0076",_ba .R ,_ba .EncryptMetadata );
-};if (_ba .R >=4)&&!_ba .EncryptMetadata {_ebg .Write ([]byte {0xff,0xff,0xff,0xff});};_ggaf :=_ebg .Sum (nil );if _ba .R >=3{_ebg =_ge .New ();for _ca :=0;_ca < 50;_ca ++{_ebg .Reset ();_ebg .Write (_ggaf [0:_gee .Length /8]);_ggaf =_ebg .Sum (nil );};
-};if _ba .R >=3{return _ggaf [0:_gee .Length /8];};return _ggaf [0:5];};func (_fage stdHandlerR4 )alg6 (_aab *StdEncryptDict ,_bfe []byte )([]byte ,error ){var (_deae []byte ;_bbf error ;);_ccd :=_fage .alg2 (_aab ,_bfe );if _aab .R ==2{_deae ,_bbf =_fage .alg4 (_ccd ,_bfe );
-}else if _aab .R >=3{_deae ,_bbf =_fage .alg5 (_ccd ,_bfe );}else {return nil ,_f .New ("\u0069n\u0076\u0061\u006c\u0069\u0064\u0020R");};if _bbf !=nil {return nil ,_bbf ;};if _ed .Log .IsLogLevel (_ed .LogLevelTrace ){_ed .Log .Trace ("\u0063\u0068\u0065\u0063k:\u0020\u0025\u0020\u0078\u0020\u003d\u003d\u0020\u0025\u0020\u0078\u0020\u003f",string (_deae ),string (_aab .U ));
-};_cdb :=_deae ;_cg :=_aab .U ;if _aab .R >=3{if len (_cdb )> 16{_cdb =_cdb [0:16];};if len (_cg )> 16{_cg =_cg [0:16];};};if !_bb .Equal (_cdb ,_cg ){return nil ,nil ;};return _ccd ,nil ;};func (_ec *ecbEncrypter )BlockSize ()int {return _ec ._dd };func _fa (_gdf _c .Block )_c .BlockMode {return (*ecbEncrypter )(_fef (_gdf ))};
-
-
-// NewHandlerR4 creates a new standard security handler for R<=4.
-func NewHandlerR4 (id0 string ,length int )StdHandler {return stdHandlerR4 {ID0 :id0 ,Length :length }};const _ag ="\x28\277\116\136\x4e\x75\x8a\x41\x64\000\x4e\x56\377"+"\xfa\001\010\056\x2e\x00\xb6\xd0\x68\076\x80\x2f\014"+"\251\xfe\x64\x53\x69\172";
-func (_dea stdHandlerR4 )alg3 (R int ,_dfg ,_bc []byte )([]byte ,error ){var _cef []byte ;if len (_bc )> 0{_cef =_dea .alg3Key (R ,_bc );}else {_cef =_dea .alg3Key (R ,_dfg );};_gc ,_bba :=_gd .NewCipher (_cef );if _bba !=nil {return nil ,_f .New ("\u0066a\u0069l\u0065\u0064\u0020\u0072\u0063\u0034\u0020\u0063\u0069\u0070\u0068");
-};_fg :=_dea .paddedPass (_dfg );_fae :=make ([]byte ,len (_fg ));_gc .XORKeyStream (_fae ,_fg );if R >=3{_fee :=make ([]byte ,len (_cef ));for _cc :=0;_cc < 19;_cc ++{for _bfb :=0;_bfb < len (_cef );_bfb ++{_fee [_bfb ]=_cef [_bfb ]^byte (_cc +1);};_cdec ,_eda :=_gd .NewCipher (_fee );
-if _eda !=nil {return nil ,_f .New ("\u0066a\u0069l\u0065\u0064\u0020\u0072\u0063\u0034\u0020\u0063\u0069\u0070\u0068");};_cdec .XORKeyStream (_fae ,_fae );};};return _fae ,nil ;};func _geb (_cga []byte )(_c .Block ,error ){_eeb ,_aca :=_da .NewCipher (_cga );
-if _aca !=nil {_ed .Log .Error ("\u0045\u0052\u0052\u004f\u0052\u003a\u0020\u0063\u006f\u0075\u006c\u0064\u0020\u006e\u006f\u0074\u0020\u0063\u0072\u0065\u0061\u0074\u0065\u0020A\u0045\u0053\u0020\u0063\u0069p\u0068\u0065r\u003a\u0020\u0025\u0076",_aca );
-return nil ,_aca ;};return _eeb ,nil ;};func (_bbaff stdHandlerR6 )alg13 (_bfd *StdEncryptDict ,_bgaa []byte )error {if _bbac :=_be ("\u0061\u006c\u00671\u0033","\u004b\u0065\u0079",32,_bgaa );_bbac !=nil {return _bbac ;};if _bdc :=_be ("\u0061\u006c\u00671\u0033","\u0050\u0065\u0072m\u0073",16,_bfd .Perms );
-_bdc !=nil {return _bdc ;};_ced :=make ([]byte ,16);copy (_ced ,_bfd .Perms [:16]);_agg ,_ggc :=_da .NewCipher (_bgaa [:32]);if _ggc !=nil {return _ggc ;};_ggcd :=_cd (_agg );_ggcd .CryptBlocks (_ced ,_ced );if !_bb .Equal (_ced [9:12],[]byte ("\u0061\u0064\u0062")){return _f .New ("\u0064\u0065\u0063o\u0064\u0065\u0064\u0020p\u0065\u0072\u006d\u0069\u0073\u0073\u0069o\u006e\u0073\u0020\u0061\u0072\u0065\u0020\u0069\u006e\u0076\u0061\u006c\u0069\u0064");
-};_bddb :=Permissions (_eg .LittleEndian .Uint32 (_ced [0:4]));if _bddb !=_bfd .P {return _f .New ("\u0070\u0065r\u006d\u0069\u0073\u0073\u0069\u006f\u006e\u0073\u0020\u0076\u0061\u006c\u0069\u0064\u0061\u0074\u0069\u006f\u006e\u0020\u0066\u0061il\u0065\u0064");
-};var _cfga bool ;switch _ced [8]{case 'T':_cfga =true ;case 'F':_cfga =false ;default:return _f .New ("\u0064\u0065\u0063\u006f\u0064\u0065\u0064 \u006d\u0065\u0074a\u0064\u0061\u0074\u0061 \u0065\u006e\u0063\u0072\u0079\u0070\u0074\u0069\u006f\u006e\u0020\u0066\u006c\u0061\u0067\u0020\u0069\u0073\u0020\u0069\u006e\u0076\u0061\u006c\u0069\u0064");
-};if _cfga !=_bfd .EncryptMetadata {return _f .New ("\u006d\u0065t\u0061\u0064\u0061\u0074a\u0020\u0065n\u0063\u0072\u0079\u0070\u0074\u0069\u006f\u006e \u0076\u0061\u006c\u0069\u0064\u0061\u0074\u0069\u006f\u006e\u0020\u0066a\u0069\u006c\u0065\u0064");
-};return nil ;};func (_ggg *ecbDecrypter )CryptBlocks (dst ,src []byte ){if len (src )%_ggg ._dd !=0{_ed .Log .Error ("\u0045\u0052\u0052\u004f\u0052:\u0020\u0045\u0043\u0042\u0020\u0064\u0065\u0063\u0072\u0079\u0070\u0074\u003a \u0069\u006e\u0070\u0075\u0074\u0020\u006e\u006f\u0074\u0020\u0066\u0075\u006c\u006c\u0020\u0062\u006c\u006f\u0063\u006b\u0073");
-return ;};if len (dst )< len (src ){_ed .Log .Error ("\u0045R\u0052\u004fR\u003a\u0020\u0045C\u0042\u0020\u0064\u0065\u0063\u0072\u0079p\u0074\u003a\u0020\u006f\u0075\u0074p\u0075\u0074\u0020\u0073\u006d\u0061\u006c\u006c\u0065\u0072\u0020t\u0068\u0061\u006e\u0020\u0069\u006e\u0070\u0075\u0074");
-return ;};for len (src )> 0{_ggg ._gg .Decrypt (dst ,src [:_ggg ._dd ]);src =src [_ggg ._dd :];dst =dst [_ggg ._dd :];};};
-
-// Allowed checks if a set of permissions can be granted.
-func (_cde Permissions )Allowed (p2 Permissions )bool {return _cde &p2 ==p2 };
+// Permissions is a bitmask of access permissions for a PDF file.
+type Permissions uint32 ;func (_ebg stdHandlerR6 )alg13 (_gfd *StdEncryptDict ,_eaed []byte )error {if _ebfd :=_eg ("\u0061\u006c\u00671\u0033","\u004b\u0065\u0079",32,_eaed );_ebfd !=nil {return _ebfd ;};if _cccd :=_eg ("\u0061\u006c\u00671\u0033","\u0050\u0065\u0072m\u0073",16,_gfd .Perms );
+_cccd !=nil {return _cccd ;};_gfdc :=make ([]byte ,16);copy (_gfdc ,_gfd .Perms [:16]);_adc ,_gegb :=_bb .NewCipher (_eaed [:32]);if _gegb !=nil {return _gegb ;};_cfbf :=_ea (_adc );_cfbf .CryptBlocks (_gfdc ,_gfdc );if !_gd .Equal (_gfdc [9:12],[]byte ("\u0061\u0064\u0062")){return _ag .New ("\u0064\u0065\u0063o\u0064\u0065\u0064\u0020p\u0065\u0072\u006d\u0069\u0073\u0073\u0069o\u006e\u0073\u0020\u0061\u0072\u0065\u0020\u0069\u006e\u0076\u0061\u006c\u0069\u0064");
+};_afg :=Permissions (_ad .LittleEndian .Uint32 (_gfdc [0:4]));if _afg !=_gfd .P {return _ag .New ("\u0070\u0065r\u006d\u0069\u0073\u0073\u0069\u006f\u006e\u0073\u0020\u0076\u0061\u006c\u0069\u0064\u0061\u0074\u0069\u006f\u006e\u0020\u0066\u0061il\u0065\u0064");
+};var _aded bool ;switch _gfdc [8]{case 'T':_aded =true ;case 'F':_aded =false ;default:return _ag .New ("\u0064\u0065\u0063\u006f\u0064\u0065\u0064 \u006d\u0065\u0074a\u0064\u0061\u0074\u0061 \u0065\u006e\u0063\u0072\u0079\u0070\u0074\u0069\u006f\u006e\u0020\u0066\u006c\u0061\u0067\u0020\u0069\u0073\u0020\u0069\u006e\u0076\u0061\u006c\u0069\u0064");
+};if _aded !=_gfd .EncryptMetadata {return _ag .New ("\u006d\u0065t\u0061\u0064\u0061\u0074a\u0020\u0065n\u0063\u0072\u0079\u0070\u0074\u0069\u006f\u006e \u0076\u0061\u006c\u0069\u0064\u0061\u0074\u0069\u006f\u006e\u0020\u0066a\u0069\u006c\u0065\u0064");
+};return nil ;};func (_fgbbc stdHandlerR4 )alg7 (_ab *StdEncryptDict ,_fca []byte )([]byte ,error ){_bea :=_fgbbc .alg3Key (_ab .R ,_fca );_bgab :=make ([]byte ,len (_ab .O ));if _ab .R ==2{_aaed ,_ddec :=_d .NewCipher (_bea );if _ddec !=nil {return nil ,_ag .New ("\u0066\u0061\u0069\u006c\u0065\u0064\u0020\u0063\u0069\u0070\u0068\u0065\u0072");
+};_aaed .XORKeyStream (_bgab ,_ab .O );}else if _ab .R >=3{_agd :=append ([]byte {},_ab .O ...);for _dbf :=0;_dbf < 20;_dbf ++{_cdfg :=append ([]byte {},_bea ...);for _fcge :=0;_fcge < len (_bea );_fcge ++{_cdfg [_fcge ]^=byte (19-_dbf );};_fdc ,_fag :=_d .NewCipher (_cdfg );
+if _fag !=nil {return nil ,_ag .New ("\u0066\u0061\u0069\u006c\u0065\u0064\u0020\u0063\u0069\u0070\u0068\u0065\u0072");};_fdc .XORKeyStream (_bgab ,_agd );_agd =append ([]byte {},_bgab ...);};}else {return nil ,_ag .New ("\u0069n\u0076\u0061\u006c\u0069\u0064\u0020R");
+};_ddeb ,_efb :=_fgbbc .alg6 (_ab ,_bgab );if _efb !=nil {return nil ,nil ;};return _ddeb ,nil ;};func (_bffc stdHandlerR4 )alg3 (R int ,_fbd ,_cgc []byte )([]byte ,error ){var _dcf []byte ;if len (_cgc )> 0{_dcf =_bffc .alg3Key (R ,_cgc );}else {_dcf =_bffc .alg3Key (R ,_fbd );
+};_gdd ,_gag :=_d .NewCipher (_dcf );if _gag !=nil {return nil ,_ag .New ("\u0066a\u0069l\u0065\u0064\u0020\u0072\u0063\u0034\u0020\u0063\u0069\u0070\u0068");};_ffde :=_bffc .paddedPass (_fbd );_bfb :=make ([]byte ,len (_ffde ));_gdd .XORKeyStream (_bfb ,_ffde );
+if R >=3{_efg :=make ([]byte ,len (_dcf ));for _dada :=0;_dada < 19;_dada ++{for _aag :=0;_aag < len (_dcf );_aag ++{_efg [_aag ]=_dcf [_aag ]^byte (_dada +1);};_eec ,_eaee :=_d .NewCipher (_efg );if _eaee !=nil {return nil ,_ag .New ("\u0066a\u0069l\u0065\u0064\u0020\u0072\u0063\u0034\u0020\u0063\u0069\u0070\u0068");
+};_eec .XORKeyStream (_bfb ,_bfb );};};return _bfb ,nil ;};const _dfgg ="\x28\277\116\136\x4e\x75\x8a\x41\x64\000\x4e\x56\377"+"\xfa\001\010\056\x2e\x00\xb6\xd0\x68\076\x80\x2f\014"+"\251\xfe\x64\x53\x69\172";func _gba (_fe _a .Block )_a .BlockMode {return (*ecbEncrypter )(_bga (_fe ))};
+func (_geaf stdHandlerR6 )alg12 (_bce *StdEncryptDict ,_cgcf []byte )([]byte ,error ){if _gce :=_eg ("\u0061\u006c\u00671\u0032","\u0055",48,_bce .U );_gce !=nil {return nil ,_gce ;};if _aba :=_eg ("\u0061\u006c\u00671\u0032","\u004f",48,_bce .O );_aba !=nil {return nil ,_aba ;
+};_bfa :=make ([]byte ,len (_cgcf )+8+48);_edce :=copy (_bfa ,_cgcf );_edce +=copy (_bfa [_edce :],_bce .O [32:40]);_edce +=copy (_bfa [_edce :],_bce .U [0:48]);_edd ,_eba :=_geaf .alg2b (_bce .R ,_bfa ,_cgcf ,_bce .U [0:48]);if _eba !=nil {return nil ,_eba ;
+};_edd =_edd [:32];if !_gd .Equal (_edd ,_bce .O [:32]){return nil ,nil ;};return _edd ,nil ;};
 
 // StdHandler is an interface for standard security handlers.
 type StdHandler interface{
 
 // GenerateParams uses owner and user passwords to set encryption parameters and generate an encryption key.
 // It assumes that R, P and EncryptMetadata are already set.
-GenerateParams (_ga *StdEncryptDict ,_bf ,_edg []byte )([]byte ,error );
+GenerateParams (_dde *StdEncryptDict ,_da ,_bc []byte )([]byte ,error );
 
 // Authenticate uses encryption dictionary parameters and the password to calculate
 // the document encryption key. It also returns permissions that should be granted to a user.
-// In case of failed authentication, it returns empty key and zero permissions with no error.
-Authenticate (_eb *StdEncryptDict ,_df []byte )([]byte ,Permissions ,error );};
+// In case of failed authentication, it returns an empty key with no error.
+// Permissions may be zero even when authentication succeeds.
+Authenticate (_ce *StdEncryptDict ,_bgf []byte )([]byte ,Permissions ,error );};func (_cfd *ecbEncrypter )BlockSize ()int {return _cfd ._de };var _ StdHandler =stdHandlerR6 {};var ErrUnsupportedRecipient =_ag .New ("a\u0020\u0072\u0065\u0063\u0069\u0070\u0069\u0065\u006e\u0074\u0020\u0065\u006e\u0074\u0072\u0079\u0020\u006f\u0066\u0020\u0074\u0068\u0069\u0073\u0020\u0064o\u0063u\u006d\u0065\u006e\u0074 \u0075\u0073e\u0073\u0020\u0061\u006e\u0020\u0075\u006e\u0073\u0075\u0070\u0070\u006f\u0072\u0074\u0065\u0064\u0020\u0066\u006f\u0072\u006d\u0061\u0074");
+
+
+// NewHandlerR6 creates a new standard security handler for R=5 and R=6.
+func NewHandlerR6 ()StdHandler {return stdHandlerR6 {}};func _bab (_abfg []byte )([]byte ,error ){_gace ,_cdgg :=_fb (_abfg );if _cdgg !=nil {return nil ,_cdgg ;};if len (_gace )==0&&len (_abfg )!=0{return nil ,_ag .New ("\u0070a\u0073\u0073w\u006f\u0072\u0064\u0020i\u0073\u0020\u0065m\u0070\u0074\u0079\u0020\u0061\u0066\u0074\u0065\u0072 S\u0041\u0053\u004cp\u0072\u0065p\u0020\u0070\u0072\u0065\u0070\u0061r\u0061\u0074i\u006f\u006e");
+};if !_bg .Valid (_abfg ){_cf .Log .Warning ("\u0041\u0045\u0053\u0056\u0033\u0020\u0070\u0061\u0073\u0073\u0077\u006f\u0072\u0064\u0020\u0069\u0073\u0020\u006e\u006f\u0074 \u0076\u0061\u006c\u0069\u0064\u0020\u0055\u0054\u0046\u002d\u0038\u003b\u0020\u0069\u0074\u0020\u0069\u0073\u0020\u0075\u0073\u0065\u0064 \u0075\u006e\u0070\u0072\u0065\u0070\u0061\u0072ed\u0020\u0061\u006e\u0064\u0020\u0063\u006f\u006e\u0066\u006f\u0072\u006d\u0069\u006e\u0067\u0020\u0072\u0065\u0061\u0064\u0065\u0072\u0073\u0020\u0077i\u006c\u006c\u0020\u006e\u006f\u0074\u0020\u0061\u0063\u0063e\u0070\u0074\u0020\u0069\u0074\u0020\u0061\u0073 \u0074\u0079\u0070\u0065\u0064");
+};return _cd (_gace ),nil ;};func _ced (_cebc []byte )([]byte ,error ){_agb :=_aa .New ();_agb .Write (_cebc );return _agb .Sum (nil ),nil ;};
+
+// PubSecUnwrap finds the /Recipients entry that cert can open, decrypts it
+// with key and returns the 20-byte seed, the 4 permission bytes and the index
+// of the entry. Entries are tried in array order and the first match wins
+// (ISO 32000-2 Table 23: a recipient listed twice gets the permissions of the
+// first list). An entry that cannot be read, or whose recipient matches cert
+// by issuer and serial but does not decrypt with key (two certificates can
+// share an issuer and serial), does not stop the search. When nothing opens,
+// the error is, in order: ErrRecipientNotOpened if an entry addressed to cert
+// did not open, ErrUnsupportedRecipient if some entry could not be read,
+// otherwise ErrNotRecipient.
+//
+// key must be a complete *rsa.PrivateKey; RSA key transport is the only
+// recipient type the CMS library decrypts. Problems with the key itself are
+// reported as such, since they reveal nothing about the document.
+func PubSecUnwrap (recipients [][]byte ,cert *_dc .Certificate ,key _gc .PrivateKey )(_fgb []byte ,_ddf [4]byte ,_fdd int ,_ff error ){if cert ==nil ||key ==nil {return nil ,_ddf ,-1,_ag .New ("c\u0065\u0072\u0074\u0069\u0066\u0069\u0063\u0061\u0074\u0065\u0020\u0061\u006e\u0064\u0020\u0070\u0072\u0069v\u0061\u0074\u0065\u0020\u006b\u0065\u0079\u0020\u0061\u0072e \u0072\u0065\u0071u\u0069r\u0065\u0064");
+};_cge ,_ec :=key .(*_ga .PrivateKey );if !_ec {return nil ,_ddf ,-1,_ef .Errorf ("\u0070\u0072i\u0076\u0061\u0074\u0065\u0020k\u0065\u0079\u0020\u0069\u0073 \u0025\u0054\u002c\u0020\u006f\u006e\u006c\u0079\u0020\u002a\u0072\u0073\u0061\u002e\u0050\u0072\u0069\u0076\u0061\u0074\u0065\u004b\u0065\u0079\u0020\u0069\u0073\u0020\u0073\u0075\u0070\u0070\u006f\u0072\u0074\u0065\u0064",key );
+};if _cge .N ==nil ||_cge .D ==nil {return nil ,_ddf ,-1,_ag .New ("\u0070r\u0069\u0076\u0061\u0074e\u0020\u006b\u0065\u0079\u0020i\u0073 \u0069n\u0063\u006f\u006d\u0070\u006c\u0065\u0074e");};var _dad ,_ae error ;for _gbc ,_gbd :=range recipients {_fed ,_fcg :=_gg .Parse (_gbd );
+if _fcg !=nil {if _dad ==nil {_dad =_ef .Errorf ("\u0072\u0065c\u0069\u0070\u0069e\u006e\u0074\u0020\u0025\u0064\u003a\u0020\u0025\u0077",_gbc ,_fcg );};continue ;};_bcc ,_fcg :=_fed .Decrypt (cert ,key );if _fcg !=nil {if _ag .Is (_fcg ,_gg .ErrNotEncryptedContent ){if _dad ==nil {_dad =_ef .Errorf ("\u0072\u0065c\u0069\u0070\u0069e\u006e\u0074\u0020\u0025\u0064\u003a\u0020\u0025\u0077",_gbc ,_fcg );
+};continue ;};if _ag .Is (_fcg ,_gg .ErrNoRecipient ){continue ;};if _ag .Is (_fcg ,_gg .ErrUnsupportedAlgorithm ){if _dad ==nil {_dad =_ef .Errorf ("\u0072\u0065c\u0069\u0070\u0069e\u006e\u0074\u0020\u0025\u0064\u003a\u0020\u0025\u0077",_gbc ,_fcg );};
+continue ;};if _ae ==nil {_ae =_ef .Errorf ("\u0072\u0065c\u0069\u0070\u0069e\u006e\u0074\u0020\u0025\u0064\u003a\u0020\u0025\u0077",_gbc ,ErrRecipientNotOpened );};continue ;};if len (_bcc )!=PubSecEnvelopeLength {if _ae ==nil {_ae =_ef .Errorf ("\u0072\u0065c\u0069\u0070\u0069e\u006e\u0074\u0020\u0025\u0064\u003a\u0020\u0025\u0077",_gbc ,ErrRecipientNotOpened );
+};continue ;};copy (_ddf [:],_bcc [PubSecSeedLength :]);return _bcc [:PubSecSeedLength ],_ddf ,_gbc ,nil ;};switch {case _ae !=nil :return nil ,_ddf ,-1,_ae ;case _dad !=nil :return nil ,_ddf ,-1,_ef .Errorf ("\u0025w\u0020\u0028\u0025\u0076\u0029",ErrUnsupportedRecipient ,_dad );
+};return nil ,_ddf ,-1,ErrNotRecipient ;};type ecb struct{_cfc _a .Block ;_de int ;};type ecbDecrypter ecb ;func _fb (_agg []byte )([]byte ,error ){if _ecg (_agg )||!_bg .Valid (_agg ){return _agg ,nil ;};_efe ,_bgag :=_fc .SASLprep .Prepare (string (_agg ));
+if _bgag !=nil {return nil ,_fgg ;};return []byte (_efe ),nil ;};
+
+// NewHandlerR4 creates a new standard security handler for R<=4.
+func NewHandlerR4 (id0 string ,length int )StdHandler {return stdHandlerR4 {ID0 :id0 ,Length :length }};type stdHandlerR6 struct{};
+
+// AuthEvent is an event type that triggers authentication.
+type AuthEvent string ;
+
+// GenerateParams is the algorithm opposite to alg2a (R>=5).
+// It generates U,O,UE,OE,Perms fields using AESv3 encryption.
+// There is no algorithm number assigned to this function in the spec.
+// It expects R, P and EncryptMetadata fields to be set.
+// Both passwords are prepared with SASLprep and truncated to 127 bytes
+// (Algorithm 2.A steps a and b); an error is returned if a password contains
+// characters the profile prohibits or consists only of characters it removes.
+func (_ddde stdHandlerR6 )GenerateParams (d *StdEncryptDict ,opass ,upass []byte )([]byte ,error ){upass ,_ace :=_bab (upass );if _ace !=nil {return nil ,_ef .Errorf ("\u0075\u0073\u0065\u0072\u0020\u0070\u0061\u0073\u0073\u0077\u006fr\u0064\u0020\u0063\u0061\u006e\u006e\u006f\u0074 \u0062e\u0020\u0075\u0073\u0065\u0064\u0020\u0066\u006f\u0072\u0020\u0041\u0045\u0053\u0056\u0033\u0020\u0065\u006ec\u0072\u0079\u0070\u0074\u0069\u006f\u006e\u003a\u0020\u0025\u0077",_ace );
+};opass ,_ace =_bab (opass );if _ace !=nil {return nil ,_ef .Errorf ("\u006f\u0077\u006e\u0065\u0072\u0020\u0070\u0061\u0073\u0073\u0077\u006f\u0072\u0064\u0020c\u0061\u006e\u006e\u006f\u0074\u0020\u0062\u0065\u0020\u0075\u0073\u0065\u0064 \u0066\u006f\u0072\u0020\u0041\u0045\u0053\u0056\u0033\u0020\u0065\u006ecr\u0079\u0070\u0074\u0069\u006f\u006e\u003a\u0020\u0025\u0077",_ace );
+};if len (opass )==0{opass =upass ;};_ebe :=make ([]byte ,32);if _ ,_ebc :=_c .ReadFull (_f .Reader ,_ebe );_ebc !=nil {return nil ,_ebc ;};d .U =nil ;d .O =nil ;d .UE =nil ;d .OE =nil ;d .Perms =nil ;if _fcgg :=_ddde .alg8 (d ,_ebe ,upass );_fcgg !=nil {return nil ,_fcgg ;
+};if _cccg :=_ddde .alg9 (d ,_ebe ,opass );_cccg !=nil {return nil ,_cccg ;};if d .R ==5{return _ebe ,nil ;};if _dgfg :=_ddde .alg10 (d ,_ebe );_dgfg !=nil {return nil ,_dgfg ;};return _ebe ,nil ;};func _bga (_gb _a .Block )*ecb {return &ecb {_cfc :_gb ,_de :_gb .BlockSize ()}};
+func (_bff stdHandlerR4 )alg2 (_aed *StdEncryptDict ,_cee []byte )[]byte {if _cf .Log .IsLogLevel (_cf .LogLevelTrace ){_cf .Log .Trace ("\u0061\u006c\u0067\u0032");};_cdg :=_bff .paddedPass (_cee );_dfgb :=_e .New ();_dfgb .Write (_cdg );_dfgb .Write (_aed .O );
+var _cbg [4]byte ;_ad .LittleEndian .PutUint32 (_cbg [:],uint32 (_aed .P ));_dfgb .Write (_cbg [:]);if _cf .Log .IsLogLevel (_cf .LogLevelTrace ){_cf .Log .Trace ("\u0067o\u0020\u0050\u003a\u0020\u0025\u0020x",_cbg );};_dfgb .Write ([]byte (_bff .ID0 ));
+if _cf .Log .IsLogLevel (_cf .LogLevelTrace ){_cf .Log .Trace ("\u0074\u0068\u0069\u0073\u002e\u0052\u0020\u003d\u0020\u0025d\u0020\u0065\u006e\u0063\u0072\u0079\u0070t\u004d\u0065\u0074\u0061\u0064\u0061\u0074\u0061\u0020\u0025\u0076",_aed .R ,_aed .EncryptMetadata );
+};if (_aed .R >=4)&&!_aed .EncryptMetadata {_dfgb .Write ([]byte {0xff,0xff,0xff,0xff});};_fbc :=_dfgb .Sum (nil );if _aed .R >=3{_dfgb =_e .New ();for _fdf :=0;_fdf < 50;_fdf ++{_dfgb .Reset ();_dfgb .Write (_fbc [0:_bff .Length /8]);_fbc =_dfgb .Sum (nil );
+};};if _aed .R >=3{return _fbc [0:_bff .Length /8];};return _fbc [0:5];};
+
+// Authenticate implements StdHandler interface.
+func (_ddb stdHandlerR6 )Authenticate (d *StdEncryptDict ,pass []byte )([]byte ,Permissions ,error ){return _ddb .alg2a (d ,pass );};func (_ggd errInvalidField )Error ()string {return _ef .Sprintf ("\u0025s\u003a\u0020e\u0078\u0070\u0065\u0063t\u0065\u0064\u0020%\u0073\u0020\u0066\u0069\u0065\u006c\u0064\u0020\u0074o \u0062\u0065\u0020%\u0064\u0020b\u0079\u0074\u0065\u0073\u002c\u0020g\u006f\u0074 \u0025\u0064",_ggd .Func ,_ggd .Field ,_ggd .Exp ,_ggd .Got );
+};
+
+// Allowed checks if a set of permissions can be granted.
+func (_af Permissions )Allowed (p2 Permissions )bool {return _af &p2 ==p2 };func (_aga stdHandlerR6 )alg2b (R int ,_gfg ,_bdf ,_cca []byte )([]byte ,error ){if R ==5{return _ced (_gfg );};return _gga (_gfg ,_bdf ,_cca );};
