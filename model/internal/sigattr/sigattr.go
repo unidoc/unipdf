@@ -9,4 +9,4 @@
 // Use of this source code is governed by the UniDoc End User License Agreement
 // terms that can be accessed at https://unidoc.io/eula/
 
-package sigattr ;import _d "encoding/asn1";type RevocationInfoArchival struct{Crl []_d .RawValue `asn1:"explicit,tag:0,optional"`;Ocsp []_d .RawValue `asn1:"explicit,tag:1,optional"`;OtherRevInfo []_d .RawValue `asn1:"explicit,tag:2,optional"`;};
+package sigattr ;import _f "encoding/asn1";type RevocationInfoArchival struct{Crl []_f .RawValue `asn1:"explicit,tag:0,optional"`;Ocsp []_f .RawValue `asn1:"explicit,tag:1,optional"`;OtherRevInfo []_f .RawValue `asn1:"explicit,tag:2,optional"`;};
