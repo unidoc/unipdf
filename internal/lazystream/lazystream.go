@@ -9,4 +9,4 @@
 // Use of this source code is governed by the UniDoc End User License Agreement
 // terms that can be accessed at https://unidoc.io/eula/
 
-package lazystream ;var Take func (_ce ,_d any )(_dg []byte ,_b bool );var Drop func (_f any );
+package lazystream ;var Take func (_ac ,_g any )(_b []byte ,_f bool );var Drop func (_d any );
